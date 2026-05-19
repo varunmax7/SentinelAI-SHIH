@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="{{ current_language }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}{{ translate('coastal_alert') }}{% endblock %}</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description"
+        content="AI-Powered Emergency Response & Incident Management System for community safety and disaster management">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a365d">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Sentinel AI">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='icons/icon-512x512.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ url_for('static', filename='icons/icon-152x152.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+
+    <!-- Stylesheets -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% block head_extra %}{% endblock %}
+
+    <!-- Enhanced Responsive Styles -->
+    <style>
+        /* Base Styles */
+        :root {
+            --primary-color: #0ea5e9;
+            --primary-dark: #0284c7;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --info-color: #06b6d4;
+            --bg-dark: #0f172a;
+            --card-glass: rgba(255, 255, 255, 0.05);
+            --border-glass: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            width: 100%;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            line-height: 1.6;
+            background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+            color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Navbar Styles - Enhanced for Mobile */
+        .navbar {
+            background: rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-glass);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            min-height: 70px;
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.3rem;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-toggler {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.25rem 0.5rem;
+        }
+
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .navbar-collapse {
+            transition: all 0.3s ease;
+        }
+
+        .navbar-nav .nav-link {
+            font-weight: 500;
+            padding: 0.5rem 0.8rem !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.95) !important;
+            margin: 0 0.1rem;
+            white-space: nowrap;
+        }
+
+        .navbar-nav .nav-link:not(.btn-report):not(.btn-coordination):hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white !important;
+        }
+
+        .nav-link.btn-report {
+            background: var(--danger-color) !important;
+            color: white !important;
+            border-radius: 25px;
+            padding: 0.5rem 1.2rem !important;
+            margin: 0 0.3rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-link.btn-report:hover {
+            background: #c82333 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .nav-link.btn-complete-rescue {
+            background: var(--info-color) !important;
+            color: white !important;
+            border-radius: 25px;
+            padding: 0.5rem 1.2rem !important;
+            margin: 0 0.3rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-link.btn-complete-rescue:hover {
+            background: #0891b2 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(6, 182, 212, 0.3);
+        }
+
+
+        /* Coordination Platform Button */
+        .nav-link.btn-coordination {
+            background: var(--warning-color) !important;
+            color: white !important;
+            border-radius: 25px;
+            padding: 0.5rem 1.2rem !important;
+            margin: 0 0.3rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-link.btn-coordination:hover {
+            background: #e55a2b !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+        }
+
+        /* Container and Card Styles */
+        .container,
+        .card,
+        .alert {
+            border-radius: 16px;
+        }
+
+        .glass-card {
+            background: var(--card-glass) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .alert {
+            border: 1px solid var(--border-glass);
+            border-left-width: 4px;
+            padding: 1rem 1.5rem;
+            word-break: break-word;
+        }
+
+        /* Form Controls */
+        .form-control {
+            border: 1px solid #ced4da;
+            color: #495057;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(30, 60, 114, 0.15);
+        }
+
+        /* Button Styles */
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: #2a5298;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(30, 60, 114, 0.3);
+        }
+
+        .btn-outline-light {
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Dropdown Styles */
+        .dropdown-menu {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+            max-width: 100vw;
+        }
+
+        .dropdown-item {
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+            margin: 0.1rem 0.5rem;
+            width: auto;
+            word-break: break-word;
+        }
+
+        .dropdown-item:hover {
+            background: var(--primary-color);
+            color: white !important;
+        }
+
+        /* Footer Styles */
+        footer {
+            background: #343a40 !important;
+            border-top: 1px solid #495057;
+            margin-top: auto;
+        }
+
+        /* Floating Action Buttons - Improved for Mobile */
+        .floating-action-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex !important;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .floating-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            border: none;
+            position: relative;
+            font-size: 1.1rem;
+            z-index: 10000;
+            cursor: pointer;
+        }
+
+        .floating-btn-danger {
+            background: var(--danger-color) !important;
+            color: white !important;
+        }
+
+        .floating-btn-primary {
+            background: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .floating-btn-success {
+            background: var(--success-color) !important;
+            color: white !important;
+        }
+
+        .floating-btn-warning {
+            background: var(--warning-color) !important;
+            color: white !important;
+        }
+
+        .floating-btn-info {
+            background: #17a2b8 !important;
+            color: white !important;
+        }
+
+        .floating-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+            color: white !important;
+        }
+
+        .floating-label {
+            position: absolute;
+            right: 55px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateX(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            font-weight: 600;
+            z-index: 10001;
+        }
+
+        .floating-btn:hover .floating-label {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Map Container Styles */
+        .map-container {
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+        }
+
+        .simulation-controls {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 0;
+            width: 100%;
+        }
+
+        /* Results Panel */
+        .results-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 0;
+            width: 100%;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            margin-bottom: 0;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Coordination Platform Specific Styles */
+        .coordination-dashboard {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            width: 100%;
+        }
+
+        .agency-card {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .emergency-card {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .resource-card {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .volunteer-card {
+            border-left: 4px solid #ffc107;
+        }
+
+        .situation-card {
+            border-left: 4px solid var(--info-color);
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+        }
+
+        .status-active {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            color: black;
+        }
+
+        .status-resolved {
+            background: #6c757d;
+            color: white;
+        }
+
+        .status-critical {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        /* Scroll Behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom spacing for fixed navbar */
+        main {
+            min-height: calc(100vh - 160px);
+            padding-bottom: 140px;
+            padding-top: 80px;
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* Enhanced Responsive Adjustments */
+        @media (max-width: 1200px) {
+            .navbar-nav .nav-link {
+                padding: 0.5rem 0.7rem !important;
+                font-size: 0.9rem;
+            }
+
+            .nav-link.btn-report,
+            .nav-link.btn-coordination {
+                padding: 0.4rem 1rem !important;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .navbar-nav .nav-link {
+                padding: 0.5rem 0.6rem !important;
+                font-size: 0.85rem;
+            }
+
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+
+            .nav-link.btn-report,
+            .nav-link.btn-coordination {
+                padding: 0.4rem 0.9rem !important;
+                font-size: 0.8rem;
+                margin: 0.1rem;
+            }
+
+            .map-container {
+                height: 350px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0.5rem 0;
+            }
+
+            .navbar-nav .nav-link {
+                padding: 0.8rem 1rem !important;
+                margin: 0.25rem 0;
+                text-align: left;
+                font-size: 1.1rem;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.03);
+            }
+
+            .navbar-collapse {
+                max-height: 85vh;
+                overflow-y: auto;
+                background-color: #0f172a;
+                padding: 1.5rem;
+                margin-top: 0.5rem;
+                border: 1px solid var(--border-glass);
+                border-radius: 20px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            }
+
+            .navbar-nav {
+                padding: 0.5rem 0;
+            }
+
+            .nav-link.btn-report,
+            .nav-link.btn-coordination {
+                padding: 0.6rem 1.2rem !important;
+                font-size: 0.9rem;
+                margin: 0.25rem 0;
+                display: inline-block;
+                width: auto;
+            }
+
+            .navbar .dropdown-menu {
+                position: static !important;
+                float: none;
+                background-color: rgba(255, 255, 255, 0.05);
+                border: none;
+                box-shadow: none;
+                margin-top: 0.5rem;
+                padding-left: 0.5rem;
+            }
+
+            .navbar .dropdown-item {
+                color: rgba(255, 255, 255, 0.8) !important;
+                padding: 0.6rem 1rem;
+                background: transparent;
+            }
+
+            .navbar .dropdown-item:hover {
+                color: white !important;
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            main {
+                padding-top: 70px !important;
+                padding-bottom: 130px !important;
+            }
+
+            .floating-action-buttons {
+                bottom: 15px;
+                right: 15px;
+                gap: 10px;
+            }
+
+            .floating-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 1rem;
+            }
+
+            .floating-label {
+                font-size: 11px;
+                padding: 5px 8px;
+                right: 50px;
+            }
+
+            .map-container {
+                height: 300px;
+            }
+
+            .metric-value {
+                font-size: 1.3rem;
+            }
+
+            .coordination-dashboard {
+                padding: 1rem;
+            }
+
+            .dropdown-menu {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .navbar {
+                min-height: 65px;
+            }
+
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+
+            .navbar-toggler {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.9rem;
+            }
+
+            .modal-dialog {
+                margin: 5px;
+                max-width: calc(100vw - 10px);
+            }
+
+            .btn-lg {
+                width: 45px !important;
+                height: 45px !important;
+            }
+
+            .display-4 {
+                font-size: 1.8rem;
+            }
+
+            .lead {
+                font-size: 1rem;
+            }
+
+            .floating-action-buttons {
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .floating-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 0.9rem;
+            }
+
+            .floating-label {
+                right: 45px;
+                font-size: 10px;
+                padding: 4px 6px;
+            }
+
+            .map-container {
+                height: 250px;
+            }
+
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .card,
+            .alert {
+                border-radius: 8px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .navbar {
+                min-height: 60px;
+            }
+
+            .navbar-brand {
+                font-size: 1rem;
+            }
+
+            .navbar-nav .nav-link {
+                padding: 0.6rem 0.8rem !important;
+                font-size: 0.9rem;
+            }
+
+            .nav-link.btn-report,
+            .nav-link.btn-coordination {
+                padding: 0.5rem 1rem !important;
+                font-size: 0.8rem;
+            }
+
+            .floating-action-buttons {
+                bottom: 8px;
+                right: 8px;
+            }
+
+            .floating-btn {
+                width: 38px;
+                height: 38px;
+                font-size: 0.85rem;
+            }
+
+            .floating-label {
+                right: 42px;
+            }
+
+            .map-container {
+                height: 200px;
+            }
+        }
+
+        /* RTL Support for Right-to-Left Languages */
+        [dir="rtl"] .navbar-nav {
+            margin-right: auto;
+            margin-left: 0;
+        }
+
+        [dir="rtl"] .dropdown-menu {
+            text-align: right;
+        }
+
+        [dir="rtl"] .dropdown-item {
+            text-align: right;
+        }
+
+        [dir="rtl"] .floating-action-buttons {
+            right: auto;
+            left: 20px;
+        }
+
+        [dir="rtl"] .floating-label {
+            right: auto;
+            left: 55px;
+        }
+
+        @media (max-width: 768px) {
+            [dir="rtl"] .floating-action-buttons {
+                left: 15px;
+            }
+
+            [dir="rtl"] .floating-label {
+                left: 50px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            [dir="rtl"] .floating-action-buttons {
+                left: 10px;
+            }
+
+            [dir="rtl"] .floating-label {
+                left: 45px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            [dir="rtl"] .floating-action-buttons {
+                left: 8px;
+            }
+
+            [dir="rtl"] .floating-label {
+                left: 42px;
+            }
+        }
+
+        /* Ensure content doesn't overflow horizontally */
+        .row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        .col,
+        .col-1,
+        .col-10,
+        .col-11,
+        .col-12,
+        .col-2,
+        .col-3,
+        .col-4,
+        .col-5,
+        .col-6,
+        .col-7,
+        .col-8,
+        .col-9,
+        .col-auto,
+        .col-lg,
+        .col-lg-1,
+        .col-lg-10,
+        .col-lg-11,
+        .col-lg-12,
+        .col-lg-2,
+        .col-lg-3,
+        .col-lg-4,
+        .col-lg-5,
+        .col-lg-6,
+        .col-lg-7,
+        .col-lg-8,
+        .col-lg-9,
+        .col-lg-auto,
+        .col-md,
+        .col-md-1,
+        .col-md-10,
+        .col-md-11,
+        .col-md-12,
+        .col-md-2,
+        .col-md-3,
+        .col-md-4,
+        .col-md-5,
+        .col-md-6,
+        .col-md-7,
+        .col-md-8,
+        .col-md-9,
+        .col-md-auto,
+        .col-sm,
+        .col-sm-1,
+        .col-sm-10,
+        .col-sm-11,
+        .col-sm-12,
+        .col-sm-2,
+        .col-sm-3,
+        .col-sm-4,
+        .col-sm-5,
+        .col-sm-6,
+        .col-sm-7,
+        .col-sm-8,
+        .col-sm-9,
+        .col-sm-auto,
+        .col-xl,
+        .col-xl-1,
+        .col-xl-10,
+        .col-xl-11,
+        .col-xl-12,
+        .col-xl-2,
+        .col-xl-3,
+        .col-xl-4,
+        .col-xl-5,
+        .col-xl-6,
+        .col-xl-7,
+        .col-xl-8,
+        .col-xl-9,
+        .col-xl-auto {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        /* Mobile Menu Enhancement */
+        .mobile-nav-header {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-nav-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem 0;
+                margin-bottom: 0.5rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .mobile-user-info {
+                display: flex;
+                align-items: center;
+                color: white;
+            }
+
+            .mobile-user-info .nav-avatar {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 0.5rem;
+            }
+
+            .mobile-close-btn {
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.2rem;
+                cursor: pointer;
+            }
+        }
+    </style>
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+    <!-- Enhanced Navigation with Coordination Platform -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top py-2" id="main-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand text-white" href="{{ url_for('home') }}">
+                <i class="fas fa-shield-alt me-2"></i>Sentinel AI
+            </a>
+
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-expanded="false" aria-controls="navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Mobile Navigation Header -->
+                <div class="mobile-nav-header d-md-none">
+                    <div class="mobile-user-info">
+                        {% if current_user.is_authenticated %}
+                        <div class="nav-avatar">
+                            <i class="fas fa-user text-primary"></i>
+                        </div>
+                        <span>{{ current_user.username }}</span>
+                        {% else %}
+                        <span>Welcome Guest</span>
+                        {% endif %}
+                    </div>
+                    <button class="mobile-close-btn" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-expanded="false" aria-controls="navbarNav">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Main Navigation -->
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}">
+                            <i class="fas fa-home me-1"></i>{{ translate('home') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('about') }}">
+                            <i class="fas fa-info-circle me-1"></i>{{ translate('about') }}
+                        </a>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="javascript:void(0)" id="communityDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-users-cog me-1"></i>{{ translate('community') }}
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="communityDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('reels') }}">
+                                    <i class="fas fa-bullhorn me-2 text-primary"></i>{{ translate('reels') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('community_hub') }}">
+                                    <i class="fas fa-users me-2 text-success"></i>{{ translate('community_hub') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('lifeline') }}">
+                                    <i class="fas fa-hand-holding-heart me-2 text-danger"></i>LifeLine P2P
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+
+
+                    <!-- Professional Tools Dropdown for Officials/Analysts -->
+                    {% if current_user.is_authenticated and current_user.role in ['official', 'analyst'] %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="javascript:void(0)" id="analyticsDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-chart-line me-1"></i>{{ translate('tools') }}
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="analyticsDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('coordination_dashboard') }}">
+                                    <i class="fas fa-tachometer-alt me-2"></i>{{ translate('coordination_platform') }}
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('dashboard') }}">
+                                    <i class="fas fa-chart-bar me-2"></i>{{ translate('basic_dashboard') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('analyst_dashboard') }}">
+                                    <i class="fas fa-chart-line me-2"></i>{{ translate('analyst_dashboard') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('simulation') }}">
+                                    <i class="fas fa-microchip me-2 text-info"></i>{{ translate('risk_simulator') }}
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('emergency_management') }}">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{{ translate('emergency_management')
+                                    }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('resource_management') }}">
+                                    <i class="fas fa-boxes me-2"></i>{{ translate('resource_management') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('volunteer_management') }}">
+                                    <i class="fas fa-hands-helping me-2"></i>{{ translate('volunteer_management') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('situation_reports') }}">
+                                    <i class="fas fa-file-alt me-2"></i>{{ translate('situation_reports') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('search') }}">
+                                    <i class="fas fa-search me-2"></i>{{ translate('search') }}
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_authenticated %}
+                    <!-- Complete Rescue Button (Navbar) -->
+                    <li class="nav-item" id="nav-rescue-item" style="display: none;">
+                        <a class="nav-link btn-complete-rescue" href="#" onclick="navigateToActiveRescue(event)"
+                            id="nav-complete-rescue-btn-top">
+                            <i class="fas fa-flag-checkered me-1"></i>Complete Rescue
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link btn-report" href="{{ url_for('report') }}">
+                            <i class="fas fa-plus me-1"></i>{{ translate('report') }}
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <!-- Right Side Navigation -->
+                <ul class="navbar-nav ms-auto">
+                    <!-- Mobile Language Selector -->
+                    <li class="nav-item d-md-none mb-2">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light btn-sm w-100 dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-globe me-1"></i>{{ current_language.upper() }}
+                            </button>
+                            <ul class="dropdown-menu w-100">
+                                {% for lang_code in available_languages %}
+                                <li>
+                                    <a class="dropdown-item {% if lang_code == current_language %}active{% endif %}"
+                                        href="{{ url_for('set_language', lang=lang_code) }}">
+                                        <i class="fas fa-language me-2"></i>
+                                        {% if lang_code == 'en' %}English
+                                        {% elif lang_code == 'ta' %}Tamil
+                                        {% elif lang_code == 'hi' %}Hindi
+                                        {% elif lang_code == 'te' %}Telugu
+                                        {% elif lang_code == 'ml' %}Malayalam
+                                        {% elif lang_code == 'kn' %}Kannada
+                                        {% else %}{{ lang_code.upper() }}{% endif %}
+                                        ({{ lang_code.upper() }})
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </li>
+
+                    {% if current_user.is_authenticated %}
+                    <!-- Desktop Language Selector -->
+                    <li class="nav-item dropdown d-none d-md-flex me-2">
+                        <a class="nav-link dropdown-toggle" href="javascript:void(0)" id="langDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-globe me-1"></i>{{ current_language.upper() }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="langDropdown">
+                            {% for lang_code in available_languages %}
+                            <li>
+                                <a class="dropdown-item {% if lang_code == current_language %}active{% endif %}"
+                                    href="{{ url_for('set_language', lang=lang_code) }}">
+                                    <i class="fas fa-language me-2"></i>
+                                    {% if lang_code == 'en' %}English
+                                    {% elif lang_code == 'ta' %}Tamil
+                                    {% elif lang_code == 'hi' %}Hindi
+                                    {% elif lang_code == 'te' %}Telugu
+                                    {% elif lang_code == 'ml' %}Malayalam
+                                    {% elif lang_code == 'kn' %}Kannada
+                                    {% else %}{{ lang_code.upper() }}{% endif %}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+
+                    <!-- Notifications -->
+                    <li class="nav-item dropdown me-2">
+                        <a class="nav-link position-relative" href="{{ url_for('notifications') }}" role="button">
+                            <i class="fas fa-bell"></i>
+                            {% set unread_count = current_user.notifications|selectattr('is_read', 'false')|list|length
+                            %}
+                            {% if unread_count > 0 %}
+                            <span
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ unread_count }}
+                            </span>
+                            {% endif %}
+                        </a>
+                    </li>
+
+                    <!-- User Profile -->
+                    <li class="nav-item dropdown d-none d-md-block">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="javascript:void(0)" id="userDropdown"
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="d-flex align-items-center">
+                                <div
+                                    class="nav-avatar rounded-circle d-flex align-items-center justify-content-center me-2 bg-light">
+                                    <i class="fas fa-user text-primary"></i>
+                                </div>
+                                <div class="text-start">
+                                    <div class="small fw-bold">{{ current_user.username }}</div>
+                                    <div class="x-small text-light">{{ translate('level') }} {{ current_user.level }}
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item text-primary fw-bold"
+                                    href="https://www.chatbase.co/chatbot-iframe/5TamUBmuatJ5_CdlVO-MF" target="_blank">
+                                    <i class="fas fa-robot me-2"></i>{{ translate('ai_support_assistant') }}
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item"
+                                    href="{{ url_for('profile', username=current_user.username) }}">
+                                    <i class="fas fa-user me-2"></i>{{ translate('profile') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('edit_profile') }}">
+                                    <i class="fas fa-cog me-2"></i>{{ translate('settings') }}
+                                </a>
+                            </li>
+
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <h6 class="dropdown-header">{{ translate('quick_access') }}</h6>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('leaderboards') }}">
+                                    <i class="fas fa-crown me-2"></i>{{ translate('all_leaderboards') }}
+                                    <span class="badge bg-warning ms-2">{{ current_user.points }} {{ translate('points')
+                                        }}</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('set_location') }}">
+                                    <i class="fas fa-map-marker-alt me-2"></i>{{ translate('my_location') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('alert_preferences') }}">
+                                    <i class="fas fa-bell me-2"></i>{{ translate('alert_preferences') }}
+                                </a>
+                            </li>
+
+                            {% if current_user.role in ['official', 'analyst'] %}
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <h6 class="dropdown-header">{{ translate('professional_tools') }}</h6>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('coordination_dashboard') }}">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Coordination Platform
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('analyst_dashboard') }}">
+                                    <i class="fas fa-chart-line me-2"></i>Analyst Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('debug_users') }}">
+                                    <i class="fas fa-users-cog me-2"></i>User Analytics
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>{{ translate('logout') }}
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Mobile User Menu -->
+                    <li class="nav-item d-md-none">
+                        <div class="d-grid gap-2">
+                            <a class="btn btn-outline-light btn-sm"
+                                href="{{ url_for('profile', username=current_user.username) }}">
+                                <i class="fas fa-user me-2"></i>{{ translate('profile') }}
+                            </a>
+                            <a class="btn btn-outline-light btn-sm" href="{{ url_for('leaderboards') }}">
+                                <i class="fas fa-crown me-2"></i>{{ translate('all_leaderboards') }} <span
+                                    class="badge bg-warning ms-1">{{
+                                    current_user.points }}</span>
+                            </a>
+                            <a class="btn btn-outline-light btn-sm" href="{{ url_for('edit_profile') }}">
+                                <i class="fas fa-cog me-2"></i>{{ translate('settings') }}
+                            </a>
+                            <a class="btn btn-danger btn-sm" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i>{{ translate('logout') }}
+                            </a>
+                        </div>
+                    </li>
+
+                    {% else %}
+                    <!-- Guest User Options -->
+                    <li class="nav-item me-2">
+                        <a class="nav-link" href="{{ url_for('login') }}">
+                            <i class="fas fa-sign-in-alt me-1"></i>{{ translate('login') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-success btn-sm" href="{{ url_for('register') }}">
+                            <i class="fas fa-user-plus me-1"></i>{{ translate('register') }}
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content - Proper spacing for fixed navbar -->
+    <main class="flex-grow-1 position-relative" style="z-index: 1;">
+        <!-- Flash Messages - Centered Container -->
+        <div class="container-fluid">
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-10 col-xl-8">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="fas 
+                                            {% if category == 'success' %}fa-check-circle text-success{% endif %}
+                                            {% if category == 'danger' %}fa-exclamation-triangle text-danger{% endif %}
+                                            {% if category == 'warning' %}fa-exclamation-circle text-warning{% endif %}
+                                            {% if category == 'info' %}fa-info-circle text-info{% endif %}
+                                            me-3 fs-5"></i>
+                            <div class="flex-grow-1">{{ message }}</div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Content - Centered Container -->
+        <div class="container-fluid">
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-10 col-xl-8">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FIXED Floating Action Buttons -->
+    <div class="floating-action-buttons" id="floating-action-buttons">
+        <!-- Report Hazard Button - Always Visible -->
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('report') }}" class="floating-btn floating-btn-danger" title="Report Hazard"
+            id="report-btn">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span class="floating-label">Report Hazard</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('register') }}" class="floating-btn floating-btn-danger" title="Register to Report"
+            id="register-btn">
+            <i class="fas fa-user-plus"></i>
+            <span class="floating-label">Register to Report</span>
+        </a>
+        {% endif %}
+
+        <!-- Be a Volunteer Button -->
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('register_volunteer') }}" class="floating-btn floating-btn-success" title="Be a Volunteer"
+            id="volunteer-btn">
+            <i class="fas fa-hands-helping"></i>
+            <span class="floating-label">Be a Volunteer</span>
+        </a>
+        {% endif %}
+
+
+        <!-- Coordination Platform Button - For Officials/Analysts -->
+        {% if current_user.is_authenticated and current_user.role in ['official', 'analyst'] %}
+        <a href="{{ url_for('coordination_dashboard') }}" class="floating-btn floating-btn-warning"
+            title="Coordination Platform" id="coordination-btn">
+            <i class="fas fa-tachometer-alt"></i>
+            <span class="floating-label">Coordination Platform</span>
+        </a>
+        {% endif %}
+
+
+        <!-- AI Assistant Button - Always Visible -->
+        <button class="floating-btn floating-btn-primary" data-bs-toggle="modal" data-bs-target="#chatbotModal"
+            title="Sentinel AI Assistant" id="ai-btn">
+            <i class="fas fa-robot"></i>
+            <span class="floating-label">AI Assistant</span>
+        </button>
+
+        {% if current_user.is_authenticated %}
+        <!-- SOS Panic Button -->
+        <button class="floating-btn floating-btn-danger pulse-animation" id="sos-btn" onclick="startPanicMode()"
+            title="Panic Mode SOS">
+            <i class="fas fa-microphone"></i>
+            <span class="floating-label">SOS Voice Report</span>
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- SOS Recording Modal -->
+    <div class="modal fade" id="sosModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-danger text-white">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-broadcast-tower me-2"></i>SOS PANIC MODE</h5>
+                    <button type="button" class="btn-close btn-close-white" onclick="stopPanicMode()"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-5">
+                    <div class="display-1 mb-4">
+                        <i class="fas fa-microphone fa-beat" style="--fa-animation-duration: 1s;"></i>
+                    </div>
+                    <h3 class="mb-3">Listening...</h3>
+                    <p class="lead" id="sos-transcript">Speak clearly! Describe the emergency.</p>
+                    <div id="sos-location-status" class="mt-3 small text-white-50">
+                        <i class="fas fa-satellite-dish me-1"></i>Acquiring precise location...
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-light text-danger fw-bold btn-lg px-5"
+                        onclick="stopPanicMode()">
+                        STOP & SEND
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot Modal -->
+    <div class="modal fade" id="chatbotModal" tabindex="-1" aria-labelledby="chatbotModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="chatbotModalLabel">
+                        <i class="fas fa-robot me-2"></i>Sentinel AI Assistant
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <p class="text-muted mx-auto" style="max-width: 400px;">AI monitoring indicates safe conditions. For
+                    real-time updates and comprehensive safety intelligence, please refer to official sources and local
+                    authorities. Sentinel AI provides general information and assistance.</p>
+                <div class="modal-body p-0" style="height: 600px;">
+                    <iframe src="https://4719b0f3-e556-4a85-ae5b-b8f6a9b345d7-00-3li3araff4yhw.sisko.replit.dev/"
+                        style="width: 100%; height: 100%; border: none; border-radius: 0 0 0.375rem 0.375rem;"
+                        title="Sentinel AI Assistant">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Footer -->
+    <footer class="bg-dark text-light py-4 mt-auto position-relative" style="z-index: 1;">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6 mb-3 mb-md-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-shield-alt fa-2x me-3 text-info"></i>
+                        <div>
+                            <h5 class="fw-bold mb-0">Sentinel AI</h5>
+                            <p class="text-muted small">Help protect your community</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 text-md-end">
+                    <div class="d-flex flex-column flex-md-row justify-content-md-end align-items-center gap-3">
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            <a href="{{ url_for('home') }}" class="text-light-50 text-decoration-none small">{{
+                                translate('home') }}</a>
+                            <a href="{{ url_for('about') }}" class="text-light-50 text-decoration-none small">{{
+                                translate('about') }}</a>
+                            <a href="{{ url_for('reels') }}" class="text-light-50 text-decoration-none small">{{
+                                translate('reels') }}</a>
+                            <a href="{{ url_for('community_hub') }}"
+                                class="text-light-50 text-decoration-none small">Community Hub</a>
+                            {% if current_user.is_authenticated and current_user.role in ['official', 'analyst'] %}
+                            <a href="{{ url_for('coordination_dashboard') }}"
+                                class="text-light-50 text-decoration-none small">Coordination</a>
+                            {% endif %}
+                            <a href="#" class="text-light-50 text-decoration-none small" data-bs-toggle="modal"
+                                data-bs-target="#chatbotModal">AI Assistant</a>
+                        </div>
+                        <div class="d-flex gap-3 mt-2 mt-md-0">
+                            <a href="#" class="text-light-50" title="Twitter"><i class="fab fa-twitter"></i></a>
+                            <a href="#" class="text-light-50" title="Facebook"><i class="fab fa-facebook"></i></a>
+                            <a href="#" class="text-light-50" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-light my-3">
+
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <p class="mb-0 small text-light-50">
+                        <i class="fas fa-shield-alt me-1"></i>Officially collaborating with safety and emergency
+                        organizations
+                    </p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <p class="mb-0 small text-light-50">
+                        &copy; 2026 Sentinel AI. All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <!-- SOS Voice Logic -->
+    <script>
+        let recognition;
+        let isRecording = false;
+        let sosTranscript = "";
+        let sosLocation = null;
+
+        function startPanicMode() {
+            const modal = new bootstrap.Modal(document.getElementById('sosModal'));
+            modal.show();
+
+            // 1. Get Location immediately
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        sosLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                            accuracy: position.coords.accuracy
+                        };
+                        document.getElementById('sos-location-status').innerHTML =
+                            `<i class="fas fa-check-circle me-1"></i>Location Locked via GPS`;
+                    },
+                    (error) => {
+                        console.error("Location error:", error);
+                        document.getElementById('sos-location-status').innerHTML =
+                            `<i class="fas fa-exclamation-triangle me-1"></i>GPS Weak - Using Approximate Location`;
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            }
+
+            // 2. Start Speech Recognition
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = '{{ current_language or "en-US" }}'; // Adapt to user language
+
+                recognition.onstart = () => {
+                    isRecording = true;
+                    document.getElementById('sos-transcript').innerText = "Listening...";
+                };
+
+                recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    let finalTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interimTranscript += event.results[i][0].transcript;
+                        }
+                    }
+
+                    if (finalTranscript || interimTranscript) {
+                        document.getElementById('sos-transcript').innerText = finalTranscript + interimTranscript;
+                        sosTranscript = finalTranscript + interimTranscript; // Keep updating
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    console.error("Speech error", event.error);
+                };
+
+                recognition.start();
+            } else {
+                alert("Voice recognition not supported in this browser. Please use the manual report form.");
+            }
+        }
+
+        function stopPanicMode() {
+            if (recognition) {
+                recognition.stop();
+            }
+            isRecording = false;
+
+            // Hide Modal
+            const modalEl = document.getElementById('sosModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            // 3. Submit Report automatically
+            if (sosTranscript.trim().length > 0) {
+                submitSOSReport();
+            } else {
+                // If stopped without text, maybe just cancelled?
+                // Or if it was a false alarm.
+            }
+        }
+
+        function submitSOSReport() {
+            // Show loading overlay or toast
+            if (!sosLocation) {
+                alert("Checking location... please wait a moment.");
+                // Retry specifically for location? For now proceed if we can or block.
+                // In emergency, we might submit without location and resolve later? 
+                // Let's assume location came in or send null.
+            }
+
+            const payload = {
+                transcript: sosTranscript,
+                latitude: sosLocation ? sosLocation.lat : null,
+                longitude: sosLocation ? sosLocation.lng : null,
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('/api/submit_sos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() if csrf_token is defined else '' }}" // Flask-WTF CSRF if active
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('🚨 SOS SENT! Help is on the way.');
+                        window.location.href = "{{ url_for('home') }}"; // Redirect to see it in feed
+                    } else {
+                        alert('Error sending SOS: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Network error. Trying to save offline...');
+                    // Here we could integrate with PWA offline sync
+                });
+        }
+    </script>
+
+    <style>
+        .pulse-animation {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            animation: sos-pulse 2s infinite;
+        }
+
+        @keyframes sos-pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 20px rgba(220, 53, 69, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+    </style>
+
+    <!-- Chart.js for Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Real-time Notifications -->
+    {% if current_user.is_authenticated %}
+    <script>
+        // Toast notification system
+        let lastToastTime = 0;
+        function showNotificationToast() {
+            // Debounce to avoid showing multiple toasts
+            const now = Date.now();
+            if (now - lastToastTime < 10000) return; // Don't show within 10 seconds
+            lastToastTime = now;
+
+            // Create toast container if it doesn't exist
+            let toastContainer = document.getElementById('notificationToastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'notificationToastContainer';
+                toastContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(toastContainer);
+            }
+
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-info alert-dismissible fade show';
+            toast.style.cssText = 'min-width: 300px; animation: slideIn 0.3s ease-in-out;';
+            toast.innerHTML = `
+                <strong>🔔 New Notification!</strong>
+                <p>You have a new assignment notification.</p>
+                <a href="{{ url_for('notifications') }}" class="btn btn-sm btn-primary">View Notification</a>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+
+        // Add slide-in animation CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Fast polling for new notifications (every 3 seconds)
+        function checkNewNotifications() {
+            fetch('{{ url_for("unread_notifications_count") }}')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.querySelector('.nav-link[href*="notifications"] .badge');
+                    if (data.count > 0) {
+                        if (!badge) {
+                            const link = document.querySelector('.nav-link[href*="notifications"]');
+                            const newBadge = document.createElement('span');
+                            newBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger';
+                            newBadge.textContent = data.count;
+                            link.appendChild(newBadge);
+
+                            // Show toast notification
+                            if (typeof showNotificationToast === 'function') {
+                                showNotificationToast();
+                            }
+                        } else {
+                            const oldCount = parseInt(badge.textContent);
+                            if (data.count > oldCount) {
+                                // New notification(s) arrived
+                                if (typeof showNotificationToast === 'function') {
+                                    showNotificationToast();
+                                }
+                            }
+                            badge.textContent = data.count;
+                        }
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                })
+                .catch(err => console.log('Notification poll failed:', err));
+        }
+
+        // Check notifications every 3 seconds (much faster response)
+        setInterval(checkNewNotifications, 3000);
+
+        // Check immediately on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkNewNotifications();
+            // Check again after 1 second to catch delayed notifications
+            setTimeout(checkNewNotifications, 1000);
+        });
+
+        // Also check if page is already loaded
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            checkNewNotifications();
+            setTimeout(checkNewNotifications, 1000);
+        }
+    </script>
+    {% endif %}
+
+    {% block scripts %}{% endblock %}
+
+    <!-- Enhanced Responsive Script -->
+    <script>
+        // Language direction detection
+        const rtlLanguages = ['ar', 'he', 'fa', 'ur'];
+        if (rtlLanguages.includes('{{ current_language }}')) {
+            document.documentElement.dir = 'rtl';
+        } else {
+            document.documentElement.dir = 'ltr';
+        }
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Enhanced responsive adjustments
+        function adjustUIForScreenSize() {
+            const width = window.innerWidth;
+            const floatingButtons = document.getElementById('floating-action-buttons');
+
+            // Adjust floating buttons for very small screens
+            if (width < 400) {
+                if (floatingButtons) {
+                    floatingButtons.style.bottom = '8px';
+                    floatingButtons.style.right = '8px';
+                    floatingButtons.style.gap = '8px';
+                }
+            } else if (width < 576) {
+                if (floatingButtons) {
+                    floatingButtons.style.bottom = '10px';
+                    floatingButtons.style.right = '10px';
+                    floatingButtons.style.gap = '10px';
+                }
+            }
+
+            // Ensure all content fits within viewport
+            document.body.style.maxWidth = '100vw';
+            document.body.style.overflowX = 'hidden';
+        }
+
+        // Force floating buttons visibility
+        function forceFloatingButtonsVisibility() {
+            const floatingButtons = document.getElementById('floating-action-buttons');
+            const reportBtn = document.getElementById('report-btn') || document.getElementById('register-btn');
+            const coordinationBtn = document.getElementById('coordination-btn');
+            const aiBtn = document.getElementById('ai-btn');
+
+            if (floatingButtons) {
+                floatingButtons.style.display = 'flex';
+                floatingButtons.style.visibility = 'visible';
+                floatingButtons.style.opacity = '1';
+                floatingButtons.style.zIndex = '9999';
+                floatingButtons.style.position = 'fixed';
+            }
+
+            if (reportBtn) {
+                reportBtn.style.display = 'flex';
+                reportBtn.style.visibility = 'visible';
+                reportBtn.style.opacity = '1';
+            }
+
+            if (coordinationBtn) {
+                coordinationBtn.style.display = 'flex';
+                coordinationBtn.style.visibility = 'visible';
+                coordinationBtn.style.opacity = '1';
+            }
+
+
+            if (aiBtn) {
+                aiBtn.style.display = 'flex';
+                aiBtn.style.visibility = 'visible';
+                aiBtn.style.opacity = '1';
+            }
+        }
+
+        // Force visibility on load
+        document.addEventListener('DOMContentLoaded', function () {
+            forceFloatingButtonsVisibility();
+            adjustUIForScreenSize();
+
+            // Add loading animation
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.3s ease';
+                document.body.style.opacity = '1';
+            }, 100);
+
+            // Mobile menu enhancements
+            const navbarToggler = document.querySelector('.navbar-toggler');
+            const navbarCollapse = document.querySelector('.navbar-collapse');
+
+            if (navbarToggler && navbarCollapse) {
+                navbarToggler.addEventListener('click', function () {
+                    const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                    if (isExpanded) {
+                        // Menu is closing
+                        document.body.style.overflow = 'auto';
+                    } else {
+                        // Menu is opening
+                        document.body.style.overflow = 'hidden';
+                    }
+                });
+
+                // Close mobile menu when clicking on a link
+                const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+                navLinks.forEach(link => {
+                    link.addEventListener('click', function () {
+                        if (window.innerWidth < 768) {
+                            navbarToggler.click();
+                        }
+                    });
+                });
+            }
+        });
+
+        // Adjust UI on window resize
+        window.addEventListener('resize', adjustUIForScreenSize);
+
+        // Additional safety check - run every 5 seconds
+        setInterval(function () {
+            const floatingButtons = document.getElementById('floating-action-buttons');
+            if (floatingButtons && (floatingButtons.style.display === 'none' ||
+                floatingButtons.style.visibility === 'hidden' ||
+                floatingButtons.style.opacity === '0')) {
+                floatingButtons.style.display = 'flex';
+                floatingButtons.style.visibility = 'visible';
+                floatingButtons.style.opacity = '1';
+            }
+        }, 5000);
+
+
+        // Coordination Platform Utility Functions
+        window.coordinationUtils = {
+            // Update emergency status
+            updateEmergencyStatus: function (emergencyId, newStatus) {
+                fetch(`/api/coordination/emergency/${emergencyId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            alert('Failed to update status: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to update status');
+                    });
+            },
+
+            // Send emergency alert
+            sendEmergencyAlert: function (emergencyId) {
+                if (confirm('Are you sure you want to send alerts to all users in the affected area?')) {
+                    fetch(`/api/coordination/emergency/${emergencyId}/alert`, {
+                        method: 'POST'
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert(`Emergency alerts sent to ${data.users_alerted} users`);
+                            } else {
+                                alert('Failed to send alerts: ' + data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Failed to send alerts');
+                        });
+                }
+            },
+
+            // Match volunteers for emergency
+            matchVolunteers: function (emergencyId) {
+                fetch(`/api/coordination/volunteers/match?emergency_id=${emergencyId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.matched_volunteers) {
+                            // Display matched volunteers in a modal or update UI
+                            this.displayMatchedVolunteers(data.matched_volunteers);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to match volunteers');
+                    });
+            },
+
+            // Display matched volunteers
+            displayMatchedVolunteers: function (volunteers) {
+                const modalBody = document.getElementById('volunteerMatchModalBody');
+                if (modalBody && volunteers.length > 0) {
+                    let html = '<div class="list-group">';
+                    volunteers.forEach(volunteer => {
+                        html += `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${volunteer.name}</h6>
+                                <p class="mb-1 small">Skills: ${volunteer.skills}</p>
+                                <p class="mb-1 small">Experience: ${volunteer.experience_level}</p>
+                                ${volunteer.distance_km ? `<p class="mb-0 small">Distance: ${volunteer.distance_km.toFixed(1)} km</p>` : ''}
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="coordinationUtils.assignVolunteer(${volunteer.id})">
+                                Assign
+                            </button>
+                        </div>
+                    </div>
+                    `;
+                    });
+                    html += '</div>';
+                    modalBody.innerHTML = html;
+
+                    // Show modal
+                    new bootstrap.Modal(document.getElementById('volunteerMatchModal')).show();
+                } else {
+                    alert('No suitable volunteers found for this emergency.');
+                }
+            },
+
+            // Assign volunteer to emergency
+            assignVolunteer: function (volunteerId) {
+                // Implementation for assigning a specific volunteer
+                console.log('Assigning volunteer:', volunteerId);
+                // This would typically open a form to specify the role and assignment details
+            }
+        };
+    </script>
+
+    <!-- Complete Rescue Button Handler -->
+    <script>
+        // Check for active rescue assignment on page load
+        function checkActiveRescue() {
+            const btn = document.getElementById('complete-rescue-btn');
+            const navRescueItem = document.getElementById('nav-rescue-item');
+            const navRescueBtn = document.getElementById('nav-complete-rescue-btn-top');
+
+            if (!btn && !navRescueBtn) {
+                console.log('Complete Rescue buttons not found');
+                return;
+            }
+
+            console.log('Checking for active rescue assignment...');
+            fetch('/api/coordination/assignments/active', {
+                method: 'GET',
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (!response.ok && response.status !== 403) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.assignment_id) {
+                        const assignmentId = data.assignment_id;
+
+                        // Update floating button
+                        if (btn) {
+                            btn.dataset.assignmentId = assignmentId;
+                            btn.style.visibility = 'visible';
+                            btn.style.opacity = '1';
+                        }
+
+                        // Update navbar button
+                        if (navRescueItem) {
+                            navRescueItem.style.display = 'block';
+                        }
+                        if (navRescueBtn) {
+                            navRescueBtn.dataset.assignmentId = assignmentId;
+                        }
+                    } else {
+                        // Hide floating button
+                        if (btn) {
+                            btn.style.visibility = 'hidden';
+                            btn.style.opacity = '0';
+                        }
+
+                        // Hide navbar button
+                        if (navRescueItem) {
+                            navRescueItem.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking active rescue:', error);
+                    if (btn) {
+                        btn.style.visibility = 'hidden';
+                        btn.style.opacity = '0';
+                    }
+                    if (navRescueItem) {
+                        navRescueItem.style.display = 'none';
+                    }
+                });
+        }
+
+        // Navigate to active rescue completion form
+        function navigateToActiveRescue(e) {
+            e.preventDefault();
+            // Try getting assignmentId from either the clicked button or the global buttons
+            const clickedBtn = e.currentTarget;
+            let assignmentId = clickedBtn.dataset.assignmentId;
+
+            if (!assignmentId) {
+                const navBtn = document.getElementById('nav-complete-rescue-btn-top');
+                const floatBtn = document.getElementById('complete-rescue-btn');
+                assignmentId = (navBtn && navBtn.dataset.assignmentId) || (floatBtn && floatBtn.dataset.assignmentId);
+            }
+
+            if (assignmentId) {
+                window.location.href = `/rescue-complete?assignment_id=${assignmentId}`;
+            } else {
+                // Secondary check if data is missing but assignment might exist
+                checkActiveRescue();
+                alert('No active rescue assignment found. Please refresh if you just accepted one.');
+            }
+        }
+
+        // Check on page load
+        document.addEventListener('DOMContentLoaded', checkActiveRescue);
+
+        // Also check immediately if document is already loaded
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            checkActiveRescue();
+        }
+
+        // Re-check every 30 seconds to update button visibility
+        setInterval(checkActiveRescue, 30000);
+    </script>
+
+    <!-- Real-Time Notification System -->
+    <!-- Removed - using improved checkNewNotifications() from earlier in template -->
+
+    <!-- PWA Registration Script -->
+    <script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
+    
+    <!-- Offline Sync Manager -->
+    <script src="{{ url_for('static', filename='js/offline-sync.js') }}"></script>
+
+</body>
+</html>

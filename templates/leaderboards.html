@@ -1,0 +1,733 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    .leaderboards-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .leaderboards-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+
+    .leaderboards-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .leaderboards-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1.1rem;
+    }
+
+    /* Tab Navigation — Sticky pill bar, visible on all screens */
+    .tab-navigation {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        flex-wrap: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 0.75rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .tab-navigation::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+        flex: 1;
+        min-width: 100px;
+        padding: 0.7rem 0.5rem;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        color: rgba(255, 255, 255, 0.65);
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        white-space: nowrap;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        line-height: 1.2;
+    }
+
+    .tab-btn:hover {
+        background: rgba(255,255,255,0.12);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .tab-btn.active {
+        background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.15));
+        border-color: #FFD700;
+        color: #FFD700;
+        box-shadow: 0 4px 15px rgba(255,215,0,0.2);
+    }
+
+    .tab-icon {
+        font-size: 1.4rem;
+        display: block !important; /* Always show icons */
+        line-height: 1;
+    }
+
+    .tab-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+    }
+
+    /* Tab Content */
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Leaderboard Card */
+    .leaderboard-card {
+        background: linear-gradient(135deg, rgba(26, 54, 93, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .leaderboard-header {
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: 80px 2fr 1fr 1fr 1fr;
+        gap: 1.5rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .leaderboard-row {
+        padding: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: grid;
+        grid-template-columns: 80px 2fr 1fr 1fr 1fr;
+        gap: 1.5rem;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+
+    .leaderboard-row:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .leaderboard-row:last-child {
+        border-bottom: none;
+    }
+
+    /* Rescue Tab Specific Layout */
+    .rescue-header, .rescue-row {
+        grid-template-columns: 80px 2.5fr 1fr 1fr 1.5fr;
+    }
+
+    .rank-badge {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.5rem;
+    }
+
+    .rank-1 {
+        background: linear-gradient(135deg, #ffd54f 0%, #ffb74d 100%);
+        color: #333;
+    }
+
+    .rank-2 {
+        background: linear-gradient(135deg, #c0c0c0 0%, #a9a9a9 100%);
+        color: #333;
+    }
+
+    .rank-3 {
+        background: linear-gradient(135deg, #cd7f32 0%, #b87533 100%);
+        color: white;
+    }
+
+    .rank-other {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    .user-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .user-name {
+        font-weight: 600;
+        color: white;
+        margin-bottom: 0.3rem;
+    }
+
+    .user-badge {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .badge-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.25rem 0.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .badge-verified {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+    }
+
+    .badge-expert {
+        background: rgba(33, 150, 243, 0.2);
+        color: #64b5f6;
+    }
+
+    .points-value {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #ffd54f;
+        text-align: center;
+    }
+
+    .rescues-value {
+        color: rgba(255, 255, 255, 0.8);
+        text-align: center;
+    }
+
+    .experience-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .experience-beginner {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+    }
+
+    .experience-intermediate {
+        background: rgba(33, 150, 243, 0.2);
+        color: #64b5f6;
+    }
+
+    .experience-expert {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffd54f;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .loading-spinner {
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top: 4px solid #42a5f5;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .pagination-btn {
+        padding: 0.5rem 1rem;
+        background: rgba(33, 150, 243, 0.8);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: #42a5f5;
+        transform: translateY(-2px);
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 992px) {
+        .leaderboard-header,
+        .leaderboard-row {
+            grid-template-columns: 70px 2fr 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .rescue-header, .rescue-row {
+            grid-template-columns: 70px 2.5fr 1fr 1fr;
+        }
+
+        .experience-badge {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .leaderboards-header h1 { font-size: 2rem; }
+
+        .leaderboard-header,
+        .leaderboard-row,
+        .rescue-header,
+        .rescue-row {
+            grid-template-columns: 60px 1.5fr 1fr !important;
+            gap: 0.75rem;
+            padding: 0.75rem;
+        }
+
+        .points-value,
+        .rescues-value,
+        .experience-badge,
+        .progress-container { display: none; }
+
+        .rank-badge { width: 50px; height: 50px; font-size: 1.2rem; }
+    }
+
+    @media (max-width: 576px) {
+        .leaderboards-container { margin: 1rem 0.5rem; }
+        .leaderboards-header h1 { font-size: 1.5rem; }
+
+        .leaderboard-header,
+        .leaderboard-row,
+        .rescue-header,
+        .rescue-row {
+            grid-template-columns: 50px 1fr !important;
+            gap: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        .rank-badge { width: 45px; height: 45px; font-size: 1rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="leaderboards-container">
+    <!-- Header -->
+    <div class="leaderboards-header">
+        <h1><i class="fas fa-trophy me-2"></i>Leaderboards</h1>
+        <p class="leaderboards-subtitle">View top contributors across different categories</p>
+    </div>
+
+    <!-- Tab Navigation — Sticky pill bar -->
+    <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="community" onclick="switchTab('community')">
+            <span class="tab-icon">👥</span>
+            <span class="tab-label">Community</span>
+        </button>
+        <button class="tab-btn" data-tab="rescue" onclick="switchTab('rescue')">
+            <span class="tab-icon">🚨</span>
+            <span class="tab-label">Rescue Heroes</span>
+        </button>
+        <button class="tab-btn" data-tab="eco" onclick="switchTab('eco')">
+            <span class="tab-icon">♻️</span>
+            <span class="tab-label">Eco Champions</span>
+        </button>
+    </div>
+
+    <!-- Community Leaderboard Tab -->
+    <div class="tab-content active" id="community-tab">
+        <div class="leaderboard-card">
+            <div class="leaderboard-header">
+                <div>Rank</div>
+                <div>Contributor</div>
+                <div>Total Points</div>
+                <div>Breakdown</div>
+                <div>Activity</div>
+            </div>
+            <div id="communityContent">
+                <div class="empty-state">
+                    <div class="loading-spinner"></div>
+                    Loading community leaderboard...
+                </div>
+            </div>
+        </div>
+        <div class="pagination" id="communityPagination" style="display: none;">
+            <button class="pagination-btn" onclick="previousPage('community')">← Previous</button>
+            <span id="communityPageInfo" style="color: rgba(255, 255, 255, 0.7); padding: 0.5rem 1rem;"></span>
+            <button class="pagination-btn" onclick="nextPage('community')">Next →</button>
+        </div>
+    </div>
+
+    <!-- Rescue Heroes Leaderboard Tab -->
+    <div class="tab-content" id="rescue-tab">
+        <!-- District / Regional League Filter + Certificate Download -->
+        <div class="filter-section" style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem;">
+            <select id="districtFilter" class="form-select bg-dark text-white border-secondary" style="max-width: 320px; padding: 0.5rem 1rem; border-radius: 8px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2) !important; background-color: #1e293b !important;" onchange="loadRescueLeaderboard(1)">
+                <option value="all" style="font-weight: bold; color: #ffd54f;">🌍 Global League (All Regions)</option>
+                <option value="Hyderabad">🏆 Hyderabad District</option>
+                <option value="Medchal-Malkajgiri">🏆 Medchal-Malkajgiri</option>
+                <option value="Rangareddy">🏆 Rangareddy</option>
+                <option value="Warangal">🏆 Warangal</option>
+                <option value="Adilabad">🏆 Adilabad</option>
+                <option value="Karimnagar">🏆 Karimnagar</option>
+                <option value="Khammam">🏆 Khammam</option>
+                <option value="Nizamabad">🏆 Nizamabad</option>
+                <option value="Yadadri">🏆 Yadadri Bhuvanagiri</option>
+            </select>
+            {% if current_user.points >= 500 %}
+            <a href="/certificate/download/{{ current_user.id }}" target="_blank"
+               style="display: inline-flex; align-items: center; gap: 0.5rem;
+                      padding: 0.55rem 1.4rem; border-radius: 8px; font-weight: 800; font-size: 0.9rem;
+                      background: linear-gradient(135deg, #d97706, #f59e0b); color: #111;
+                      text-decoration: none; box-shadow: 0 4px 15px rgba(245,158,11,0.4);
+                      transition: all 0.2s; letter-spacing: 0.5px;"
+               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(245,158,11,0.5)';"
+               onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 15px rgba(245,158,11,0.4)';"
+            >
+                🏆 Download Certificate
+            </a>
+            {% else %}
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem;
+                        padding: 0.55rem 1.4rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem;
+                        background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35);
+                        border: 1px dashed rgba(255,255,255,0.15); cursor: not-allowed;"
+                 title="Earn 2000 points to unlock your Government Certificate">
+                🔒 Certificate ({{ current_user.points }}/500 pts)
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="leaderboard-card">
+            <div class="leaderboard-header rescue-header">
+                <div>Rank</div>
+                <div>Volunteer</div>
+                <div>Points</div>
+                <div>Rescues</div>
+                <div style="text-align: right; margin-right: 15px;">Bounty Rewards</div>
+            </div>
+            <div id="rescueContent">
+                <div class="empty-state">
+                    <div class="loading-spinner"></div>
+                    Loading rescue leaderboard...
+                </div>
+            </div>
+        </div>
+        <div class="pagination" id="rescuePagination" style="display: none;">
+            <button class="pagination-btn" onclick="previousPage('rescue')">← Previous</button>
+            <span id="rescuePageInfo" style="color: rgba(255, 255, 255, 0.7); padding: 0.5rem 1rem;"></span>
+            <button class="pagination-btn" onclick="nextPage('rescue')">Next →</button>
+        </div>
+    </div>
+
+    <!-- Eco Leaderboard Tab -->
+    <div class="tab-content" id="eco-tab">
+        <div class="leaderboard-card">
+            <div class="leaderboard-header">
+                <div>Rank</div>
+                <div>Contributor</div>
+                <div>Points</div>
+                <div>Activities</div>
+                <div>Impact</div>
+            </div>
+            <div id="ecoContent">
+                <div class="empty-state">
+                    <div class="loading-spinner"></div>
+                    Loading eco leaderboard...
+                </div>
+            </div>
+        </div>
+        <div class="pagination" id="ecoPagination" style="display: none;">
+            <button class="pagination-btn" onclick="previousPage('eco')">← Previous</button>
+            <span id="ecoPageInfo" style="color: rgba(255, 255, 255, 0.7); padding: 0.5rem 1rem;"></span>
+            <button class="pagination-btn" onclick="nextPage('eco')">Next →</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentPages = {
+        community: 1,
+        rescue: 1,
+        eco: 1
+    };
+    let totalPages = {
+        community: 1,
+        rescue: 1,
+        eco: 1
+    };
+    const perPage = 50;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCommunityLeaderboard(1);
+        loadRescueLeaderboard(1);
+    });
+
+    function switchTab(tab) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+        // Show selected tab
+        document.getElementById(tab + '-tab').classList.add('active');
+        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+
+        // Load data for eco tab if not loaded yet
+        if (tab === 'eco' && document.getElementById('ecoContent').innerHTML.includes('Loading')) {
+            loadEcoLeaderboard(1);
+        }
+    }
+
+    async function loadCommunityLeaderboard(page) {
+        try {
+            const response = await fetch(`/api/community_leaderboard?page=${page}&per_page=${perPage}`);
+            if (!response.ok) throw new Error('Failed to load');
+            
+            const data = await response.json();
+            currentPages.community = page;
+            totalPages.community = data.pages;
+            
+            renderCommunityLeaderboard(data.leaderboard);
+            updatePagination('community', data);
+        } catch (error) {
+            document.getElementById('communityContent').innerHTML = `<div class="empty-state"><div>Error loading leaderboard</div></div>`;
+        }
+    }
+
+    async function loadRescueLeaderboard(page) {
+        try {
+            const districtFilter = document.getElementById('districtFilter');
+            const district = districtFilter ? districtFilter.value : 'all';
+            const response = await fetch(`/api/leaderboard?page=${page}&per_page=${perPage}&district=${district}`);
+            if (!response.ok) throw new Error('Failed to load');
+            
+            const data = await response.json();
+            currentPages.rescue = page;
+            totalPages.rescue = data.pages;
+            
+            renderRescueLeaderboard(data.leaderboard);
+            updatePagination('rescue', data);
+        } catch (error) {
+            document.getElementById('rescueContent').innerHTML = `<div class="empty-state"><div>Error loading leaderboard</div></div>`;
+        }
+    }
+
+    async function loadEcoLeaderboard(page) {
+        try {
+            const response = await fetch(`/api/eco_leaderboard?page=${page}&per_page=${perPage}`);
+            if (!response.ok) throw new Error('Failed to load');
+            
+            const data = await response.json();
+            currentPages.eco = page;
+            totalPages.eco = data.pages || 1;
+            
+            renderEcoLeaderboard(data.leaderboard || data);
+            updatePagination('eco', data);
+        } catch (error) {
+            document.getElementById('ecoContent').innerHTML = `<div class="empty-state"><div>Error loading leaderboard</div></div>`;
+        }
+    }
+
+    function renderCommunityLeaderboard(contributors) {
+        let html = '';
+        contributors.forEach(c => {
+            const rankClass = c.rank === 1 ? 'rank-1' : c.rank === 2 ? 'rank-2' : c.rank === 3 ? 'rank-3' : 'rank-other';
+            const rankIcon = c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : c.rank;
+            
+            html += `
+                <div class="leaderboard-row">
+                    <div><div class="rank-badge ${rankClass}">${rankIcon}</div></div>
+                    <div class="user-info">
+                        <div class="user-name">${c.username}</div>
+                        <div class="user-badge">
+                            ${c.is_verified ? '<span class="badge-item badge-verified">✓ Verified</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="points-value">${c.total_points}</div>
+                    <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.6);">
+                        Reports: ${c.user_points}<br>Rescues: ${c.rescue_points}
+                    </div>
+                    <div style="text-align: center; color: rgba(255, 255, 255, 0.8);">
+                        ${c.rescues > 0 ? c.rescues + ' Rescues' : 'Active'}
+                    </div>
+                </div>
+            `;
+        });
+        document.getElementById('communityContent').innerHTML = html;
+    }
+
+    function renderRescueLeaderboard(volunteers) {
+        let html = '';
+        volunteers.forEach(v => {
+            const rankClass = v.rank === 1 ? 'rank-1' : v.rank === 2 ? 'rank-2' : v.rank === 3 ? 'rank-3' : 'rank-other';
+            const rankIcon = v.rank === 1 ? '🥇' : v.rank === 2 ? '🥈' : v.rank === 3 ? '🥉' : v.rank;
+            
+            // Format location for display
+            const locText = v.location && v.location !== 'Unknown' ? v.location.split(',')[0].substring(0, 15) : 'Unknown Area';
+            
+            // Construct Regional Title badge if won
+            const titleBadge = v.title ? `<div style="color: #10b981; font-size: 0.85rem; font-weight: 800; margin-top: 6px; letter-spacing: 0.5px; text-transform: uppercase;">${v.title}</div>` : '';
+            
+            // Progress Bar logic for Government Certification
+            const certGoal = 500;
+            const pts = v.points;
+            const percent = Math.min((pts / certGoal) * 100, 100);
+            const progressText = pts >= certGoal ? 
+                '<span style="color:#10b981;"><i class="fas fa-lock-open"></i> Cert Unlocked</span>' : 
+                `<span style="color:#ffb74d;">${certGoal - pts} pts to Govt Cert</span>`;
+
+            html += `
+                <div class="leaderboard-row rescue-row">
+                    <div><div class="rank-badge ${rankClass}">${rankIcon}</div></div>
+                    <div class="user-info">
+                        <div class="user-name">${v.username} <span style="font-size: 0.8rem; color: #94a3b8; font-weight: normal; margin-left: 5px;">📍 ${locText}</span></div>
+                        <div class="user-badge" style="margin-bottom: 2px;">
+                            ${v.is_verified ? '<span class="badge-item badge-verified">✓ Verified</span>' : ''}
+                        </div>
+                        ${titleBadge}
+                    </div>
+                    <div class="points-value">${v.points}</div>
+                    <div class="rescues-value">${v.rescues}</div>
+                    <div>
+                        <div class="progress-container" style="width: 100%; max-width: 180px; margin-left: auto;">
+                            <div style="font-size: 0.75rem; font-weight: bold; margin-bottom: 6px; color: #fff;">Milestone Progress</div>
+                            <div style="height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
+                                <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #f59e0b, #fcd34d); transition: width 1s ease-out;"></div>
+                            </div>
+                            <div style="font-size: 0.7rem; text-align: right; font-weight: 700; letter-spacing: 0.3px;">${progressText}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        document.getElementById('rescueContent').innerHTML = html;
+    }
+
+    function renderEcoLeaderboard(data) {
+        let html = '';
+        const items = Array.isArray(data) ? data : data.leaderboard || [];
+        
+        if (items.length === 0) {
+            html = '<div class="empty-state"><div>No eco data available</div></div>';
+        } else {
+            items.forEach((item, idx) => {
+                const rank = item.rank || (idx + 1);
+                const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+                const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+                
+                html += `
+                    <div class="leaderboard-row">
+                        <div><div class="rank-badge ${rankClass}">${rankIcon}</div></div>
+                        <div class="user-info">
+                            <div class="user-name">${item.username || 'User ' + rank}</div>
+                        </div>
+                        <div class="points-value">${item.total_points || item.eco_points || 0}</div>
+                        <div style="text-align: center; color: rgba(255, 255, 255, 0.8);">${item.activities || '-'}</div>
+                        <div style="text-align: center; font-size: 0.9rem; color: rgba(255, 255, 255, 0.7);">
+                            ${item.impact || item.carbon_saved ? (item.carbon_saved || item.impact) + ' kg CO₂' : '-'}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        document.getElementById('ecoContent').innerHTML = html;
+    }
+
+    function updatePagination(tab, data) {
+        const pagination = document.getElementById(tab + 'Pagination');
+        const pageInfo = document.getElementById(tab + 'PageInfo');
+        
+        if (data.pages > 1) {
+            pagination.style.display = 'flex';
+            pageInfo.textContent = `Page ${data.current_page} of ${data.pages}`;
+        } else {
+            pagination.style.display = 'none';
+        }
+    }
+
+    function previousPage(tab) {
+        if (currentPages[tab] > 1) {
+            currentPages[tab]--;
+            if (tab === 'community') loadCommunityLeaderboard(currentPages[tab]);
+            else if (tab === 'rescue') loadRescueLeaderboard(currentPages[tab]);
+            else if (tab === 'eco') loadEcoLeaderboard(currentPages[tab]);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function nextPage(tab) {
+        if (currentPages[tab] < totalPages[tab]) {
+            currentPages[tab]++;
+            if (tab === 'community') loadCommunityLeaderboard(currentPages[tab]);
+            else if (tab === 'rescue') loadRescueLeaderboard(currentPages[tab]);
+            else if (tab === 'eco') loadEcoLeaderboard(currentPages[tab]);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+</script>
+{% endblock %}

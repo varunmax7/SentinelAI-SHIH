@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }} - Following{% endblock %}
+
+{% block head_extra %}
+<style>
+    .following-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .user-card {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: white;
+    }
+
+    .user-card:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+
+    .user-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 1.5rem;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .user-info h5 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .user-info p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+    }
+
+    .header-section {
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .back-btn {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .back-btn:hover {
+        color: white;
+    }
+
+    .pagination {
+        margin-top: 2rem;
+        justify-content: center;
+    }
+
+    .page-link {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    .page-link:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .page-item.active .page-link {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .page-item.disabled .page-link {
+        background: transparent;
+        border-color: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="following-container">
+    <div class="header-section">
+        <div>
+            <a href="{{ url_for('profile', username=user.username) }}" class="back-btn">
+                <i class="fas fa-arrow-left me-2"></i>Back to Profile
+            </a>
+            <h2 class="mt-3">{{ user.username }} is Following</h2>
+        </div>
+        <div class="badge bg-primary fs-5">{{ following.total }}</div>
+    </div>
+
+    {% if following.items %}
+    <div class="following-list">
+        {% for followed_user in following.items %}
+        <a href="{{ url_for('profile', username=followed_user.username) }}" class="user-card">
+            <img src="{{ url_for('uploaded_file', filename=followed_user.profile_image) if followed_user.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                class="user-avatar" alt="{{ followed_user.username }}">
+            <div class="user-info">
+                <h5>{{ followed_user.username }}</h5>
+                <p>
+                    {% if followed_user.role == 'official' %}
+                    <i class="fas fa-shield-alt me-1"></i>Official
+                    {% elif followed_user.role == 'analyst' %}
+                    <i class="fas fa-chart-bar me-1"></i>Analyst
+                    {% else %}
+                    Level {{ followed_user.level }} Citizen
+                    {% endif %}
+                </p>
+            </div>
+            <div class="ms-auto">
+                <i class="fas fa-chevron-right text-muted"></i>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if following.pages > 1 %}
+    <nav aria-label="Following pagination">
+        <ul class="pagination">
+            <li class="page-item {{ 'disabled' if not following.has_prev }}">
+                <a class="page-link"
+                    href="{{ url_for('user_following', username=user.username, page=following.prev_num) if following.has_prev else '#' }}">Previous</a>
+            </li>
+
+            {% for page_num in following.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {{ 'active' if page_num == following.page }}">
+                <a class="page-link" href="{{ url_for('user_following', username=user.username, page=page_num) }}">{{
+                    page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+            {% endfor %}
+
+            <li class="page-item {{ 'disabled' if not following.has_next }}">
+                <a class="page-link"
+                    href="{{ url_for('user_following', username=user.username, page=following.next_num) if following.has_next else '#' }}">Next</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5 glass-card">
+        <i class="fas fa-user-plus fa-4x text-muted mb-4"></i>
+        <h3>Not following anyone</h3>
+        <p class="text-muted">Users {{ user.username }} follows will appear here.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

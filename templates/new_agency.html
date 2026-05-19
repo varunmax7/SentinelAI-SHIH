@@ -1,0 +1,160 @@
+<!-- templates/new_agency.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-building me-2"></i>Add New Agency
+                </h1>
+                <a href="{{ url_for('agency_management') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Agencies
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Agency Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('new_agency') }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.name.label(class="form-label fw-bold") }}
+                                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""),
+                                    placeholder="Enter agency name") }}
+                                    {% if form.name.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.name.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.type.label(class="form-label fw-bold") }}
+                                    {{ form.type(class="form-select" + (" is-invalid" if form.type.errors else "")) }}
+                                    {% if form.type.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.type.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.contact_email.label(class="form-label fw-bold") }}
+                                    {{ form.contact_email(class="form-control" + (" is-invalid" if
+                                    form.contact_email.errors else ""), placeholder="Enter contact email") }}
+                                    {% if form.contact_email.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.contact_email.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.contact_phone.label(class="form-label fw-bold") }}
+                                    {{ form.contact_phone(class="form-control" + (" is-invalid" if
+                                    form.contact_phone.errors else ""), placeholder="Enter contact phone") }}
+                                    {% if form.contact_phone.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.contact_phone.errors %}
+                                        {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-group">
+                                {{ form.resources.label(class="form-label fw-bold") }}
+                                {{ form.resources(class="form-control" + (" is-invalid" if form.resources.errors else
+                                ""), placeholder="Describe available resources (e.g. boats, medical kits, etc.)",
+                                rows="3") }}
+                                {% if form.resources.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.resources.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-group">
+                                {{ form.capabilities.label(class="form-label fw-bold") }}
+                                {{ form.capabilities(class="form-control" + (" is-invalid" if form.capabilities.errors
+                                else ""), placeholder="Describe agency capabilities (e.g. underwater rescue, rapid
+                                evacuation)", rows="3") }}
+                                {% if form.capabilities.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.capabilities.errors %}
+                                    {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('agency_management') }}" class="btn btn-secondary me-md-2">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control,
+    .form-select {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+
+    .card {
+        border: none;
+        border-radius: 12px;
+    }
+</style>
+{% endblock %}

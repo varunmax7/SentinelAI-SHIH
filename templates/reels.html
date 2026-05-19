@@ -1,0 +1,888 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/image-fix.css') }}">
+<style>
+    .reels-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    .reel-item {
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .reel-item:hover {
+        background: rgba(0, 0, 0, 0.6);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        margin-right: 12px;
+        object-fit: cover;
+    }
+
+    .user-details {
+        flex: 1;
+    }
+
+    .username {
+        font-weight: 700;
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+    }
+
+    .username:hover {
+        color: #42a5f5;
+    }
+
+    .timestamp {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 14px;
+        margin-top: 2px;
+    }
+
+    .hazard-badge {
+        background: linear-gradient(135deg, #ff9800, #ff5722);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+        margin-top: 4px;
+    }
+
+    .location {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        margin: 8px 0;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .reel-media {
+        width: 100%;
+        border-radius: 16px;
+        margin: 15px 0;
+        max-height: 400px;
+        min-height: 200px;
+        object-fit: cover;
+        display: block;
+        visibility: visible;
+        opacity: 1;
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .reel-description {
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 16px;
+        line-height: 1.5;
+        margin-bottom: 15px;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: space-around;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 15px;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        padding: 8px 16px;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    .action-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    .action-btn.liked {
+        color: #ff5252;
+    }
+
+    .action-btn.comment-active {
+        color: #42a5f5;
+    }
+
+    .action-count {
+        font-weight: 600;
+    }
+
+    /* Verification Badges */
+    .verification-badges {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 10;
+    }
+
+    .v-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        animation: fadeInRight 0.5s ease-out;
+    }
+
+    .v-badge-official {
+        background: rgba(46, 204, 113, 0.9);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .v-badge-local {
+        background: rgba(241, 196, 15, 0.9);
+        color: #1a1a1a;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Comments Section */
+    .comments-section {
+        margin-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 15px;
+        display: none;
+    }
+
+    .comments-section.active {
+        display: block;
+    }
+
+    .comment-form {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .comment-input {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 12px 16px;
+        color: white;
+        font-size: 14px;
+    }
+
+    .comment-input:focus {
+        outline: none;
+        border-color: #42a5f5;
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .comment-input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .submit-comment {
+        background: #42a5f5;
+        border: none;
+        border-radius: 20px;
+        padding: 12px 20px;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .submit-comment:hover {
+        background: #2196f3;
+        transform: translateY(-1px);
+    }
+
+    .submit-comment:disabled {
+        background: rgba(255, 255, 255, 0.2);
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .comments-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .comment-item {
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .comment-item:last-child {
+        border-bottom: none;
+    }
+
+    .comment-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+
+    .comment-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        margin-right: 10px;
+        object-fit: cover;
+    }
+
+    .comment-username {
+        font-weight: 600;
+        color: white;
+        font-size: 14px;
+        text-decoration: none;
+    }
+
+    .comment-username:hover {
+        color: #42a5f5;
+    }
+
+    .comment-timestamp {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 12px;
+        margin-left: 8px;
+    }
+
+    .comment-text {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        line-height: 1.4;
+        margin-left: 42px;
+    }
+
+    .no-comments {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.5);
+        font-style: italic;
+        padding: 20px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .empty-state h3 {
+        color: white;
+        margin-bottom: 10px;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+
+    /* Loading states */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .reels-container {
+            margin: 10px;
+            padding: 15px;
+            border-radius: 16px;
+        }
+
+        .reel-item {
+            padding: 15px;
+            border-radius: 16px;
+        }
+
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+        }
+
+        .reel-media {
+            max-height: 300px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .reels-container {
+            margin: 5px;
+            padding: 10px;
+        }
+
+        .reel-item {
+            padding: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+        }
+
+        .comment-form {
+            flex-direction: column;
+        }
+
+        .submit-comment {
+            align-self: flex-end;
+        }
+    }
+
+    /* Scrollbar styling */
+    .comments-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .comments-list::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+    }
+
+    .comments-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 3px;
+    }
+
+    .comments-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reels-container">
+    {% if not reports %}
+    <div class="empty-state">
+        <div class="empty-icon">🌊</div>
+        <h3>No reports yet</h3>
+        <p>Be the first to share an ocean hazard report!</p>
+        <a href="{{ url_for('report') }}" class="btn btn-primary mt-3">
+            <i class="fas fa-plus me-2"></i>Create First Report
+        </a>
+    </div>
+    {% endif %}
+
+    {% for report in reports %}
+    <div class="reel-item" id="reel-{{ report.id }}" data-view-tracked="false">
+        <!-- Verification Badges -->
+        <div class="verification-badges" id="badges-{{ report.id }}">
+            {% if report.verification_status == 'approved' %}
+            <div class="v-badge v-badge-official">
+                <i class="fas fa-shield-check"></i> Verified by Official
+            </div>
+            {% endif %}
+
+            {% if report.is_local_verified %}
+            <div class="v-badge v-badge-local" id="local-badge-{{ report.id }}">
+                <i class="fas fa-users"></i> Local Verified
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- User Info -->
+        <div class="user-info">
+            <a href="{{ url_for('profile', username=report.author.username) }}">
+                <img src="{{ url_for('uploaded_file', filename=report.author.profile_image) if report.author.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                    class="user-avatar" alt="{{ report.author.username }}">
+            </a>
+            <div class="user-details">
+                <a href="{{ url_for('profile', username=report.author.username) }}" class="username">
+                    @{{ report.author.username }}
+                </a>
+                <div class="timestamp">
+                    {{ report.timestamp.strftime('%b %d, %Y • %H:%M') }}
+                </div>
+                <div class="hazard-badge">{{ report.hazard_type }}</div>
+            </div>
+        </div>
+
+        <!-- Location -->
+        <div class="location">
+            <i class="fas fa-map-marker-alt"></i>
+            {{ report.location }}
+        </div>
+
+        <!-- Media Content -->
+        {% if report.video_file %}
+        <video class="reel-media" controls
+            onloadeddata="console.log('Video loaded:', this.querySelector('source').src);"
+            onerror="console.error('Video failed:', this.querySelector('source').src);">
+            <source src="{{ url_for('uploaded_file', filename=report.video_file) }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        {% elif report.image_file %}
+        <img class="reel-media" src="{{ url_for('uploaded_file', filename=report.image_file) }}" alt="Report image"
+            onload="console.log('Image loaded:', this.src);"
+            onerror="this.style.border='3px solid red'; console.error('Image failed to load:', this.src);">
+        {% else %}
+        <div class="reel-media"
+            style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; color: white;">
+            <div class="text-center">
+                <h1 style="font-size: 48px; margin-bottom: 10px;">🌊</h1>
+                <h4>{{ report.hazard_type }}</h4>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Description -->
+        <div class="reel-description">
+            {{ report.description }}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <div class="action-btn view-count">
+                <i class="fas fa-eye"></i>
+                <span class="action-count" id="views-{{ report.id }}">{{ report.views_count or 0 }}</span>
+            </div>
+
+            <button
+                class="action-btn local-approve-btn {% if report.id in user_locally_approved_reports %}liked{% endif %}"
+                data-report-id="{{ report.id }}" title="Community Approve">
+                <i class="fas fa-check-circle"></i>
+                <span class="action-count" id="approvals-{{ report.id }}">{{ report.local_approvals_list|length
+                    }}</span>
+            </button>
+
+            <button class="action-btn comment-btn" data-report-id="{{ report.id }}">
+                <i class="fas fa-comment"></i>
+                <span class="action-count" id="comments-{{ report.id }}">{{ report.comments_count or 0 }}</span>
+            </button>
+
+            <button class="action-btn share-btn" data-report-id="{{ report.id }}">
+                <i class="fas fa-share"></i>
+                <span class="action-count" id="shares-{{ report.id }}">{{ report.shares_count or 0 }}</span>
+            </button>
+        </div>
+
+        <!-- Assigned Volunteers Section -->
+        <div class="volunteers-section mt-3">
+            <div class="volunteers-info" id="volunteers-info-{{ report.id }}" style="display: none;">
+                <small class="text-muted d-block mb-2">
+                    <i class="fas fa-hands-helping me-1 text-success"></i>
+                    <span id="volunteer-count-{{ report.id }}">0</span> volunteers assigned
+                </small>
+                <div id="volunteer-badges-{{ report.id }}" class="d-flex flex-wrap gap-1">
+                    <!-- Volunteer avatars will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="comments-section" id="comments-{{ report.id }}-section">
+            <div class="comment-form">
+                <input type="text" class="comment-input" placeholder="Add a comment..."
+                    id="comment-input-{{ report.id }}" maxlength="280">
+                <button class="submit-comment" data-report-id="{{ report.id }}">Post</button>
+            </div>
+
+            <div class="comments-list" id="comments-list-{{ report.id }}">
+                <!-- Comments will be loaded here dynamically -->
+                <div class="no-comments">No comments yet. Be the first to comment!</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Load volunteer counts for reports
+        loadVolunteerCounts();
+
+        // Community Approval functionality
+        document.querySelectorAll('.local-approve-btn').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const reportId = this.dataset.reportId;
+                const apprCount = document.getElementById(`approvals-${reportId}`);
+
+                this.classList.add('loading');
+
+                try {
+                    const response = await fetch(`/api/report/${reportId}/local_approve`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.status === 401) {
+                        alert('Please log in to approve reports');
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error('Failed to approve report');
+                    }
+
+                    const data = await response.json();
+
+                    // Update approval count
+                    apprCount.textContent = data.approvals;
+
+                    // Toggle approved state visually
+                    if (data.approved) {
+                        this.classList.add('liked');
+                    } else {
+                        this.classList.remove('liked');
+                    }
+
+                    // Dynamically show local badge if verified
+                    const badgeContainer = document.getElementById(`badges-${reportId}`);
+                    let localBadge = document.getElementById(`local-badge-${reportId}`);
+
+                    if (data.local_verified) {
+                        if (!localBadge) {
+                            localBadge = document.createElement('div');
+                            localBadge.className = 'v-badge v-badge-local';
+                            localBadge.id = `local-badge-${reportId}`;
+                            localBadge.innerHTML = '<i class="fas fa-users"></i> Local Verified';
+                            badgeContainer.appendChild(localBadge);
+                        }
+                    } else if (localBadge) {
+                        localBadge.remove();
+                    }
+                } catch (error) {
+                    console.error('Approval error:', error);
+                    alert('Error: ' + error.message);
+                } finally {
+                    this.classList.remove('loading');
+                }
+            });
+        });
+
+        // View tracking
+        const observerOptions = {
+            threshold: 0.5 // Track as viewed when 50% visible
+        };
+
+        const viewObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.target.dataset.viewTracked === "false") {
+                    const reportId = entry.target.id.replace('reel-', '');
+                    trackView(reportId, entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reel-item').forEach(item => {
+            viewObserver.observe(item);
+        });
+
+        async function trackView(reportId, element) {
+            try {
+                const response = await fetch(`/api/report/${reportId}/view`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById(`views-${reportId}`).textContent = data.views;
+                    element.dataset.viewTracked = "true";
+                }
+            } catch (error) {
+                console.error('View tracking error:', error);
+            }
+        }
+
+        // Comment toggle functionality
+        document.querySelectorAll('.comment-btn').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const reportId = this.dataset.reportId;
+                const commentsSection = document.getElementById(`comments-${reportId}-section`);
+                const commentsList = document.getElementById(`comments-list-${reportId}`);
+
+                // Toggle comments section
+                commentsSection.classList.toggle('active');
+                this.classList.toggle('comment-active');
+
+                // Load comments if section is opened and not already loaded
+                if (commentsSection.classList.contains('active') && !commentsList.dataset.loaded) {
+                    await loadComments(reportId);
+                }
+            });
+        });
+
+        // Share functionality
+        document.querySelectorAll('.share-btn').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const reportId = this.dataset.reportId;
+                const shareCount = document.getElementById(`shares-${reportId}`);
+
+                try {
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: 'Ocean Hazard Report',
+                            text: 'Check out this ocean hazard report',
+                            url: `${window.location.origin}/view_report/${reportId}`
+                        });
+                    } else {
+                        // Fallback: copy to clipboard
+                        const reportUrl = `${window.location.origin}/view_report/${reportId}`;
+                        await navigator.clipboard.writeText(reportUrl);
+                        alert('Report link copied to clipboard!');
+                    }
+
+                    // Count the share
+                    const response = await fetch(`/api/report/${reportId}/share`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        shareCount.textContent = data.shares;
+                    }
+                } catch (error) {
+                    console.error('Share error:', error);
+                    if (error.name !== 'AbortError') {
+                        alert('Error sharing report');
+                    }
+                }
+            });
+        });
+
+        // Comment submission
+        document.querySelectorAll('.submit-comment').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const reportId = this.dataset.reportId;
+                const commentInput = document.getElementById(`comment-input-${reportId}`);
+                const commentText = commentInput.value.trim();
+
+                if (!commentText) {
+                    alert('Please enter a comment');
+                    return;
+                }
+
+                this.disabled = true;
+                this.textContent = 'Posting...';
+
+                try {
+                    const response = await fetch(`/api/report/${reportId}/comment`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ comment: commentText })
+                    });
+
+                    if (response.status === 401) {
+                        alert('Please log in to comment');
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error('Failed to post comment');
+                    }
+
+                    const data = await response.json();
+
+                    // Update comment count
+                    document.getElementById(`comments-${reportId}`).textContent = data.comments_count;
+
+                    // Clear input
+                    commentInput.value = '';
+
+                    // Reload comments
+                    await loadComments(reportId);
+                } catch (error) {
+                    console.error('Comment error:', error);
+                    alert('Error posting comment: ' + error.message);
+                } finally {
+                    this.disabled = false;
+                    this.textContent = 'Post';
+                }
+            });
+        });
+
+        // Enter key to submit comment
+        document.querySelectorAll('.comment-input').forEach(input => {
+            input.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    const reportId = this.id.replace('comment-input-', '');
+                    document.querySelector(`.submit-comment[data-report-id="${reportId}"]`).click();
+                }
+            });
+        });
+
+        // Function to load comments
+        async function loadComments(reportId) {
+            const commentsList = document.getElementById(`comments-list-${reportId}`);
+
+            try {
+                const response = await fetch(`/api/report/${reportId}/comments`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to load comments');
+                }
+
+                const comments = await response.json();
+
+                commentsList.innerHTML = '';
+
+                if (comments.length === 0) {
+                    commentsList.innerHTML = '<div class="no-comments">No comments yet. Be the first to comment!</div>';
+                } else {
+                    comments.forEach(comment => {
+                        const commentElement = createCommentElement(comment);
+                        commentsList.appendChild(commentElement);
+                    });
+                }
+
+                commentsList.dataset.loaded = 'true';
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                commentsList.innerHTML = '<div class="no-comments">Error loading comments: ' + error.message + '</div>';
+            }
+        }
+
+        // Function to create comment element
+        function createCommentElement(comment) {
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'comment-item';
+
+            const avatarUrl = comment.author_profile_image ?
+                `/uploads/${comment.author_profile_image}` :
+                '/static/images/default-profile.png';
+
+            const timestamp = new Date(comment.timestamp);
+            const formattedTime = timestamp.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            commentDiv.innerHTML = `
+            <div class="comment-header">
+                <img src="${avatarUrl}" 
+                     class="comment-avatar" alt="${comment.author_username}">
+                <a href="/profile/${comment.author_username}" class="comment-username">
+                    @${comment.author_username}
+                </a>
+                <span class="comment-timestamp">${formattedTime}</span>
+            </div>
+            <div class="comment-text">${escapeHtml(comment.comment)}</div>
+        `;
+
+            return commentDiv;
+        }
+
+        // Function to load volunteer counts
+        async function loadVolunteerCounts() {
+            const reportElements = document.querySelectorAll('.reel-item');
+
+            for (const element of reportElements) {
+                const reportId = element.id.replace('reel-', '');
+                try {
+                    // Call new endpoint with 'report' hazard_type
+                    const response = await fetch(`/api/coordination/hazard/report/${reportId}/volunteers-count`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const volunteerCount = data.total_volunteers || 0;
+
+                        if (volunteerCount > 0) {
+                            const volunteersInfo = document.getElementById(`volunteers-info-${reportId}`);
+                            const volunteerCountSpan = document.getElementById(`volunteer-count-${reportId}`);
+                            const volunteerBadges = document.getElementById(`volunteer-badges-${reportId}`);
+
+                            if (volunteersInfo) {
+                                volunteersInfo.style.display = 'block';
+                                volunteerCountSpan.textContent = volunteerCount;
+
+                                // Add volunteer avatars/badges
+                                if (data.volunteers && data.volunteers.length > 0) {
+                                    volunteerBadges.innerHTML = '';
+                                    data.volunteers.forEach(vol => {
+                                        const badge = document.createElement('span');
+                                        badge.className = 'badge bg-success';
+                                        badge.title = vol.name;
+                                        badge.innerHTML = `<i class="fas fa-check me-1"></i>${vol.name}`;
+                                        volunteerBadges.appendChild(badge);
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.log(`Could not load volunteer data for report ${reportId}`);
+                }
+            }
+        }
+
+        // Refresh volunteer counts every 15 seconds for real-time updates
+        setInterval(loadVolunteerCounts, 15000);
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    });
+</script>
+{% endblock %}

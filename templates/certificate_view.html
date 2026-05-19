@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Commendation - Sentinel AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Montserrat:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+
+        body {
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .certificate-outer {
+            width: 1000px;
+            max-width: 100%;
+            padding: 40px;
+            background: #fff;
+            position: relative;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+            border: 15px solid #1a365d;
+        }
+
+        .certificate-inner {
+            border: 5px solid #b45309;
+            padding: 40px;
+            text-align: center;
+            background: #fff;
+            position: relative;
+        }
+
+        .certificate-inner::before {
+            content: "";
+            position: absolute;
+            top: 10px; left: 10px; right: 10px; bottom: 10px;
+            border: 1px solid #b45309;
+            pointer-events: none;
+        }
+
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 8rem;
+            color: rgba(0,0,0,0.03);
+            font-family: 'Cinzel', serif;
+            z-index: 0;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .cert-header {
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: #1a365d;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .cert-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            color: #b45309;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .cert-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.2rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 40px;
+        }
+
+        .presented-to {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5rem;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .recipient-name {
+            font-family: 'Cinzel', serif;
+            font-size: 3.5rem;
+            color: #1e293b;
+            border-bottom: 2px solid #b45309;
+            display: inline-block;
+            padding: 5px 40px;
+            margin-bottom: 30px;
+        }
+
+        .cert-body {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            color: #334155;
+            line-height: 1.6;
+            margin: 0 auto 40px;
+            max-width: 800px;
+        }
+
+        .achievement-highlight {
+            font-weight: 700;
+            color: #1a365d;
+        }
+
+        .cert-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 60px;
+            padding: 0 40px;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 250px;
+        }
+
+        .signature-line {
+            border-top: 1px solid #1e293b;
+            margin-bottom: 10px;
+        }
+
+        .signature-name {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #1e293b;
+            text-transform: uppercase;
+        }
+
+        .signature-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .seal {
+            width: 150px;
+            height: 150px;
+            background: #b45309;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Cinzel', serif;
+            box-shadow: 0 0 0 10px #b45309, 0 0 0 12px #fff, 0 0 0 15px #b45309;
+            transform: scale(0.8);
+        }
+
+        .seal i {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+        }
+
+        .seal span {
+            font-size: 0.7rem;
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        .cert-id {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+
+        .action-btns {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-print {
+            background: #b45309;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-print:hover {
+            background: #92400e;
+            transform: translateY(-2px);
+        }
+
+        @media print {
+            .action-btns, .btn-print { display: none !important; }
+            body { padding: 0; background: #fff; }
+            .certificate-outer { box-shadow: none; width: 100%; height: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="action-btns">
+        <button class="btn-print" onclick="window.print()"><i class="fas fa-print me-2"></i>Print Certificate</button>
+        <a href="{{ url_for('profile', username=user.username) }}" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Back to Profile</a>
+    </div>
+
+    <div class="certificate-outer">
+        <div class="certificate-inner">
+            <div class="watermark">SENTINEL AI</div>
+            
+            <div class="cert-header">
+                <span class="logo"><i class="fas fa-shield-alt me-2"></i>SENTINEL AI</span>
+                <div class="cert-subtitle">Unified Disaster Coordination Network</div>
+            </div>
+
+            <h1 class="cert-title">Certificate of Commendation</h1>
+            
+            <div class="presented-to">This certificate is proudly presented to</div>
+            
+            <h2 class="recipient-name">{{ user.username }}</h2>
+
+            <div class="cert-body">
+                For outstanding contribution to the <i>Sentinel AI Disaster Management Network</i>. 
+                Through consistent vigilance and proactive response, the recipient has demonstrated 
+                exceptional commitment to public safety, earning a total of <span class="achievement-highlight">{{ user.points }} Points</span> 
+                and successfully facilitating <span class="achievement-highlight">{{ completed_rescues }} Verified Rescue Missions</span>.
+            </div>
+
+            <div class="cert-footer">
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div class="signature-name">Dr. Sanjay Khanna</div>
+                    <div class="signature-title">Director, National Disaster Response</div>
+                </div>
+
+                <div class="seal">
+                    <i class="fas fa-certificate"></i>
+                    <span>OFFICIAL GOVERNMENT SEAL</span>
+                    <small>{{ date }}</small>
+                </div>
+
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div class="signature-name">Sentinel AI Protocol</div>
+                    <div class="signature-title">Autonomous Oversight Engine</div>
+                </div>
+            </div>
+
+            <div class="cert-id">VERIFICATION ID: {{ cert_id }} | SECURED BY SH-SVA-03 PROTOCOL</div>
+        </div>
+    </div>
+</body>
+</html>

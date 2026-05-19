@@ -1,0 +1,852 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Profile Container */
+    .profile-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    /* Cards */
+    .profile-card {
+        background: rgba(0, 0, 0, 0.45) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 20px;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .profile-card:hover {
+        background: rgba(0, 0, 0, 0.6) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-header h5,
+    .card-header h6 {
+        color: white;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Profile Header */
+    .profile-header {
+        text-align: center;
+        padding: 2rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        border: 4px solid rgba(255, 255, 255, 0.2);
+        object-fit: cover;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .profile-username {
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+
+    .profile-role {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+
+    .profile-bio {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        line-height: 1.5;
+        max-width: 400px;
+        margin: 0 auto 1.5rem;
+    }
+
+    /* Stats */
+    .stats-container {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .stat-number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.85rem;
+    }
+
+    .points-display {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(66, 165, 245, 0.1));
+        border: 1px solid rgba(33, 150, 243, 0.3);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        margin: 1rem 0;
+    }
+
+    .points-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, rgba(66, 165, 245, 0.95) 0%, rgba(100, 181, 246, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-outline-primary {
+        border: 2px solid rgba(33, 150, 243, 0.5);
+        color: rgba(33, 150, 243, 0.9);
+        background: rgba(33, 150, 243, 0.1);
+    }
+
+    .btn-outline-primary:hover {
+        background: rgba(33, 150, 243, 0.2);
+        border-color: rgba(33, 150, 243, 0.8);
+        transform: translateY(-2px);
+    }
+
+    .btn-outline-danger {
+        border: 2px solid rgba(244, 67, 54, 0.5);
+        color: rgba(244, 67, 54, 0.9);
+        background: rgba(244, 67, 54, 0.1);
+    }
+
+    .btn-outline-danger:hover {
+        background: rgba(244, 67, 54, 0.2);
+        border-color: rgba(244, 67, 54, 0.8);
+        transform: translateY(-2px);
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    /* Badges */
+    .badge-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .badge {
+        background: linear-gradient(135deg, rgba(255, 193, 7, 0.9), rgba(255, 152, 0, 0.9));
+        color: #000;
+        padding: 0.5rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* List Items */
+    .list-group-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+        padding: 1rem 1.25rem;
+        margin-bottom: 0.5rem;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .list-group-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateX(5px);
+    }
+
+    .hazard-badge {
+        background: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+        padding: 0.25rem 0.5rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* Status Indicators */
+    .status-approved {
+        color: #4caf50;
+        font-weight: 600;
+    }
+
+    .status-pending {
+        color: #ff9800;
+        font-weight: 600;
+    }
+
+    .status-rejected {
+        color: #f44336;
+        font-weight: 600;
+    }
+
+    /* Alert Preferences */
+    .alert-preferences {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1rem;
+    }
+
+    .form-check-input {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .form-check-input:checked {
+        background-color: #42a5f5;
+        border-color: #42a5f5;
+    }
+
+    .form-check-label {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.9rem;
+    }
+
+    /* User Cards */
+    .user-card {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .user-card:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(5px);
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .user-avatar-small {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        margin-right: 0.75rem;
+        object-fit: cover;
+    }
+
+    /* Verification Stats */
+    .verification-stats {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 0.5rem;
+    }
+
+    .stat-approved {
+        color: #4caf50;
+    }
+
+    .stat-pending {
+        color: #ff9800;
+    }
+
+    .stat-rejected {
+        color: #f44336;
+    }
+
+    .stat-alerts {
+        color: #42a5f5;
+    }
+
+    /* Location Info */
+    .location-info {
+        background: rgba(33, 150, 243, 0.1);
+        border: 1px solid rgba(33, 150, 243, 0.3);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    /* Notifications */
+    .notification-item {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid transparent;
+        transition: all 0.3s ease;
+    }
+
+    .notification-item.alert {
+        border-left-color: #ff9800;
+        background: rgba(255, 152, 0, 0.1);
+    }
+
+    .notification-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateX(5px);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .profile-container {
+            padding: 1.5rem 2rem;
+            margin: 1rem;
+            max-width: 95%;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+        }
+
+        .profile-username {
+            font-size: 1.8rem;
+        }
+
+        .stats-container {
+            padding: 1rem;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .profile-container {
+            padding: 1.25rem 1.5rem;
+            margin: 0.75rem;
+            max-width: 92%;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+        }
+
+        .profile-username {
+            font-size: 1.6rem;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    /* Text Colors */
+    .text-muted {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    .text-success {
+        color: #4caf50 !important;
+    }
+
+    .text-warning {
+        color: #ff9800 !important;
+    }
+
+    .text-danger {
+        color: #f44336 !important;
+    }
+
+    .text-info {
+        color: #42a5f5 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="row">
+        <!-- Profile Sidebar -->
+        <div class="col-md-4">
+            <!-- Profile Header -->
+            <div class="profile-card">
+                <div class="card-body text-center">
+                    <img src="{{ url_for('uploaded_file', filename=user.profile_image) if user.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                        class="profile-avatar" alt="Profile">
+
+                    <h2 class="profile-username">{{ user.username }}</h2>
+                    <p class="profile-role">
+                        {% if user.role == 'official' %}
+                        <i class="fas fa-shield-alt me-2"></i>Official
+                        {% elif user.role == 'analyst' %}
+                        <i class="fas fa-chart-bar me-2"></i>Analyst
+                        {% else %}
+                        <i class="fas fa-user me-2"></i>Level {{ user.level }} Citizen
+                        {% endif %}
+                    </p>
+
+                    {% if user.bio %}
+                    <p class="profile-bio">{{ user.bio }}</p>
+                    {% endif %}
+
+                    <!-- Follow/Unfollow Button -->
+                    {% if current_user != user %}
+                    <div class="mb-3">
+                        {% if current_user.is_following(user) %}
+                        <a href="{{ url_for('unfollow', username=user.username) }}"
+                            class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-user-minus me-2"></i>Unfollow
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('follow', username=user.username) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus me-2"></i>Follow
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <a href="{{ url_for('edit_profile') }}" class="btn btn-outline-primary btn-sm me-2">
+                            <i class="fas fa-edit me-2"></i>Edit Profile
+                        </a>
+                        <a href="{{ url_for('register_volunteer') }}" class="btn btn-success btn-sm">
+                            <i class="fas fa-hands-helping me-2"></i>Be a Volunteer
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="profile-card">
+                <div class="card-body">
+                    <div class="stats-container">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="stat-number">{{ total_reports }}</div>
+                                <div class="stat-label">Reports</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-number">{{ user.followers.count() }}</div>
+                                <div class="stat-label">Followers</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-number">{{ user.followed.count() }}</div>
+                                <div class="stat-label">Following</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Points -->
+                    <div class="points-display">
+                        <div class="points-number">{{ total_points }}</div>
+                        <div class="stat-label">Points Earned</div>
+                        <small class="text-muted">Through contributions</small>
+                    </div>
+
+                    <!-- Certificate Button (Premium Feature) -->
+                    {% set is_eligible = (completed_rescues > 0) or (total_points >= 100) %}
+                    <div class="text-center mt-3">
+                        {% if is_eligible %}
+                        <a href="{{ url_for('view_certificate', user_id=user.id) }}" class="btn btn-primary w-100">
+                            <i class="fas fa-certificate me-2"></i>View Official Certificate
+                        </a>
+                        {% else %}
+                        <div class="p-2 border border-secondary rounded bg-dark-subtle opacity-75">
+                            <small class="text-muted">
+                                <i class="fas fa-lock me-1"></i> Certificate Locked<br>
+                                (Need 100+ points or 1 rescue)
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location Information - ONLY VISIBLE TO CURRENT USER -->
+            {% if current_user == user and user.home_latitude and user.home_longitude %}
+            <div class="profile-card">
+                <div class="card-body">
+                    <h6><i class="fas fa-map-marker-alt me-2"></i>Your Location</h6>
+                    <div class="location-info">
+                        <small class="text-muted">
+                            <strong>Latitude:</strong> {{ "%.4f"|format(user.home_latitude) }}<br>
+                            <strong>Longitude:</strong> {{ "%.4f"|format(user.home_longitude) }}
+                        </small>
+                        <br>
+                        <small class="text-muted"><em><i class="fas fa-eye-slash me-1"></i>Only visible to
+                                you</em></small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Badges -->
+            <div class="profile-card">
+                <div class="card-header">
+                    <h6><i class="fas fa-trophy me-2"></i>Earned Badges</h6>
+                </div>
+                <div class="card-body">
+                    {% if user.user_badges %}
+                    <div class="badge-container">
+                        {% for user_badge in user.user_badges %}
+                        <span class="badge" title="{{ user_badge.badge.description }}">
+                            {{ user_badge.badge.icon }} {{ user_badge.badge.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">
+                        <i class="fas fa-award me-2"></i>No badges yet
+                    </p>
+                    <p class="text-muted small text-center">Submit reports to earn badges!</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Alert Settings Card (only for current user) -->
+            {% if current_user == user %}
+            <div class="profile-card">
+                <div class="card-header">
+                    <h6><i class="fas fa-bell me-2"></i>Alert Settings</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Set your location and preferences to receive hazard alerts.</p>
+
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('set_location') }}" class="btn btn-outline-primary btn-sm">
+                            {% if user.home_latitude and user.home_longitude %}
+                            <i class="fas fa-map-marker-alt me-2"></i>Update Location
+                            {% else %}
+                            <i class="fas fa-map-marker-alt me-2"></i>Set Location
+                            {% endif %}
+                        </a>
+
+                        <a href="{{ url_for('alert_preferences') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-cog me-2"></i>Alert Preferences
+                        </a>
+                    </div>
+
+                    {% if user.home_latitude and user.home_longitude %}
+                    <div class="mt-3">
+                        <h6>Current Alert Preferences:</h6>
+                        <div class="alert-preferences">
+                            {% for hazard_type, enabled in user.get_alert_preferences().items() %}
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" disabled {% if enabled %}checked{% endif
+                                    %}>
+                                <label class="form-check-label small">
+                                    {{ hazard_type|replace('_', ' ')|title }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Notifications Card (only for current user) -->
+            {% if current_user == user %}
+            <div class="profile-card">
+                <div class="card-header">
+                    <h6><i class="fas fa-bell me-2"></i>Recent Notifications</h6>
+                </div>
+                <div class="card-body">
+                    {% set recent_notifications = user.notifications|sort(attribute='created_at', reverse=true) %}
+                    {% if recent_notifications %}
+                    {% for notification in recent_notifications[:3] %}
+                    <div class="notification-item {% if notification.is_alert %}alert{% endif %}">
+                        <small>{{ notification.message }}</small>
+                        <br>
+                        <small class="text-muted">{{ notification.created_at.strftime('%m/%d %H:%M') }}</small>
+                        {% if not notification.is_read %}
+                        <span class="badge bg-primary float-end">New</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <div class="text-center mt-2">
+                        <a href="{{ url_for('notifications') }}" class="btn btn-sm btn-outline-primary">
+                            View All Notifications
+                        </a>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No notifications yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <!-- User Reports -->
+            <div class="profile-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-file-alt me-2"></i>Recent Reports</h5>
+                    <span class="badge bg-primary">{{ total_reports }} total</span>
+                </div>
+                <div class="card-body">
+                    {% if reports %}
+                    <div class="list-group">
+                        {% for report in reports %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ report.title }}</h6>
+                                    <p class="mb-1">
+                                        <span class="hazard-badge">{{ report.hazard_type }}</span>
+                                        <span class="text-muted ms-2">at {{ report.location }}</span>
+                                    </p>
+                                    <div class="d-flex align-items-center mt-2">
+                                        <small>
+                                            {% if report.verification_status == 'approved' %}
+                                            <span class="status-approved"><i
+                                                    class="fas fa-check-circle me-1"></i>Verified</span>
+                                            {% elif report.verification_status == 'rejected' %}
+                                            <span class="status-rejected"><i
+                                                    class="fas fa-times-circle me-1"></i>Rejected</span>
+                                            {% else %}
+                                            <span class="status-pending"><i class="fas fa-clock me-1"></i>Pending
+                                                verification</span>
+                                            {% endif %}
+
+                                            {% if report.confidence_score %}
+                                            <span class="ms-3 text-info">
+                                                <i class="fas fa-robot me-1"></i>{{ (report.confidence_score *
+                                                100)|round(1) }}%
+                                            </span>
+                                            {% endif %}
+
+                                            <!-- Alert Status -->
+                                            {% if report.verification_status == 'approved' and report.alert_sent %}
+                                            <span class="ms-3 text-info" title="Alert sent to nearby users">
+                                                <i class="fas fa-bullhorn me-1"></i>Alert Sent
+                                            </span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">{{ report.timestamp.strftime('%Y-%m-%d') }}</small>
+
+                                    <!-- Delete Button (only for report owner or admin) -->
+                                    {% if current_user.id == report.user_id or current_user.role in ['official',
+                                    'analyst'] %}
+                                    <form action="{{ url_for('delete_report', report_id=report.id) }}" method="post"
+                                        class="d-inline ms-2">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Are you sure you want to delete this report? This action cannot be undone.')">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- View All Reports Link -->
+                    {% if reports|length > 5 %}
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('user_reports', username=user.username) }}" class="btn btn-outline-primary">
+                            View All Reports
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No reports submitted yet.</p>
+                        {% if current_user == user %}
+                        <a href="{{ url_for('report') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Submit Your First Report
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Verification Stats (only show for current user) -->
+            {% if current_user == user %}
+            <div class="profile-card">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-bar me-2"></i>Verification Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="verification-stats">
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <div class="stat-number stat-approved">{{ verified_reports }}</div>
+                                <div class="stat-label">Approved</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="stat-number stat-pending">{{ pending_reports }}</div>
+                                <div class="stat-label">Pending</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="stat-number stat-rejected">{{ rejected_reports }}</div>
+                                <div class="stat-label">Rejected</div>
+                            </div>
+                            <div class="col-3">
+                                <div class="stat-number stat-alerts">{{ reports|selectattr('alert_sent')|list|length }}
+                                </div>
+                                <div class="stat-label">Alerts Sent</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Followers/Following -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="profile-card">
+                        <div class="card-header">
+                            <h6><i class="fas fa-users me-2"></i>Followers ({{ user.followers.count() }})</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if user.followers %}
+                            {% for follower in user.followers.limit(5) %}
+                            <a href="{{ url_for('profile', username=follower.username) }}" class="user-card">
+                                <img src="{{ url_for('uploaded_file', filename=follower.profile_image) if follower.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                                    class="user-avatar-small">
+                                <span>{{ follower.username }}</span>
+                            </a>
+                            {% endfor %}
+                            {% if user.followers.count() > 5 %}
+                            <div class="text-center mt-2">
+                                <a href="{{ url_for('user_followers', username=user.username) }}"
+                                    class="btn btn-sm btn-outline-primary">
+                                    View All Followers
+                                </a>
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-user-friends fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">No followers yet.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="profile-card">
+                        <div class="card-header">
+                            <h6><i class="fas fa-user-friends me-2"></i>Following ({{ user.followed.count() }})</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if user.followed %}
+                            {% for followed_user in user.followed.limit(5) %}
+                            <a href="{{ url_for('profile', username=followed_user.username) }}" class="user-card">
+                                <img src="{{ url_for('uploaded_file', filename=followed_user.profile_image) if followed_user.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                                    class="user-avatar-small">
+                                <span>{{ followed_user.username }}</span>
+                            </a>
+                            {% endfor %}
+                            {% if user.followed.count() > 5 %}
+                            <div class="text-center mt-2">
+                                <a href="{{ url_for('user_following', username=user.username) }}"
+                                    class="btn btn-sm btn-outline-primary">
+                                    View All Following
+                                </a>
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-user-plus fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">Not following anyone yet.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Enhanced delete confirmation with more specific messaging
+    document.addEventListener('DOMContentLoaded', function () {
+        const deleteForms = document.querySelectorAll('form[action*="delete_report"]');
+
+        deleteForms.forEach(form => {
+            form.addEventListener('submit', function (e) {
+                if (!confirm('⚠️ Are you sure you want to delete this report?\n\nThis will permanently remove the report and any associated media files.\nThis action cannot be undone!')) {
+                    e.preventDefault();
+                }
+            });
+        });
+
+        // Add hover effects to interactive elements
+        const interactiveElements = document.querySelectorAll('.profile-card, .list-group-item, .user-card');
+        interactiveElements.forEach(element => {
+            element.style.cursor = 'pointer';
+        });
+    });
+</script>
+{% endblock %}

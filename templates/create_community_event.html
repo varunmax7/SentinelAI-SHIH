@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    .event-create-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+        color: white;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control,
+    .form-select {
+        background: rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 12px;
+        color: white !important;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background: rgba(255, 255, 255, 0.15) !important;
+        border-color: #0ea5e9 !important;
+        box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.25rem 1.5rem;
+        color: white;
+    }
+
+    .camera-preview {
+        width: 100%;
+        border-radius: 16px;
+        background: #000;
+        margin-bottom: 1rem;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .media-preview {
+        max-width: 100%;
+        border-radius: 12px;
+        border: 2px solid #10b981;
+    }
+
+    .location-status {
+        display: none;
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 12px;
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .location-status.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+{% block scripts %}
+<script>
+    (function () {
+        let stream = null;
+        let video = document.getElementById('videoPreview');
+        let canvas = document.getElementById('canvas');
+        let cameraInterface = document.getElementById('cameraInterface');
+        let cameraSelect = document.getElementById('cameraSelect');
+
+        // --- LOCATION LOGIC ---
+        window.getLocation = function () {
+            const locBtn = event.target;
+            const originalText = locBtn.innerHTML;
+            locBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Initializing GPS...';
+            locBtn.disabled = true;
+
+            const options = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+
+            function success(pos) {
+                const crd = pos.coords;
+                document.getElementById('latitude').value = crd.latitude.toFixed(6);
+                document.getElementById('longitude').value = crd.longitude.toFixed(6);
+
+                // Reverse Geocoding
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${crd.latitude}&lon=${crd.longitude}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.display_name) {
+                            document.getElementById('location').value = data.display_name;
+                            document.getElementById('locationAddress').innerText = data.display_name;
+                        }
+                        document.getElementById('locationStatus').classList.add('active');
+                        resetBtn();
+                    }).catch(() => {
+                        document.getElementById('locationStatus').classList.add('active');
+                        resetBtn();
+                    });
+            }
+
+            function error(err) {
+                console.warn(`ERROR(${err.code}): ${err.message}`);
+                // Fallback to IP location
+                fetch('https://ipapi.co/json/')
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('latitude').value = data.latitude;
+                        document.getElementById('longitude').value = data.longitude;
+                        document.getElementById('location').value = `${data.city}, ${data.region_code}`;
+                        document.getElementById('locationAddress').innerText = `${data.city}, ${data.country_name} (Approx)`;
+                        document.getElementById('locationStatus').classList.add('active');
+                    })
+                    .finally(resetBtn);
+            }
+
+            function resetBtn() {
+                locBtn.innerHTML = '<i class="fas fa-check me-2"></i>Location Applied';
+                locBtn.classList.replace('btn-info', 'btn-success');
+                setTimeout(() => {
+                    locBtn.innerHTML = originalText;
+                    locBtn.classList.replace('btn-success', 'btn-info');
+                    locBtn.disabled = false;
+                }, 3000);
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(success, error, options);
+            } else {
+                error({ code: 0, message: 'Geolocation not supported' });
+            }
+        };
+
+        // --- CAMERA LOGIC ---
+        cameraSelect.onchange = async function () {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+
+            if (this.value) {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: this.value }
+                    });
+                    video.srcObject = stream;
+                    cameraInterface.style.display = 'block';
+                } catch (e) {
+                    alert('Could not access camera. Ensure you are on HTTPS.');
+                    this.value = '';
+                }
+            } else {
+                cameraInterface.style.display = 'none';
+            }
+        };
+
+        window.capturePhoto = function () {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const file = new File([blob], "event_photo.jpg", { type: "image/jpeg" });
+
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                document.getElementById('capturedImage').files = dt.files;
+
+                document.getElementById('mediaPreview').innerHTML = `
+                    <div class="position-relative d-inline-block">
+                        <img src="${url}" class="media-preview mb-2" style="max-height: 200px">
+                        <div class="badge bg-success position-absolute top-0 start-100 translate-middle">Live Image Set</div>
+                    </div>
+                `;
+
+                // Clear file input if traditional upload was used
+                document.getElementById('fileInput').value = '';
+            }, 'image/jpeg');
+        };
+
+        window.handleFileSelect = function (input) {
+            if (input.files && input.files[0]) {
+                const url = URL.createObjectURL(input.files[0]);
+                document.getElementById('mediaPreview').innerHTML = `
+                    <img src="${url}" class="media-preview" style="max-height: 200px">
+                `;
+                // Clear captured image
+                document.getElementById('capturedImage').value = '';
+            }
+        };
+    })();
+</script>
+{% endblock %}
+{% block content %}
+<div class="event-create-container">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold"><i class="fas fa-calendar-plus me-3 text-info"></i>Create Community Event</h2>
+        <p class="opacity-75">Organize collective action and build a safer community together.</p>
+    </div>
+
+    <form method="POST" action="" enctype="multipart/form-data" id="eventForm">
+        {{ form.hidden_tag() }}
+
+        <!-- Basic Info Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>General Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ form.title.label(class="form-label") }}
+                    {{ form.title(class="form-control", placeholder="e.g. Marina Beach Cleanup Drive") }}
+                </div>
+                <div class="mb-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=4, placeholder="What's the plan? What should
+                    volunteers bring?") }}
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.event_type.label(class="form-label") }}
+                        {{ form.event_type(class="form-select") }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.date_time.label(class="form-label") }}
+                        {{ form.date_time(class="form-control", type="datetime-local") }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Event Location</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ form.location.label(class="form-label") }}
+                    {{ form.location(class="form-control", placeholder="Search for a place or use GPS", id="location")
+                    }}
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.latitude.label(class="form-label") }}
+                        {{ form.latitude(class="form-control", type="number", step="any", id="latitude") }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.longitude.label(class="form-label") }}
+                        {{ form.longitude(class="form-control", type="number", step="any", id="longitude") }}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-info w-100 fw-bold" onclick="getLocation()">
+                    <i class="fas fa-crosshairs me-2"></i>Auto-Detect Live Location
+                </button>
+                <div class="location-status" id="locationStatus">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle me-2 text-success"></i>
+                        <div>
+                            <div class="fw-bold text-success">Location Detected</div>
+                            <small class="opacity-75" id="locationAddress">Fetching address details...</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photo Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-camera me-2"></i>Live Event Cover</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Source:</label>
+                    <select class="form-select mb-3" id="cameraSelect">
+                        <option value="">Choose Camera...</option>
+                        <option value="user">User/Front Camera</option>
+                        <option value="environment">Main/Back Camera</option>
+                    </select>
+                </div>
+
+                <div id="cameraInterface" style="display: none;">
+                    <video id="videoPreview" class="camera-preview" autoplay playsinline muted></video>
+                    <canvas id="canvas" style="display: none;"></canvas>
+                    <button type="button" class="btn btn-success w-100 mb-3 fw-bold" onclick="capturePhoto()">
+                        <i class="fas fa-camera me-2"></i>Capture Live Image
+                    </button>
+                </div>
+
+                <div id="mediaPreview" class="text-center mb-3"></div>
+
+                <div class="traditional-upload mt-3">
+                    <label class="form-label">Or Upload Existing File:</label>
+                    {{ form.image(class="form-control", id="fileInput", onchange="handleFileSelect(this)") }}
+                </div>
+
+                <!-- Hidden input for captured image -->
+                <input type="file" name="image_captured" id="capturedImage" style="display: none;" accept="image/*">
+            </div>
+        </div>
+
+        <div class="d-grid gap-3">
+            <button type="submit" class="btn btn-primary btn-lg fw-bold py-3 shadow-lg">
+                <i class="fas fa-rocket me-2"></i>Publish Event
+            </button>
+            <a href="{{ url_for('community_hub') }}" class="btn btn-outline-light opacity-75">Discard & Go Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

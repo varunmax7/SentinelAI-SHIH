@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Home-page style integration */
+    .main-content-container {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+    }
+
+    .hero-subtitle {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 2rem;
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .op-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1rem;
+        text-decoration: none;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+    }
+
+    .op-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateY(-5px);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .x-small {
+        font-size: 0.65rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+        <div>
+            <h1 class="hero-title">📡 Coordination Command</h1>
+            <p class="hero-subtitle mb-0">Unified Response & Resource Allocation Center</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('new_emergency') }}" class="btn btn-primary px-4 fw-bold shadow">
+                <i class="fas fa-plus me-1"></i>Declare Emergency
+            </a>
+            <a href="{{ url_for('situation_reports') }}" class="btn btn-outline-light px-4 border-secondary">
+                <i class="fas fa-file-shield me-1"></i>SitReps
+            </a>
+        </div>
+    </div>
+
+    <!-- Live Stats Grid -->
+    <div class="row mb-5">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 h-100" style="border-left: 4px solid #ef4444 !important;">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Active Events</div>
+                        <h3 class="fw-bold text-white mb-0">{{ active_events|length }}</h3>
+                    </div>
+                    <i class="fas fa-fire-pulse fa-2x text-danger opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 h-100" style="border-left: 4px solid #10b981 !important;">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Volunteers</div>
+                        <h3 class="fw-bold text-white mb-0">{{ available_volunteers }}</h3>
+                    </div>
+                    <i class="fas fa-people-group fa-2x text-success opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 h-100" style="border-left: 4px solid #f59e0b !important;">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Resources</div>
+                        <h3 class="fw-bold text-white mb-0">{{ resource_allocations|length }}</h3>
+                    </div>
+                    <i class="fas fa-truck-ramp-box fa-2x text-warning opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 h-100" style="border-left: 4px solid #06b6d4 !important;">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">SitReps</div>
+                        <h3 class="fw-bold text-white mb-0">{{ recent_reports|length }}</h3>
+                    </div>
+                    <i class="fas fa-satellite fa-2x text-info opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Command Interface -->
+    <div class="row mb-5">
+        <div class="col-xl-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header border-0 py-3 bg-transparent">
+                    <h6 class="m-0 fw-bold text-white">Priority Situations</h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if active_events %}
+                    <div class="list-group list-group-flush">
+                        {% for event in active_events %}
+                        <div class="list-group-item bg-transparent border-white border-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold text-white">{{ event.title }}</h6>
+                                    <div class="small text-muted mb-2"><i class="fas fa-map-marker-alt me-2"></i>{{
+                                        event.location }}</div>
+                                    <div class="d-flex gap-2">
+                                        <span
+                                            class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25">{{
+                                            event.severity }}</span>
+                                        <span
+                                            class="badge bg-secondary bg-opacity-25 text-white border border-secondary border-opacity-25">{{
+                                            event.hazard_type }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary px-3">Connect</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 opacity-50"><i class="fas fa-shield-check fa-3x mb-3 text-success"></i>
+                        <p>All Systems Clear</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header border-0 py-3 bg-transparent">
+                    <h6 class="m-0 fw-bold text-white">Situation Reports</h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_reports %}
+                    <div class="list-group list-group-flush">
+                        {% for report in recent_reports %}
+                        <div class="list-group-item bg-transparent border-white border-opacity-10 px-4 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 text-white small fw-bold">{{ report.title }}</h6>
+                                    <p class="x-small text-muted mb-0 text-truncate" style="max-width:300px;">{{
+                                        report.content }}</p>
+                                </div>
+                                <span
+                                    class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">{{
+                                    report.priority }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 opacity-50"><i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>No Field Reports</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operations Console -->
+    <div class="card mb-4">
+        <div class="card-header py-4 ps-4 bg-transparent border-0">
+            <h5 class="fw-bold text-white mb-0">Operations Console</h5>
+        </div>
+        <div class="card-body p-4 pt-0">
+            <div class="row g-4">
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ url_for('new_emergency') }}" class="op-btn">
+                        <i class="fas fa-circle-exclamation text-danger fa-2x mb-3"></i>
+                        <span class="fw-bold text-white">Emergency Command</span>
+                        <span class="x-small text-muted mt-1">Declare New Event</span>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ url_for('resource_management') }}" class="op-btn">
+                        <i class="fas fa-gear text-warning fa-2x mb-3"></i>
+                        <span class="fw-bold text-white">Logistics Unit</span>
+                        <span class="x-small text-muted mt-1">Manage Resources</span>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ url_for('volunteer_management') }}" class="op-btn">
+                        <i class="fas fa-heart-circle-check text-success fa-2x mb-3"></i>
+                        <span class="fw-bold text-white">Corps Personnel</span>
+                        <span class="x-small text-muted mt-1">Volunteer Network</span>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ url_for('agency_management') }}" class="op-btn">
+                        <i class="fas fa-building-circle-check text-info fa-2x mb-3"></i>
+                        <span class="fw-bold text-white">Agency Cloud</span>
+                        <span class="x-small text-muted mt-1">External Partners</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Setup - Sentinel AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .status-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-pending {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .code-block {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            color: #065f46;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+
+        .command-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .command-list li {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .command-list code {
+            background: #f3f4f6;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+        }
+
+        .webhook-url {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #10b981;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🛡️ Sentinel AI</h1>
+        <p class="subtitle">WhatsApp Integration Setup</p>
+
+        <div class="status-badge status-success">✅ Credentials Configured</div>
+        <div class="status-badge status-pending">⏳ Webhook Pending</div>
+
+        <div class="alert alert-info">
+            <strong>📱 Your Twilio WhatsApp Number:</strong> +1 xxx xxx xxxx<br>
+            <strong>🔐 Account SID:</strong> YOUR_TWILIO_SID_HERE
+        </div>
+
+        <div class="section">
+            <h2>🚀 Quick Setup (3 Steps)</h2>
+
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Install & Start ngrok</strong>
+                <div class="code-block">
+                    <button class="copy-btn" onclick="copyToClipboard('ngrok-install')">Copy</button>
+                    <div id="ngrok-install">curl -O
+                        https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-darwin-amd64.zip
+                        unzip ngrok-v3-stable-darwin-amd64.zip
+                        sudo mv ngrok /usr/local/bin/
+                        ngrok http 5001</div>
+                </div>
+                <p style="margin-top: 10px; color: #666;">Copy your ngrok HTTPS URL (e.g., https://xxxx.ngrok-free.app)
+                </p>
+            </div>
+
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Generate Your Webhook URL</strong>
+                <div class="input-group">
+                    <label for="ngrok-url">Enter your ngrok URL:</label>
+                    <input type="text" id="ngrok-url" placeholder="https://xxxx-xxxx.ngrok-free.app"
+                        oninput="updateWebhookURL()">
+                </div>
+                <div class="alert alert-success" id="webhook-result" style="display: none;">
+                    <strong>📍 Your Webhook URL:</strong><br>
+                    <span class="webhook-url" id="webhook-url"></span>
+                    <button class="btn" style="margin-top: 10px;" onclick="copyWebhookURL()">Copy Webhook URL</button>
+                </div>
+            </div>
+
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Configure Twilio</strong>
+                <ol style="margin-left: 20px; margin-top: 10px;">
+                    <li>Go to <a href="https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn"
+                            target="_blank" style="color: #667eea;">Twilio Console</a></li>
+                    <li>Navigate to: Messaging → Try it out → Send a WhatsApp message</li>
+                    <li>In "Sandbox Configuration", set "WHEN A MESSAGE COMES IN" to your webhook URL</li>
+                    <li>Method: POST</li>
+                    <li>Click Save</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📱 Join WhatsApp Sandbox</h2>
+            <div class="alert alert-warning">
+                <strong>⚠️ Important:</strong> You must join the sandbox before testing
+            </div>
+            <ol style="margin-left: 20px; margin-top: 10px;">
+                <li>Open WhatsApp on your phone</li>
+                <li>Send a message to: <strong>+1 415 523 8886</strong></li>
+                <li>Message: <code>join &lt;your-sandbox-code&gt;</code></li>
+                <li>Get your sandbox code from the <a
+                        href="https://console.twilio.com/us1/develop/sms/try-it-out/whatsapp-learn" target="_blank"
+                        style="color: #667eea;">Twilio Console</a></li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>🔗 Link Your Account</h2>
+            <p style="margin-bottom: 15px;">After joining the sandbox, link your Sentinel AI account:</p>
+            <ul class="command-list">
+                <li><code>hi</code> → Start authentication</li>
+                <li><code>your_username</code> → Enter your username</li>
+                <li><code>your_password</code> → Enter your password</li>
+                <li><code>status</code> → Check link status</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>✅ Available Commands</h2>
+            <ul class="command-list">
+                <li><code>status</code> → Check your account status</li>
+                <li><code>1</code> or <code>accept</code> → Accept volunteer assignment</li>
+                <li><code>2</code> or <code>reject</code> → Reject volunteer assignment</li>
+                <li><code>cancel</code> → Cancel accepted assignment</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-info">
+            <strong>📚 Need Help?</strong> Check <code>WHATSAPP_SETUP.md</code> for detailed instructions
+        </div>
+    </div>
+
+    <script>
+        function updateWebhookURL() {
+            const ngrokURL = document.getElementById('ngrok-url').value.trim();
+            if (ngrokURL) {
+                // Remove trailing slash if present
+                const cleanURL = ngrokURL.replace(/\/$/, '');
+                const webhookURL = cleanURL + '/webhook/whatsapp';
+
+                document.getElementById('webhook-url').textContent = webhookURL;
+                document.getElementById('webhook-result').style.display = 'block';
+            } else {
+                document.getElementById('webhook-result').style.display = 'none';
+            }
+        }
+
+        function copyWebhookURL() {
+            const webhookURL = document.getElementById('webhook-url').textContent;
+            navigator.clipboard.writeText(webhookURL).then(() => {
+                alert('✅ Webhook URL copied to clipboard!');
+            });
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+
+</html>

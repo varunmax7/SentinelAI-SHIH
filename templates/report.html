@@ -1,0 +1,1281 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Main Container */
+    .report-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    /* Header Section */
+    .report-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .report-header h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .alert-info {
+        background: rgba(33, 150, 243, 0.15) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(33, 150, 243, 0.3);
+        border-radius: 16px;
+        color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* Form Elements */
+    .form-label {
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control,
+    .form-select {
+        background: rgba(255, 255, 255, 0.15) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border-radius: 12px;
+        color: white !important;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background: rgba(255, 255, 255, 0.2) !important;
+        border-color: rgba(33, 150, 243, 0.6) !important;
+        box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.15);
+        color: white !important;
+        transform: translateY(-1px);
+    }
+
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    .form-text {
+        color: rgba(255, 255, 255, 0.7) !important;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Cards */
+    .card {
+        background: rgba(0, 0, 0, 0.45) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 20px;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        background: rgba(0, 0, 0, 0.6) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-header h5 {
+        color: white;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Camera Section */
+    .camera-preview {
+        width: 100%;
+        max-height: 300px;
+        border: 2px dashed rgba(255, 255, 255, 0.3);
+        border-radius: 16px;
+        margin-bottom: 1rem;
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .camera-controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 1rem;
+    }
+
+    .capture-btn {
+        flex: 1;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .camera-container {
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+
+    /* Media Preview */
+    .media-preview-container {
+        margin-top: 1rem;
+    }
+
+    .media-preview {
+        max-width: 100%;
+        max-height: 150px;
+        border-radius: 12px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Recording Indicator */
+    .recording-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        background-color: #ff4444;
+        border-radius: 50%;
+        margin-right: 8px;
+        animation: blink 1s infinite;
+        box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+    }
+
+    @keyframes blink {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.3;
+        }
+    }
+
+    /* Terms Checkbox */
+    .terms-checkbox {
+        margin: 2rem 0;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        border-left: 4px solid #42a5f5;
+    }
+
+    .form-check-input {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .form-check-input:checked {
+        background-color: #42a5f5;
+        border-color: #42a5f5;
+    }
+
+    .form-check-label {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, rgba(66, 165, 245, 0.95) 0%, rgba(100, 181, 246, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-outline-primary {
+        border: 2px solid rgba(33, 150, 243, 0.5);
+        color: rgba(33, 150, 243, 0.9);
+        background: rgba(33, 150, 243, 0.1);
+    }
+
+    .btn-outline-primary:hover {
+        background: rgba(33, 150, 243, 0.2);
+        border-color: rgba(33, 150, 243, 0.8);
+        transform: translateY(-2px);
+    }
+
+    .btn-outline-info {
+        border: 2px solid rgba(23, 162, 184, 0.5);
+        color: rgba(23, 162, 184, 0.9);
+        background: rgba(23, 162, 184, 0.1);
+    }
+
+    .btn-outline-info:hover {
+        background: rgba(23, 162, 184, 0.2);
+        border-color: rgba(23, 162, 184, 0.8);
+        transform: translateY(-2px);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.9) 0%, rgba(56, 142, 60, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+    }
+
+    .btn-success:hover {
+        background: linear-gradient(135deg, rgba(56, 142, 60, 0.95) 0%, rgba(46, 125, 50, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, rgba(244, 67, 54, 0.9) 0%, rgba(211, 47, 47, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(244, 67, 54, 0.3);
+    }
+
+    .btn-danger:hover {
+        background: linear-gradient(135deg, rgba(211, 47, 47, 0.95) 0%, rgba(183, 28, 28, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(244, 67, 54, 0.4);
+    }
+
+    .btn-warning {
+        background: linear-gradient(135deg, rgba(255, 152, 0, 0.9) 0%, rgba(245, 124, 0, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(255, 152, 0, 0.3);
+    }
+
+    .btn-warning:hover {
+        background: linear-gradient(135deg, rgba(245, 124, 0, 0.95) 0%, rgba(230, 81, 0, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255, 152, 0, 0.4);
+    }
+
+    .btn-outline-danger {
+        border: 2px solid rgba(244, 67, 54, 0.5);
+        color: rgba(244, 67, 54, 0.9);
+        background: rgba(244, 67, 54, 0.1);
+    }
+
+    .btn-outline-danger:hover {
+        background: rgba(244, 67, 54, 0.2);
+        border-color: rgba(244, 67, 54, 0.8);
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+    }
+
+    /* Location Button */
+    .location-btn {
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    /* Location Detected Status */
+    .location-status {
+        display: none;
+        margin-top: 1rem;
+        padding: 1rem 1.25rem;
+        border-radius: 14px;
+        background: rgba(76, 175, 80, 0.15);
+        border: 1px solid rgba(76, 175, 80, 0.4);
+        color: #a5d6a7;
+        font-size: 0.95rem;
+        animation: fadeSlideIn 0.4s ease;
+    }
+
+    .location-status.active {
+        display: block;
+    }
+
+    .location-status .location-coords {
+        font-weight: 700;
+        color: #81c784;
+        font-size: 1rem;
+    }
+
+    .location-status .location-address {
+        color: #c8e6c9;
+        margin-top: 0.35rem;
+        font-size: 0.9rem;
+        word-break: break-word;
+    }
+
+    @keyframes fadeSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Highlight animation for filled inputs */
+    @keyframes inputHighlight {
+        0% {
+            border-color: rgba(76, 175, 80, 0.8) !important;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.25);
+        }
+
+        100% {
+            border-color: rgba(255, 255, 255, 0.25) !important;
+            box-shadow: none;
+        }
+    }
+
+    .input-filled-highlight {
+        animation: inputHighlight 2s ease forwards;
+        color: #fff !important;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .report-container {
+            padding: 1.5rem 2rem;
+            margin: 1rem;
+            max-width: 95%;
+        }
+
+        .report-header h2 {
+            font-size: 2rem;
+        }
+
+        .camera-controls {
+            flex-direction: column;
+        }
+
+        .capture-btn {
+            width: 100%;
+        }
+
+        .camera-preview {
+            max-height: 250px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .report-container {
+            padding: 1.25rem 1.5rem;
+            margin: 0.75rem;
+            max-width: 92%;
+        }
+
+        .report-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    /* Form Validation Styling */
+    .is-invalid {
+        border-color: #ff4444 !important;
+        box-shadow: 0 0 0 0.2rem rgba(255, 68, 68, 0.15) !important;
+    }
+
+    .invalid-feedback {
+        color: #ff6b6b;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Loading States */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    /* Success States */
+    .alert-success {
+        background: rgba(76, 175, 80, 0.15) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(76, 175, 80, 0.3);
+        border-radius: 16px;
+        color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* Warning States */
+    .alert-warning {
+        background: rgba(255, 152, 0, 0.15) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 152, 0, 0.3);
+        border-radius: 16px;
+        color: rgba(255, 255, 255, 0.95);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <!-- Header Section -->
+    <div class="report-header">
+        <h2>🌊 {{ translate('report_hazard') }}</h2>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>{{ translate('report_hazard_description') }}</strong>
+            </div>
+            <a href="{{ url_for('about') }}" class="btn btn-outline-info">
+                <i class="fas fa-university me-2"></i>About INCOIS
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="" enctype="multipart/form-data" id="reportForm">
+        {{ form.hidden_tag() }}
+
+        <!-- Basic Information Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>{{ translate('basic_information') }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control", placeholder="Brief title for your report") }}
+                        <div class="form-text">e.g., "High waves at Marina Beach"</div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        {{ form.hazard_type.label(class="form-label") }}
+                        {{ form.hazard_type(class="form-select") }}
+                        <div class="form-text">Select the type of hazard you're reporting</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=4, placeholder="Describe what you observed in detail
+                    including time, intensity, and any impacts") }}
+                    <div class="form-text">Detailed descriptions help authorities assess the situation accurately</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Information Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>{{ translate('location_details') }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    {{ form.location.label(class="form-label") }}
+                    {{ form.location(class="form-control", placeholder="e.g., Marina Beach, Chennai", id="location") }}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        {{ form.latitude.label(class="form-label") }}
+                        {{ form.latitude(class="form-control", type="number", step="any", id="latitude") }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        {{ form.longitude.label(class="form-label") }}
+                        {{ form.longitude(class="form-control", type="number", step="any", id="longitude") }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button type="button" class="btn btn-outline-primary location-btn" onclick="getLocation()">
+                        <i class="fas fa-crosshairs me-2"></i>{{ translate('use_current_location') }}
+                    </button>
+                    <small class="text-muted ms-2">Click to automatically get your coordinates</small>
+                </div>
+
+                <!-- Location Detected Status -->
+                <div class="location-status" id="locationStatus">
+                    <div><i class="fas fa-check-circle me-2" style="color: #66bb6a;"></i><strong>Location Detected
+                            Successfully!</strong></div>
+                    <div class="location-coords" id="locationCoords"></div>
+                    <div class="location-address" id="locationAddress"><i
+                            class="fas fa-spinner fa-spin me-1"></i>Fetching address...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Camera Section -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-camera me-2"></i>Live Media Capture</h5>
+            </div>
+            <div class="card-body">
+                <!-- Camera Selection -->
+                <div class="mb-3">
+                    <label class="form-label">Select Camera:</label>
+                    <select class="form-select" id="cameraSelect">
+                        <option value="">Select camera...</option>
+                        <option value="front">📱 Front Camera</option>
+                        <option value="back">📷 Back Camera</option>
+                    </select>
+                </div>
+
+                <!-- Camera Preview -->
+                <div class="camera-container">
+                    <video id="videoPreview" class="camera-preview" autoplay muted playsinline
+                        style="background: #000; display: block;"></video>
+                    <canvas id="canvas" style="display:none;"></canvas>
+                </div>
+
+                <!-- Camera Controls -->
+                <div class="camera-controls">
+                    <button type="button" class="btn btn-success capture-btn" onclick="capturePhoto()">
+                        <i class="fas fa-camera me-2"></i>{{ translate('capture_photo') }}
+                    </button>
+                    <button type="button" class="btn btn-danger capture-btn" id="recordButton"
+                        onclick="toggleVideoRecording()">
+                        <span id="recordingDot" style="display:none;" class="recording-indicator"></span>
+                        <i class="fas fa-video me-2"></i>Start Recording
+                    </button>
+                </div>
+
+                <!-- Media Preview -->
+                <div id="mediaPreview" class="media-preview-container"></div>
+
+                <!-- Hidden file inputs for captured media -->
+                <input type="file" name="photo" id="photoInput" style="display: none;" accept="image/*">
+                <input type="file" name="video" id="videoInput" style="display: none;" accept="video/*">
+            </div>
+        </div>
+
+        <!-- Traditional File Upload -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-upload me-2"></i>Or Upload Files</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Upload Photo</label>
+                        <input type="file" class="form-control" name="photo" accept="image/*" id="filePhotoInput"
+                            onchange="handleFileSelect(this, 'photo')">
+                        <div class="form-text">JPG, PNG, GIF (or use live camera above)</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Upload Video</label>
+                        <input type="file" class="form-control" name="video" accept="video/*" id="fileVideoInput"
+                            onchange="handleFileSelect(this, 'video')">
+                        <div class="form-text">MP4, MOV, AVI - max 16MB (or use live camera above)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Severity Assessment -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>{{ translate('severity_assessment') }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Severity Level</label>
+                        <select class="form-select" name="severity">
+                            <option value="low">Low - Minor issue</option>
+                            <option value="medium" selected>Medium - Concerning situation</option>
+                            <option value="high">High - Dangerous conditions</option>
+                            <option value="extreme">Extreme - Immediate threat to life/property</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Urgency</label>
+                        <select class="form-select" name="urgency">
+                            <option value="low">Low - Monitoring</option>
+                            <option value="medium" selected>Medium - Attention needed</option>
+                            <option value="high">High - Immediate attention required</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terms and Conditions -->
+        <div class="terms-checkbox">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="termsCheckbox" required>
+                <label class="form-check-label" for="termsCheckbox">
+                    I agree to the <a href="{{ url_for('about') }}" target="_blank" class="text-info">Terms and
+                        Conditions</a>
+                    and confirm that this report contains accurate information about ocean hazards.
+                    I understand that false reports may lead to penalties.
+                </label>
+            </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+            <a href="{{ url_for('main.home') if 'main.home' in view_functions else url_for('login') }}"
+                class="btn btn-secondary me-md-2">
+                <i class="fas fa-times me-2"></i>{{ translate('cancel') }}
+            </a>
+            {{ form.submit(class="btn btn-primary btn-lg", id="submitButton") }}
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- JavaScript for Camera and Location -->
+<script>
+    (function () {
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let videoRecording = false;
+        let videoElement = document.getElementById('videoPreview');
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas ? canvas.getContext('2d') : null;
+        let recordButton = document.getElementById('recordButton');
+        let recordingDot = document.getElementById('recordingDot');
+        let submitButton = document.getElementById('submitButton');
+        let currentMediaType = null;
+
+        // Check for Secure Context on Load
+        document.addEventListener('DOMContentLoaded', function () {
+            // Fix labels more aggressively
+            function fixLabels() {
+                // Mapping of field IDs to desired labels
+                const labelMap = {
+                    'title': 'Title',
+                    'description': 'Description',
+                    'location': 'Location Name',
+                    'latitude': 'Latitude',
+                    'longitude': 'Longitude',
+                    'hazard_type': 'Hazard Type'
+                };
+
+                for (const [id, text] of Object.entries(labelMap)) {
+                    // Find label for this id
+                    const label = document.querySelector(`label[for="${id}"]`);
+                    if (label) {
+                        label.innerText = text;
+                    } else {
+                        // Fallback: try to find label by content if it contains "Form Reportform"
+                        document.querySelectorAll('label').forEach(l => {
+                            if (l.innerText.includes(`Form Reportform ${text}`) ||
+                                l.innerText.includes(`Form Reportform ${id.charAt(0).toUpperCase() + id.slice(1)}`)) {
+                                l.innerText = text;
+                            }
+                        });
+                    }
+                }
+            }
+            fixLabels();
+            // Run again after a short delay in case of dynamic rendering
+            setTimeout(fixLabels, 500);
+
+            // Check if we are in a secure context (HTTPS or localhost)
+            if (!window.isSecureContext) {
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'alert alert-warning border-warning';
+                warningDiv.innerHTML = `
+                <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Security Warning</h5>
+                <p class="mb-0">
+                    You are accessing this site via an insecure connection (HTTP). 
+                    <strong>Camera features will NOT work.</strong>
+                    Location detection will use IP-based fallback (approximate).
+                    For best results, use the <strong>HTTPS</strong> link (Ngrok) or access via <strong>localhost</strong>.
+                </p>
+            `;
+                document.querySelector('.report-container').prepend(warningDiv);
+
+                // Only disable camera buttons, NOT location (we have IP fallback)
+                document.querySelectorAll('.capture-btn').forEach(btn => {
+                    btn.disabled = true;
+                    btn.title = "Requires HTTPS connection";
+                });
+            }
+
+            // Set up form validation
+            document.getElementById('reportForm').addEventListener('submit', function (e) {
+                if (!document.getElementById('termsCheckbox').checked) {
+                    e.preventDefault();
+                    alert('Please agree to the terms and conditions before submitting.');
+                    return false;
+                }
+
+                // Stop recording if still active
+                if (videoRecording) {
+                    stopRecording();
+                    // Delay submission to allow recording to finish
+                    setTimeout(() => {
+                        this.submit();
+                    }, 1000);
+                    e.preventDefault();
+                    return false;
+                }
+                return true;
+            });
+        });
+
+        // Start selected camera
+        async function startCamera(cameraType) {
+            // Reset state
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+
+            // Basic support check
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Camera API is not supported in this browser or context.\nAre you using the HTTPS (ngrok) link?');
+                return;
+            }
+
+            const videoElement = document.getElementById('videoPreview');
+            videoElement.srcObject = null; // Clear previous stream
+
+            try {
+                // Constraints
+                const constraints = {
+                    video: {
+                        facingMode: cameraType === 'back' ? { exact: 'environment' } : 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false // Disable audio for now to reduce permission friction, enable if recording needs it
+                };
+
+                // Enhanced fallback logic for back camera
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (err) {
+                    if (cameraType === 'back') {
+                        console.warn('Exact environment camera failed, trying generic...');
+                        constraints.video.facingMode = 'environment';
+                        try {
+                            mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                        } catch (e2) {
+                            // Last resort: any camera
+                            console.warn('Environment camera failed, trying any camera...');
+                            delete constraints.video.facingMode;
+                            mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                        }
+                    } else {
+                        throw err;
+                    }
+                }
+
+                videoElement.srcObject = mediaStream;
+                videoElement.style.display = 'block';
+
+                // Critical for iOS/Mobile:
+                videoElement.setAttribute('playsinline', '');
+                videoElement.setAttribute('autoplay', '');
+                videoElement.muted = true; // Required for autoplay in many browsers
+
+                // Explicit play attempt
+                try {
+                    await videoElement.play();
+                    console.log("Video playing successfully");
+                } catch (playErr) {
+                    console.error("Auto-play failed:", playErr);
+                    // Show a manual play button overlay if needed
+                    alert("Please tap the video area to start the preview (Autoplay blocked).");
+                    videoElement.controls = true; // Enable controls so user can press play
+                }
+
+            } catch (error) {
+                console.error('Error starting camera:', error);
+                let msg = `Could not access camera: ${error.message}`;
+
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    msg = 'Camera access denied. Please grant permission in your browser settings and reload.';
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    msg = 'No camera device found on this device.';
+                } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                    msg = 'Camera is already in use by another application or tab.';
+                }
+
+                alert(msg + "\n\nMake sure you are using the HTTPS link.");
+            }
+        }
+
+        // Camera selection change
+        document.getElementById('cameraSelect').addEventListener('change', function () {
+            const selectedCamera = this.value;
+            if (selectedCamera) {
+                startCamera(selectedCamera);
+            } else if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+            }
+        });
+
+        // Capture photo from camera
+        function capturePhoto() {
+            if (!mediaStream) {
+                alert('Please select a camera first.');
+                return;
+            }
+
+            // Set canvas size to video size
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+
+            // Draw current video frame to canvas
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas to blob and create file
+            canvas.toBlob(function (blob) {
+                const file = new File([blob], 'captured_photo.jpg', { type: 'image/jpeg' });
+
+                // Create a data transfer object to simulate file input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                document.getElementById('photoInput').files = dataTransfer.files;
+
+                // Clear any file input
+                document.getElementById('filePhotoInput').value = '';
+
+                // Show preview
+                showMediaPreview(URL.createObjectURL(blob), 'photo');
+                currentMediaType = 'photo';
+
+            }, 'image/jpeg', 0.9);
+        }
+
+        // Toggle video recording
+        function toggleVideoRecording() {
+            if (!mediaStream) {
+                alert('Please select a camera first.');
+                return;
+            }
+
+            if (!videoRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        // Start video recording
+        function startRecording() {
+            recordedChunks = [];
+
+            try {
+                const options = { mimeType: 'video/webm; codecs=vp9' };
+                mediaRecorder = new MediaRecorder(mediaStream, options);
+            } catch (e0) {
+                console.log('VP9 not supported, trying VP8');
+                try {
+                    const options = { mimeType: 'video/webm; codecs=vp8' };
+                    mediaRecorder = new MediaRecorder(mediaStream, options);
+                } catch (e1) {
+                    console.log('VP8 not supported, trying default');
+                    try {
+                        mediaRecorder = new MediaRecorder(mediaStream);
+                    } catch (e2) {
+                        alert('MediaRecorder is not supported in this browser.');
+                        return;
+                    }
+                }
+            }
+
+            try {
+                mediaRecorder.ondataavailable = function (event) {
+                    if (event.data && event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = function () {
+                    const blob = new Blob(recordedChunks, { type: 'video/mp4' });
+                    const file = new File([blob], 'recorded_video.mp4', { type: 'video/mp4' });
+
+                    // Create a data transfer object to simulate file input
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    document.getElementById('videoInput').files = dataTransfer.files;
+
+                    // Clear any file input
+                    document.getElementById('fileVideoInput').value = '';
+
+                    // Show preview
+                    showMediaPreview(URL.createObjectURL(blob), 'video');
+                    currentMediaType = 'video';
+                };
+
+                mediaRecorder.start(1000); // Collect 1-second chunks
+                videoRecording = true;
+                recordButton.innerHTML = '<span class="recording-indicator"></span><i class="fas fa-stop me-2"></i>Stop Recording';
+                recordButton.classList.remove('btn-danger');
+                recordButton.classList.add('btn-warning');
+                recordingDot.style.display = 'inline-block';
+
+                // Disable submit button while recording
+                submitButton.disabled = true;
+                submitButton.title = 'Please stop recording before submitting';
+
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Failed to start recording: ' + error.message);
+            }
+        }
+
+        // Stop video recording
+        function stopRecording() {
+            if (mediaRecorder && videoRecording) {
+                mediaRecorder.stop();
+                videoRecording = false;
+                recordButton.innerHTML = '<i class="fas fa-video me-2"></i>Start Recording';
+                recordButton.classList.remove('btn-warning');
+                recordButton.classList.add('btn-danger');
+                recordingDot.style.display = 'none';
+
+                // Re-enable submit button
+                submitButton.disabled = false;
+                submitButton.title = '';
+            }
+        }
+
+        // Show media preview
+        function showMediaPreview(url, type) {
+            const previewDiv = document.getElementById('mediaPreview');
+
+            if (type === 'photo') {
+                previewDiv.innerHTML = `
+                <div class="alert alert-success d-flex align-items-center">
+                    <strong class="me-2"><i class="fas fa-check-circle me-2"></i>Photo Captured!</strong>
+                    <img src="${url}" class="media-preview ms-2">
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearMedia('photo')">
+                        <i class="fas fa-trash me-1"></i>Remove
+                    </button>
+                </div>
+            `;
+            } else if (type === 'video') {
+                previewDiv.innerHTML = `
+                <div class="alert alert-info d-flex align-items-center">
+                    <strong class="me-2"><i class="fas fa-check-circle me-2"></i>Video Recorded!</strong>
+                    <video src="${url}" controls class="media-preview ms-2"></video>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearMedia('video')">
+                        <i class="fas fa-trash me-1"></i>Remove
+                    </button>
+                </div>
+            `;
+            }
+        }
+
+        // Handle file selection from traditional upload
+        function handleFileSelect(input, type) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const url = URL.createObjectURL(file);
+
+                // Clear the other input (camera capture)
+                if (type === 'photo') {
+                    document.getElementById('photoInput').value = '';
+                } else {
+                    document.getElementById('videoInput').value = '';
+                }
+
+                showMediaPreview(url, type);
+                currentMediaType = type;
+            }
+        }
+
+        // Clear media
+        function clearMedia(type) {
+            const previewDiv = document.getElementById('mediaPreview');
+            previewDiv.innerHTML = '';
+
+            if (type === 'photo') {
+                document.getElementById('photoInput').value = '';
+                document.getElementById('filePhotoInput').value = '';
+            } else if (type === 'video') {
+                document.getElementById('videoInput').value = '';
+                document.getElementById('fileVideoInput').value = '';
+            }
+
+            currentMediaType = null;
+        }
+
+        // Clean up when leaving page
+        window.addEventListener('beforeunload', function () {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            if (mediaRecorder && videoRecording) {
+                mediaRecorder.stop();
+            }
+        });
+
+        // Helper: find form inputs with multiple fallback selectors
+        function findLocationInputs() {
+            // Try by explicit id first, then by name, then by any input inside the location card
+            const allInputs = document.querySelectorAll('input, select, textarea');
+            let latInput = document.getElementById('latitude');
+            let lonInput = document.getElementById('longitude');
+            let locInput = document.getElementById('location');
+
+            // Fallback: search by name attribute
+            if (!latInput) latInput = document.querySelector('input[name="latitude"]');
+            if (!lonInput) lonInput = document.querySelector('input[name="longitude"]');
+            if (!locInput) locInput = document.querySelector('input[name="location"]');
+
+            // Fallback: search by type=number fields inside location card
+            if (!latInput || !lonInput) {
+                allInputs.forEach(input => {
+                    const label = document.querySelector(`label[for="${input.id}"]`);
+                    const labelText = label ? label.textContent.toLowerCase() : '';
+                    if (!latInput && (labelText.includes('latitude') || input.id.toLowerCase().includes('lat'))) {
+                        latInput = input;
+                    }
+                    if (!lonInput && (labelText.includes('longitude') || input.id.toLowerCase().includes('lon'))) {
+                        lonInput = input;
+                    }
+                    if (!locInput && (labelText.includes('location') || input.id.toLowerCase().includes('location'))) {
+                        locInput = input;
+                    }
+                });
+            }
+
+            console.log('Found inputs:', { latInput, lonInput, locInput });
+            return { latInput, lonInput, locInput };
+        }
+
+        // Helper: populate location fields and show status
+        function populateLocationFields(lat, lon) {
+            const { latInput, lonInput, locInput } = findLocationInputs();
+            const statusDiv = document.getElementById('locationStatus');
+            const coordsDiv = document.getElementById('locationCoords');
+            const addressDiv = document.getElementById('locationAddress');
+            const locationBtn = document.querySelector('.location-btn');
+
+            // Set lat/lon values
+            if (latInput) {
+                latInput.value = lat.toFixed(6);
+                latInput.classList.add('input-filled-highlight');
+                // Trigger change event so any listeners pick it up
+                latInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (lonInput) {
+                lonInput.value = lon.toFixed(6);
+                lonInput.classList.add('input-filled-highlight');
+                lonInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            // Show status banner
+            if (statusDiv && coordsDiv) {
+                coordsDiv.innerHTML = `📍 Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+                if (addressDiv) addressDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Fetching address...';
+                statusDiv.classList.add('active');
+            }
+
+            if (locationBtn) {
+                locationBtn.className = 'btn btn-success location-btn';
+                locationBtn.innerHTML = '<i class="fas fa-check me-2"></i>Location Found';
+            }
+
+            // Reverse Geocoding for address
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.display_name) {
+                        if (locInput) {
+                            locInput.value = data.display_name;
+                            locInput.classList.add('input-filled-highlight');
+                            locInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                        if (addressDiv) {
+                            addressDiv.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${data.display_name}`;
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error("Geocoding error:", err);
+                    if (addressDiv) addressDiv.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>Could not fetch address, but coordinates are set.';
+                });
+
+            // Remove highlight after animation
+            setTimeout(() => {
+                document.querySelectorAll('.input-filled-highlight').forEach(el => {
+                    el.classList.remove('input-filled-highlight');
+                });
+            }, 2500);
+
+            setTimeout(() => {
+                if (locationBtn) resetLocationBtn(locationBtn);
+            }, 4000);
+        }
+
+        // IP-based geolocation fallback
+        function getLocationByIP() {
+            const statusDiv = document.getElementById('locationStatus');
+            const addressDiv = document.getElementById('locationAddress');
+            const locationBtn = document.querySelector('.location-btn');
+
+            console.log("Trying IP-based geolocation fallback...");
+            if (locationBtn) {
+                locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Trying IP location...';
+            }
+
+            // Try multiple IP geolocation services as fallback
+            fetch('https://ipapi.co/json/')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("IP geolocation result:", data);
+                    if (data.latitude && data.longitude) {
+                        populateLocationFields(data.latitude, data.longitude);
+
+                        // Also set the location name from IP data
+                        const { locInput } = findLocationInputs();
+                        const ipLocationName = [data.city, data.region, data.country_name].filter(Boolean).join(', ');
+                        if (locInput && ipLocationName) {
+                            locInput.value = ipLocationName;
+                            locInput.classList.add('input-filled-highlight');
+                        }
+                        if (addressDiv) {
+                            addressDiv.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${ipLocationName} <small>(approximate, via IP)</small>`;
+                        }
+                    } else {
+                        throw new Error("No coordinates in IP response");
+                    }
+                })
+                .catch(err => {
+                    console.error("IP geolocation also failed:", err);
+                    // Try another service
+                    fetch('https://ip-api.com/json/?fields=lat,lon,city,regionName,country')
+                        .then(r => r.json())
+                        .then(data2 => {
+                            if (data2.lat && data2.lon) {
+                                populateLocationFields(data2.lat, data2.lon);
+                                const { locInput } = findLocationInputs();
+                                const name2 = [data2.city, data2.regionName, data2.country].filter(Boolean).join(', ');
+                                if (locInput && name2) {
+                                    locInput.value = name2;
+                                    locInput.classList.add('input-filled-highlight');
+                                }
+                                if (addressDiv) {
+                                    addressDiv.innerHTML = `<i class="fas fa-map-marker-alt me-1"></i>${name2} <small>(approximate, via IP)</small>`;
+                                }
+                            } else {
+                                if (statusDiv) {
+                                    statusDiv.classList.add('active');
+                                    statusDiv.style.background = 'rgba(244, 67, 54, 0.15)';
+                                    statusDiv.style.borderColor = 'rgba(244, 67, 54, 0.4)';
+                                    statusDiv.querySelector('div').innerHTML = '<i class="fas fa-times-circle me-2" style="color: #ef5350;"></i><strong>Location detection failed</strong>';
+                                    if (addressDiv) addressDiv.innerHTML = 'Please enter your location manually.';
+                                }
+                                if (locationBtn) resetLocationBtn(locationBtn);
+                            }
+                        })
+                        .catch(err2 => {
+                            console.error("All geolocation methods failed:", err2);
+                            if (statusDiv) {
+                                statusDiv.classList.add('active');
+                                statusDiv.style.background = 'rgba(244, 67, 54, 0.15)';
+                                statusDiv.style.borderColor = 'rgba(244, 67, 54, 0.4)';
+                                statusDiv.querySelector('div').innerHTML = '<i class="fas fa-times-circle me-2" style="color: #ef5350;"></i><strong>Location detection failed</strong>';
+                                if (addressDiv) addressDiv.innerHTML = 'Please enter your location manually.';
+                            }
+                            if (locationBtn) resetLocationBtn(locationBtn);
+                        });
+                });
+        }
+
+        // Main Location Logic
+        window.getLocation = function () {
+            console.log("getLocation called via onclick");
+
+            const locationBtn = document.querySelector('.location-btn');
+            const statusDiv = document.getElementById('locationStatus');
+
+            // Hide previous status & reset style
+            if (statusDiv) {
+                statusDiv.classList.remove('active');
+                statusDiv.style.background = '';
+                statusDiv.style.borderColor = '';
+            }
+
+            if (locationBtn) {
+                locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Locating...';
+                locationBtn.disabled = true;
+            }
+
+            // Check if browser geolocation is available and we're in a secure context
+            if (navigator.geolocation && window.isSecureContext) {
+                console.log("Using browser geolocation API...");
+                navigator.geolocation.getCurrentPosition(
+                    // Success
+                    function (position) {
+                        console.log("Browser geolocation success:", position);
+                        populateLocationFields(position.coords.latitude, position.coords.longitude);
+                    },
+                    // Error - fallback to IP
+                    function (error) {
+                        console.warn("Browser geolocation failed:", error.message, "- falling back to IP geolocation");
+                        getLocationByIP();
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                // Not secure context or no geolocation API - use IP fallback directly
+                console.log("No secure context or geolocation API unavailable, using IP fallback");
+                getLocationByIP();
+            }
+        };
+
+        function resetLocationBtn(btn) {
+            btn.innerHTML = '<i class="fas fa-crosshairs me-2"></i>Use Current Location';
+            btn.className = 'btn btn-outline-primary location-btn';
+            btn.disabled = false;
+        }
+
+        // Note: Initialization is handled in the main DOMContentLoaded listener above
+
+        // Expose functions to global scope for onclick/onchange handlers
+        window.capturePhoto = capturePhoto;
+        window.toggleVideoRecording = toggleVideoRecording;
+        window.clearMedia = clearMedia;
+        window.handleFileSelect = handleFileSelect;
+    })();
+</script>
+{% endblock %}

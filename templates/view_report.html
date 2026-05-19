@@ -1,0 +1,577 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Report Container */
+    .report-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        max-width: 1000px;
+    }
+
+    .report-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .report-header h2 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: white;
+    }
+
+    .status-badges {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+
+    .status-badge {
+        padding: 0.75rem 1.25rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .status-approved {
+        background: rgba(76, 175, 80, 0.2);
+        color: #a5d6a7;
+        border: 1px solid rgba(76, 175, 80, 0.4);
+    }
+
+    .status-rejected {
+        background: rgba(244, 67, 54, 0.2);
+        color: #ff8a80;
+        border: 1px solid rgba(244, 67, 54, 0.4);
+    }
+
+    .status-pending {
+        background: rgba(255, 152, 0, 0.2);
+        color: #ffcc80;
+        border: 1px solid rgba(255, 152, 0, 0.4);
+    }
+
+    .confidence-badge {
+        background: rgba(33, 150, 243, 0.2);
+        color: #90caf9;
+        border: 1px solid rgba(33, 150, 243, 0.4);
+    }
+
+    .verified-badge {
+        background: rgba(76, 175, 80, 0.2);
+        color: #a5d6a7;
+        border: 1px solid rgba(76, 175, 80, 0.4);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .info-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .info-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateY(-2px);
+    }
+
+    .info-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-value {
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .content-section {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.2rem;
+    }
+
+    .section-content {
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.6;
+    }
+
+    .ai-analysis {
+        border-left: 4px solid #42a5f5;
+        background: rgba(33, 150, 243, 0.1);
+    }
+
+    .alert-approved {
+        border-left: 4px solid #4caf50;
+        background: rgba(76, 175, 80, 0.1);
+    }
+
+    .alert-rejected {
+        border-left: 4px solid #f44336;
+        background: rgba(244, 67, 54, 0.1);
+    }
+
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .media-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .media-preview {
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    .media-preview img,
+    .media-preview video {
+        width: 100%;
+        height: auto;
+        max-height: 300px;
+        object-fit: cover;
+    }
+
+    .media-label {
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 600;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .metric-item {
+        padding: 1.5rem 1rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .metric-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-count {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #42a5f5;
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .action-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .action-header {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.1rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-custom {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .btn-primary-custom {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%);
+        color: white;
+    }
+
+    .btn-success-custom {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.9) 0%, rgba(102, 187, 106, 0.9) 100%);
+        color: white;
+    }
+
+    .btn-danger-custom {
+        background: linear-gradient(135deg, rgba(244, 67, 54, 0.9) 0%, rgba(229, 57, 53, 0.9) 100%);
+        color: white;
+    }
+
+    .btn-warning-custom {
+        background: linear-gradient(135deg, rgba(255, 152, 0, 0.9) 0%, rgba(255, 167, 38, 0.9) 100%);
+        color: white;
+    }
+
+    .btn-outline-custom {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+
+    /* Button hover effects */
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 768px) {
+        .report-container {
+            padding: 2rem;
+            margin: 1rem;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .media-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <div class="report-header">
+        <h2><i class="fas fa-file-alt me-2"></i>{{ report.title }}</h2>
+        <div class="status-badges">
+            <span class="status-badge status-{{ report.verification_status }}">
+                <i
+                    class="fas fa-{% if report.verification_status == 'approved' %}check-circle{% elif report.verification_status == 'rejected' %}times-circle{% else %}clock{% endif %}"></i>
+                {{ report.verification_status|title }}
+            </span>
+            {% if report.confidence_score %}
+            <span class="status-badge confidence-badge">
+                <i class="fas fa-robot"></i>
+                AI Confidence: {{ (report.confidence_score * 100)|round(1) }}%
+            </span>
+            {% endif %}
+            {% if report.verified %}
+            <span class="status-badge verified-badge">
+                <i class="fas fa-shield-alt"></i>
+                Verified
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show mb-4">
+        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="info-grid">
+        <div class="info-card">
+            <div class="info-label"><i class="fas fa-bolt"></i>Hazard Type</div>
+            <div class="info-value">{{ report.hazard_type }}</div>
+        </div>
+        <div class="info-card">
+            <div class="info-label"><i class="fas fa-map-marker-alt"></i>Location</div>
+            <div class="info-value">{{ report.location }}</div>
+        </div>
+        <div class="info-card">
+            <div class="info-label"><i class="fas fa-globe"></i>Coordinates</div>
+            <div class="info-value">{{ report.latitude|round(6) }}, {{ report.longitude|round(6) }}</div>
+        </div>
+        <div class="info-card">
+            <div class="info-label"><i class="fas fa-user"></i>Reported By</div>
+            <div class="info-value">
+                <a href="{{ url_for('profile', username=report.author.username) }}"
+                    class="text-decoration-none text-white">
+                    <i class="fas fa-user-circle me-1"></i>{{ report.author.username }}
+                </a>
+            </div>
+        </div>
+        <div class="info-card">
+            <div class="info-label"><i class="fas fa-clock"></i>Timestamp</div>
+            <div class="info-value">{{ report.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+        </div>
+        {% if report.verified_at %}
+        <div class="info-card">
+            <div class="info-label"><i class="fas fa-check-circle"></i>Verified At</div>
+            <div class="info-value">{{ report.verified_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="content-section">
+        <div class="section-header"><i class="fas fa-align-left"></i>Description</div>
+        <div class="section-content">{{ report.description }}</div>
+    </div>
+
+    {% if report.ai_analysis %}
+    <div class="content-section ai-analysis">
+        <div class="section-header"><i class="fas fa-robot"></i>AI Analysis</div>
+        <div class="section-content">{{ report.ai_analysis }}</div>
+    </div>
+    {% endif %}
+
+    {% if report.verification_status == 'approved' and report.verifier %}
+    <div class="content-section alert-approved">
+        <div class="section-header"><i class="fas fa-check-circle"></i>Approval Details</div>
+        <div class="section-content">
+            <strong>Approved by:</strong> {{ report.verifier.username }}
+            {% if report.verified_at %}on {{ report.verified_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if report.verification_status == 'rejected' %}
+    <div class="content-section alert-rejected">
+        <div class="section-header"><i class="fas fa-times-circle"></i>Rejection Details</div>
+        <div class="section-content">
+            {% if report.rejection_reason %}<p><strong>Reason:</strong> {{ report.rejection_reason }}</p>{% endif %}
+            {% if report.verifier %}<p><strong>Rejected by:</strong> {{ report.verifier.username }}</p>{% endif %}
+            {% if report.verified_at %}<p><strong>Rejected on:</strong> {{ report.verified_at.strftime('%Y-%m-%d %H:%M')
+                }}</p>{% endif %}
+            {% if report.scheduled_deletion %}<p><i class="fas fa-exclamation-triangle me-1"></i><strong>Scheduled for
+                    deletion:</strong> {{ report.scheduled_deletion.strftime('%Y-%m-%d %H:%M') }}</p>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if report.image_file or report.video_file %}
+    <div class="content-section">
+        <div class="section-header"><i class="fas fa-camera"></i>Media Evidence</div>
+        <div class="media-grid">
+            {% if report.image_file %}
+            <div class="media-card">
+                <div class="media-label">Photo Evidence</div>
+                <div class="media-preview">
+                    <a href="{{ url_for('uploaded_file', filename=report.image_file) }}" target="_blank">
+                        <img src="{{ url_for('uploaded_file', filename=report.image_file) }}" alt="Report image">
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            {% if report.video_file %}
+            <div class="media-card">
+                <div class="media-label">Video Evidence</div>
+                <div class="media-preview">
+                    <video controls>
+                        <source src="{{ url_for('uploaded_file', filename=report.video_file) }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="content-section">
+        <div class="section-header"><i class="fas fa-chart-line"></i>Engagement Analytics</div>
+        <div class="metrics-grid">
+            <div class="metric-item">
+                <div class="metric-icon">👁️</div>
+                <div class="metric-count">{{ report.views_count }}</div>
+                <div class="metric-label">Total Views</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-icon">🤝</div>
+                <div class="metric-count">{{ report.likes_count }}</div>
+                <div class="metric-label">Local Approvals</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-icon">💬</div>
+                <div class="metric-count">{{ report.comments_count }}</div>
+                <div class="metric-label">Total Comments</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Specific Post Comments -->
+    <div class="content-section">
+        <div class="section-header"><i class="fas fa-comments"></i>Recent Activity & Comments</div>
+        <div class="comments-list mt-3">
+            {% if report.comments %}
+            {% for comment in report.comments|sort(attribute='timestamp', reverse=True) %}
+            <div class="comment-item p-3 mb-2 rounded bg-white bg-opacity-10">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="text-info">@{{ comment.user.username }}</strong>
+                    <small class="text-white-50">{{ comment.timestamp.strftime('%b %d, %H:%M') }}</small>
+                </div>
+                <p class="mb-0 text-white">{{ comment.text }}</p>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center py-4 text-white-50">
+                <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                <p>No community discussion yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if current_user.role in ['official', 'analyst'] %}
+    <div class="action-card">
+        <div class="action-header"><i class="fas fa-user-shield"></i>Verification Actions</div>
+        <div class="action-buttons">
+            {% if report.verification_status != 'approved' %}
+            <form action="{{ url_for('verify_report', report_id=report.id) }}" method="post" class="d-inline">
+                <input type="hidden" name="action" value="approve">
+                <button type="submit" class="btn-custom btn-success-custom">
+                    <i class="fas fa-check me-1"></i>Approve Report
+                </button>
+            </form>
+
+            <!-- REPLACED: Modal with direct link to reject page -->
+            <a href="{{ url_for('reject_report', report_id=report.id) }}" class="btn-custom btn-danger-custom">
+                <i class="fas fa-times me-1"></i>Reject Report
+            </a>
+
+            {% if report.verification_status == 'rejected' %}
+            <form action="{{ url_for('verify_report', report_id=report.id) }}" method="post" class="d-inline">
+                <input type="hidden" name="action" value="pending">
+                <button type="submit" class="btn-custom btn-warning-custom">
+                    <i class="fas fa-undo me-1"></i>Return to Pending
+                </button>
+            </form>
+            {% endif %}
+            {% else %}
+            <!-- Report is already approved -->
+            <form action="{{ url_for('verify_report', report_id=report.id) }}" method="post" class="d-inline">
+                <input type="hidden" name="action" value="pending">
+                <button type="submit" class="btn-custom btn-warning-custom">
+                    <i class="fas fa-arrow-left me-1"></i>Revert to Pending
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if current_user.id == report.user_id %}
+    <div class="action-card">
+        <div class="action-header"><i class="fas fa-cog"></i>Your Actions</div>
+        <div class="action-buttons">
+            <form action="{{ url_for('delete_report', report_id=report.id) }}" method="post" class="d-inline">
+                <button type="submit" class="btn-custom btn-danger-custom"
+                    onclick="return confirm('Are you sure you want to delete this report?')">
+                    <i class="fas fa-trash me-1"></i>Delete My Report
+                </button>
+            </form>
+            {% if report.verification_status == 'rejected' and report.scheduled_deletion %}
+            <form action="{{ url_for('cancel_deletion', report_id=report.id) }}" method="post" class="d-inline">
+                <button type="submit" class="btn-custom btn-warning-custom">
+                    <i class="fas fa-ban me-1"></i>Cancel Deletion
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <a href="{{ url_for('dashboard') }}" class="btn-custom btn-primary-custom">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+        <a href="{{ url_for('reels') }}" class="btn-custom btn-outline-custom">
+            <i class="fas fa-film me-2"></i>View in Reels
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('View Report page loaded');
+
+        // Simple confirmation for delete actions
+        const deleteButtons = document.querySelectorAll('form[action*="delete_report"] button');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function (e) {
+                if (!confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

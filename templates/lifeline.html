@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    .lifeline-header {
+        background: radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent),
+            radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.05), transparent);
+        border-radius: 24px;
+        padding: 3rem;
+        margin-bottom: 3rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        transform: translateY(-5px);
+        border-color: rgba(14, 165, 233, 0.3);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-badge {
+        font-size: 0.75rem;
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .resource-type-indicator {
+        width: 4px;
+        height: 40px;
+        border-radius: 4px;
+        margin-right: 15px;
+    }
+
+    .avatar-glow {
+        box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+    }
+
+    .btn-premium {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        border: none;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-premium:hover {
+        transform: scale(1.02);
+        box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);
+        color: white;
+    }
+
+    .match-glow-card {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .urgent-pulse {
+        animation: premium-pulse 2s infinite;
+    }
+
+    @keyframes premium-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header Section -->
+    <div class="lifeline-header animate__animated animate__fadeIn">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <h1 class="display-3 fw-bold mb-3 mb-0">
+                    <span class="text-info">Life</span>Line
+                </h1>
+                <p class="lead opacity-75 mb-4">The Next-Gen P2P Supply Network. Synthesizing neighborhood resources to
+                    save lives in real-time.</p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('create_resource_listing') }}" class="btn btn-premium shadow-lg">
+                        <i class="fas fa-plus-circle me-2"></i>Post New Inventory
+                    </a>
+                    <a href="{{ url_for('lifeline_map') }}"
+                        class="btn btn-outline-info border-2 px-4 rounded-4 fw-bold">
+                        <i class="fas fa-project-diagram me-2"></i>Live Network Map
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-5 d-none d-lg-block text-center">
+                <div class="display-1 text-info opacity-25">
+                    <i class="fas fa-hand-holding-heart animate__animated animate__pulse animate__infinite"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Connections -->
+    {% if my_matches %}
+    <div class="mb-5">
+        <div class="d-flex align-items-center mb-4">
+            <h3 class="fw-bold mb-0">Active SafeLinks</h3>
+            <span class="badge bg-success ms-3 rounded-pill">{{ my_matches|length }} Active</span>
+        </div>
+        <div class="row g-4">
+            {% for match in my_matches %}
+            <div class="col-md-6">
+                <div class="glass-card match-glow-card p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div class="stat-badge bg-success text-white">CONNECTION ESTABLISHED</div>
+                        <div class="text-muted small">{{ match.created_at.strftime('%H:%M | %b %d') }}</div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between text-center px-3">
+                        <div class="text-center">
+                            <div class="fw-bold h5 mb-1">{{ match.need_listing.user.username }}</div>
+                            <div class="small opacity-50">{{ match.need_listing.title }}</div>
+                        </div>
+                        <div class="px-3">
+                            <div
+                                class="text-success h4 mb-0 animate__animated animate__flash animate__infinite animate__slow">
+                                <i class="fas fa-link"></i>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold h5 mb-1">{{ match.have_listing.user.username }}</div>
+                            <div class="small opacity-50">{{ match.have_listing.title }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top border-white border-opacity-10 d-flex justify-content-end">
+                        {% if match.status == 'pending' %}
+                        <a href="{{ url_for('complete_resource_match', match_id=match.id) }}"
+                            class="btn btn-success btn-sm px-4 rounded-pill fw-bold">
+                            <i class="fas fa-check-circle me-2"></i>Finalize Delivery (+20 XP)
+                        </a>
+                        {% else %}
+                        <span class="text-success fw-bold small"><i class="fas fa-check-double me-2"></i>VERIFIED
+                            DELIVERED</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-5">
+        <!-- Resource Needs -->
+        <div class="col-lg-6">
+            <h4 class="fw-bold mb-4 d-flex align-items-center">
+                <i class="fas fa-crosshairs text-danger me-3"></i>Community Requisitions
+            </h4>
+            <div class="d-flex flex-column gap-3">
+                {% for need in needs %}
+                <div class="glass-card p-4 d-flex">
+                    <div class="resource-type-indicator bg-danger"></div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span
+                                class="stat-badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">
+                                {{ need.category|upper }}
+                            </span>
+                            {% if need.urgent %}
+                            <span class="stat-badge bg-danger text-white urgent-pulse">CRITICAL</span>
+                            {% endif %}
+                        </div>
+                        <h5 class="fw-bold mb-1">{{ need.title }}</h5>
+                        <p class="small opacity-75 mb-3">{{ need.description }}</p>
+
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                                    style="width: 28px; height: 28px;">
+                                    {{ need.user.username[0]|upper }}
+                                </div>
+                                <span class="small fw-bold">{{ need.user.username }}</span>
+                            </div>
+                            <div class="small opacity-50"><i class="fas fa-map-marker-alt me-1"></i> {{
+                                need.location.split(',')[0] }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5 glass-card opacity-50">
+                    <i class="fas fa-shield-alt fa-3x mb-3 text-success"></i>
+                    <p>No critical needs detected in this sector.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Resource Offerings -->
+        <div class="col-lg-6">
+            <h4 class="fw-bold mb-4 d-flex align-items-center">
+                <i class="fas fa-box-open text-success me-3"></i>Sector Inventories
+            </h4>
+            <div class="d-flex flex-column gap-3">
+                {% for have in haves %}
+                <div class="glass-card p-4 d-flex">
+                    <div class="resource-type-indicator bg-success"></div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span
+                                class="stat-badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                                {{ have.category|upper }}
+                            </span>
+                            <span class="small fw-bold text-success">{{ have.quantity }} Unit(s)</span>
+                        </div>
+                        <h5 class="fw-bold mb-1">{{ have.title }}</h5>
+                        <p class="small opacity-75 mb-3">{{ have.description }}</p>
+
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                                    style="width: 28px; height: 28px;">
+                                    {{ have.user.username[0]|upper }}
+                                </div>
+                                <span class="small fw-bold">{{ have.user.username }}</span>
+                            </div>
+                            <div class="small opacity-50"><i class="fas fa-map-marker-alt me-1"></i> {{
+                                have.location.split(',')[0] }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5 glass-card opacity-50">
+                    <i class="fas fa-layer-group fa-3x mb-3"></i>
+                    <p>Awaiting local inventory listings.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

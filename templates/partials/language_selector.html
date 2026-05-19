@@ -1,0 +1,17 @@
+<!-- Language Selector -->
+<div class="dropdown">
+    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+            data-bs-toggle="dropdown" aria-expanded="false">
+        🌐 {{ current_language.upper() }}
+    </button>
+    <ul class="dropdown-menu">
+        {% for lang_code in available_languages %}
+        <li>
+            <a class="dropdown-item {% if lang_code == current_language %}active{% endif %}" 
+               href="{{ url_for('set_language', lang=lang_code) }}">
+                {{ translate(lang_code) }} ({{ lang_code.upper() }})
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>

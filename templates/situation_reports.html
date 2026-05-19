@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Home-page style integration */
+    .main-content-container {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+    }
+
+    .hero-subtitle {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 2rem;
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .x-small {
+        font-size: 0.7rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+        <div>
+            <h1 class="hero-title">📝 Situation Reports</h1>
+            <p class="hero-subtitle mb-0">Unified field intelligence & operational reporting</p>
+        </div>
+        <a href="{{ url_for('new_situation_report') }}" class="btn btn-info px-4 py-2 fw-bold shadow text-white">
+            <i class="fas fa-plus me-2"></i>New SitRep
+        </a>
+    </div>
+
+    {% if reports %}
+    <div class="row">
+        {% for report in reports %}
+        <div class="col-xl-4 col-lg-6 mb-4">
+            <div class="card h-100 border-0"
+                style="border-left: 4px solid {{ '#ef4444' if report.priority == 'critical' else '#f59e0b' if report.priority == 'high' else '#06b6d4' }} !important;">
+                <div class="card-header bg-transparent border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-white text-truncate">{{ report.title }}</h6>
+                    <span
+                        class="badge bg-white bg-opacity-10 text-white x-small border border-white border-opacity-10">{{
+                        report.priority|title }}</span>
+                </div>
+
+                <div class="card-body">
+                    <p class="small text-muted mb-4">{{ report.content[:150] }}{% if report.content|length > 150 %}...{%
+                        endif %}</p>
+
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        <span
+                            class="badge bg-dark bg-opacity-50 text-muted x-small border border-secondary border-opacity-25">
+                            <i class="fas fa-tag me-1"></i>{{ report.report_type|replace('_', ' ')|title }}
+                        </span>
+                        {% if report.emergency_event %}
+                        <span
+                            class="badge bg-danger bg-opacity-10 text-danger x-small border border-danger border-opacity-25">
+                            <i class="fas fa-link me-1"></i>Event Linked
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div
+                        class="d-flex justify-content-between align-items-center mt-auto pt-3 border-top border-white border-opacity-10">
+                        <div class="small text-muted x-small">
+                            <i class="fas fa-clock me-1 opacity-50"></i>{{ report.created_at.strftime('%Y-%m-%d %H:%M')
+                            }}
+                        </div>
+                        <div class="small text-muted x-small">
+                            <i class="fas fa-user-circle me-1 opacity-50"></i>{{ report.author or 'Field Unit' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent border-0 pb-4">
+                    <div class="btn-group w-100 gap-2">
+                        <button class="btn btn-sm btn-outline-light border-secondary">View</button>
+                        <button class="btn btn-sm btn-outline-warning">Edit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card py-5 text-center bg-transparent border-0 opacity-50">
+        <i class="fas fa-file-waveform fa-4x mb-4"></i>
+        <h3>No Reports Filed</h3>
+        <p>Real-time situation awareness begins with your field reports.</p>
+        <div class="mt-4"><a href="{{ url_for('new_situation_report') }}" class="btn btn-info px-4 text-white">File
+                Report</a></div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

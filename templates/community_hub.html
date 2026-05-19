@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-5 fw-bold"><i class="fas fa-users me-3 text-primary"></i>Community Action Hub</h1>
+            <p class="lead text-muted">Join hands to build a safer, greener, and more resilient community.</p>
+        </div>
+        <a href="{{ url_for('create_community_event') }}" class="btn btn-primary btn-lg shadow-sm">
+            <i class="fas fa-plus-circle me-2"></i>Create Event
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-5 g-3">
+        <div class="col-md-4">
+            <div class="card bg-warning bg-gradient text-dark border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title mb-0">Disaster Prep</h5>
+                            <small>Sandbag filling, Drills</small>
+                        </div>
+                        <i class="fas fa-hard-hat fa-2x opacity-50"></i>
+                    </div>
+                    <h2 class="mt-3 fw-bold">{{ disaster_prep_events|length }} Events</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success bg-gradient text-white border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title mb-0">Eco-Connect</h5>
+                            <small>Cleanups, Planting</small>
+                        </div>
+                        <i class="fas fa-leaf fa-2x opacity-50"></i>
+                    </div>
+                    <h2 class="mt-3 fw-bold">{{ environment_events|length }} Events</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info bg-gradient text-white border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title mb-0">Impact Events</h5>
+                            <small>Food Distribution, Aid</small>
+                        </div>
+                        <i class="fas fa-hand-holding-heart fa-2x opacity-50"></i>
+                    </div>
+                    <h2 class="mt-3 fw-bold">{{ social_events|length }} Events</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Events Tabs -->
+    <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill px-4" id="pills-all-tab" data-bs-toggle="pill"
+                data-bs-target="#pills-all" type="button" role="tab">All Events</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4" id="pills-prep-tab" data-bs-toggle="pill"
+                data-bs-target="#pills-prep" type="button" role="tab"><i class="fas fa-hard-hat me-2"></i>Disaster
+                Prep</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4" id="pills-eco-tab" data-bs-toggle="pill"
+                data-bs-target="#pills-eco" type="button" role="tab"><i
+                    class="fas fa-leaf me-2"></i>Environment</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4" id="pills-social-tab" data-bs-toggle="pill"
+                data-bs-target="#pills-social" type="button" role="tab"><i
+                    class="fas fa-hand-holding-heart me-2"></i>Social Impact</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="pills-tabContent">
+        <!-- All Events Tab -->
+        <div class="tab-pane fade show active" id="pills-all" role="tabpanel">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                {% for event in disaster_prep_events + environment_events + social_events %}
+                {% include 'community_event_card.html' %}
+                {% else %}
+                <div class="col-12 text-center py-5">
+                    <img src="https://cdni.iconscout.com/illustration/premium/thumb/empty-state-2130362-1800926.png"
+                        alt="No Events" style="width: 200px; opacity: 0.6;">
+                    <h3 class="text-muted mt-3">No upcoming events found</h3>
+                    <p>Be the first to create one!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Disaster Prep Tab -->
+        <div class="tab-pane fade" id="pills-prep" role="tabpanel">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                {% for event in disaster_prep_events %}
+                {% include 'community_event_card.html' %}
+                {% else %}
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="fas fa-hard-hat fa-4x mb-3 text-warning opacity-25"></i>
+                    <h3>No Disaster Prep Events</h3>
+                    <p>Create a sandbag filling event or safety drill.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Environment Tab -->
+        <div class="tab-pane fade" id="pills-eco" role="tabpanel">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                {% for event in environment_events %}
+                {% include 'community_event_card.html' %}
+                {% else %}
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="fas fa-leaf fa-4x mb-3 text-success opacity-25"></i>
+                    <h3>No Environment Events</h3>
+                    <p>Create a beach cleanup or tree planting drive.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Social Tab -->
+        <div class="tab-pane fade" id="pills-social" role="tabpanel">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                {% for event in social_events %}
+                {% include 'community_event_card.html' %}
+                {% else %}
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="fas fa-hand-holding-heart fa-4x mb-3 text-info opacity-25"></i>
+                    <h3>No Social Impact Events</h3>
+                    <p>Create a food distribution or community aid event.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<style>
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .text-truncate-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}

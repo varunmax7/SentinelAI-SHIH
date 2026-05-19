@@ -1,0 +1,125 @@
+<!-- templates/resource_management.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="fas fa-building me-2"></i>Agency Management
+            </h1>
+            <p class="text-muted mb-0">Manage government and NGO agencies</p>
+        </div>
+        <a href="{{ url_for('new_agency') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add Agency
+        </a>
+    </div>
+
+    <!-- Agencies Grid -->
+    <div class="row">
+        {% if agencies %}
+            {% for agency in agencies %}
+            <div class="col-xl-4 col-lg-6 col-md-12 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-primary text-white py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold">{{ agency.name }}</h6>
+                            <span class="badge bg-light text-dark">
+                                {{ agency.agency_type|title if agency.agency_type else 'Unknown' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-muted">Contact Information</h6>
+                            <p class="mb-1">
+                                <i class="fas fa-user me-2 text-primary"></i>
+                                {{ agency.contact_person or 'Not specified' }}
+                            </p>
+                            <p class="mb-1">
+                                <i class="fas fa-phone me-2 text-primary"></i>
+                                {{ agency.phone or 'Not specified' }}
+                            </p>
+                            <p class="mb-0">
+                                <i class="fas fa-envelope me-2 text-primary"></i>
+                                {{ agency.email or 'Not specified' }}
+                            </p>
+                        </div>
+                        
+                        {% if agency.specialization %}
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-muted">Specialization</h6>
+                            <span class="badge bg-info">{{ agency.specialization }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if agency.resources_available %}
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-muted">Resources Available</h6>
+                            <p class="small text-muted mb-0">
+                                {{ agency.resources_available[:100] }}{% if agency.resources_available|length > 100 %}...{% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if agency.address %}
+                        <div>
+                            <h6 class="fw-bold text-muted">Address</h6>
+                            <p class="small text-muted mb-0">{{ agency.address }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>View
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-building fa-4x text-muted mb-3 opacity-50"></i>
+                    <h5 class="text-muted mb-3">No Agencies Found</h5>
+                    <p class="text-muted mb-4">Add government and NGO agencies to coordinate emergency responses.</p>
+                    <a href="{{ url_for('new_agency') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add Agency
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.btn-group .btn {
+    border-radius: 6px;
+}
+
+.badge {
+    font-weight: 500;
+}
+</style>
+{% endblock %}

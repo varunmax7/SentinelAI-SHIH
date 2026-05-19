@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Sentinel AI — Certificate of Excellence | {{ user.username }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --gold: #b8860b;
+            --gold-light: #d4af37;
+            --gold-pale: #f5e97a;
+            --navy: #1a2e4a;
+            --navy-dark: #0f1e30;
+            --crimson: #8b1a1a;
+            --text-dark: #2c2c2c;
+            --text-mid: #555;
+            --text-light: #777;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            padding: 1.5rem 1rem 2rem;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ── ACTION BAR ── */
+        .action-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 680px;
+        }
+
+        .btn {
+            padding: 0.7rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            color: #111;
+            box-shadow: 0 4px 20px rgba(245,158,11,0.4);
+        }
+
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,158,11,0.5); }
+
+        .btn-outline {
+            background: rgba(255,255,255,0.08);
+            color: #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-outline:hover { background: rgba(255,255,255,0.15); }
+
+        /* ── CERTIFICATE CARD (Portrait on mobile, landscape on desktop print) ── */
+        .cert-outer {
+            width: 100%;
+            max-width: 680px;
+            background: #fffdf5;
+            border-radius: 8px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,134,11,0.3);
+            position: relative;
+            overflow: hidden;
+            padding: 28px;
+        }
+
+        /* Band top/bottom */
+        .band {
+            position: absolute;
+            left: 0; right: 0;
+            height: 9px;
+        }
+        .band-top { top: 0; background: linear-gradient(90deg, var(--navy-dark), var(--gold), var(--navy-dark)); }
+        .band-bottom { bottom: 0; background: linear-gradient(90deg, var(--gold), var(--navy-dark), var(--gold)); }
+
+        /* Borders */
+        .border-outer {
+            position: absolute;
+            inset: 14px;
+            border: 2.5px solid var(--gold);
+            border-radius: 2px;
+            pointer-events: none;
+        }
+        .border-inner {
+            position: absolute;
+            inset: 20px;
+            border: 1px solid var(--gold-light);
+            border-radius: 1px;
+            pointer-events: none;
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: clamp(8rem, 30vw, 18rem);
+            opacity: 0.035;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Corner ornaments */
+        .corner {
+            position: absolute;
+            width: 56px; height: 56px;
+            z-index: 2;
+        }
+        .c-tl { top: 8px; left: 8px; }
+        .c-tr { top: 8px; right: 8px; transform: scaleX(-1); }
+        .c-bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+        .c-br { bottom: 8px; right: 8px; transform: scale(-1,-1); }
+
+        /* ── CONTENT ── */
+        .cert-content {
+            position: relative;
+            z-index: 3;
+            text-align: center;
+            padding: 6px 4px;
+        }
+
+        /* Header block */
+        .cert-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            margin-bottom: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .logo-circle {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--navy), var(--navy-dark));
+            border: 2px solid var(--gold);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .header-text { text-align: center; }
+
+        .govt-label {
+            font-size: clamp(0.5rem, 1.8vw, 0.65rem);
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--gold);
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .app-name {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(1.1rem, 4vw, 1.7rem);
+            font-weight: 900;
+            color: var(--navy);
+            line-height: 1;
+            letter-spacing: 2px;
+        }
+
+        .app-sub {
+            font-size: clamp(0.48rem, 1.5vw, 0.6rem);
+            letter-spacing: 2px;
+            color: var(--gold);
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        /* Divider */
+        .divider {
+            width: 70%;
+            margin: 0.8rem auto;
+            height: 1.5px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+        }
+
+        /* Certificate title */
+        .cert-title {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(1rem, 4.5vw, 1.65rem);
+            font-weight: 700;
+            color: var(--crimson);
+            letter-spacing: clamp(2px, 1vw, 5px);
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .cert-subtitle {
+            font-family: 'EB Garamond', serif;
+            font-style: italic;
+            font-size: clamp(0.75rem, 2.5vw, 0.92rem);
+            color: var(--text-mid);
+            margin-bottom: 0.8rem;
+            line-height: 1.4;
+            padding: 0 1rem;
+        }
+
+        .presented-to {
+            font-size: clamp(0.6rem, 2vw, 0.8rem);
+            letter-spacing: 3px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .recipient-name {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(2rem, 9vw, 3.2rem);
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--navy) 0%, var(--gold) 50%, var(--navy) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.15;
+            margin: 0.2rem 0 0.6rem;
+            word-break: break-word;
+        }
+
+        .cert-body {
+            font-family: 'EB Garamond', serif;
+            font-size: clamp(0.8rem, 2.8vw, 0.95rem);
+            color: var(--text-dark);
+            line-height: 1.7;
+            max-width: 90%;
+            margin: 0 auto 1rem;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            justify-content: center;
+            gap: clamp(1rem, 5vw, 3rem);
+            margin: 0.4rem 0 1rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item { text-align: center; }
+
+        .stat-num {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(1rem, 3.5vw, 1.4rem);
+            font-weight: 700;
+            color: var(--gold);
+        }
+
+        .stat-lbl {
+            font-size: clamp(0.52rem, 1.5vw, 0.65rem);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-light);
+        }
+
+        /* Signature row */
+        .sig-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 clamp(0.5rem, 4%, 2rem);
+            margin-top: 0.5rem;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .sig-block { text-align: center; flex: 1; min-width: 100px; }
+
+        .sig-line {
+            width: 90%;
+            max-width: 130px;
+            height: 1px;
+            background: var(--navy);
+            margin: 0 auto 4px;
+        }
+
+        .sig-name {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(0.55rem, 1.8vw, 0.68rem);
+            font-weight: 700;
+            color: var(--navy);
+            letter-spacing: 0.5px;
+        }
+
+        .sig-role {
+            font-size: clamp(0.48rem, 1.5vw, 0.58rem);
+            color: var(--text-light);
+            letter-spacing: 0.5px;
+        }
+
+        /* Seal */
+        .cert-seal {
+            width: clamp(64px, 15vw, 82px);
+            height: clamp(64px, 15vw, 82px);
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--navy) 0%, var(--navy-dark) 100%);
+            border: 3px solid var(--gold);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .seal-icon { font-size: clamp(1.4rem, 5vw, 2rem); }
+        .seal-text {
+            font-size: clamp(0.32rem, 1vw, 0.42rem);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--gold-light);
+            font-family: 'Inter', sans-serif;
+            text-align: center;
+            padding: 0 4px;
+        }
+
+        /* Cert ID footer */
+        .cert-id {
+            position: absolute;
+            bottom: 13px; right: 28px;
+            font-size: clamp(0.42rem, 1.2vw, 0.52rem);
+            color: #aaa;
+            letter-spacing: 0.5px;
+            z-index: 4;
+        }
+
+        /* ── PRINT ── */
+        @media print {
+            body { background: #fff; padding: 0; }
+            .action-bar { display: none !important; }
+            .cert-outer {
+                max-width: 100%;
+                box-shadow: none;
+                border-radius: 0;
+                padding: 24px;
+            }
+            .recipient-name { font-size: 2.8rem !important; }
+        }
+
+        /* ── DESKTOP WIDE: keep comfortable width ── */
+        @media (min-width: 760px) {
+            .cert-outer { padding: 36px; }
+            .corner { width: 68px; height: 68px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+        <button class="btn btn-gold" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <button class="btn btn-outline" onclick="window.history.back()">← Back</button>
+    </div>
+
+    <!-- Certificate -->
+    <div class="cert-outer" id="certificate">
+
+        <!-- Bands -->
+        <div class="band band-top"></div>
+        <div class="band band-bottom"></div>
+
+        <!-- Borders -->
+        <div class="border-outer"></div>
+        <div class="border-inner"></div>
+
+        <!-- Watermark -->
+        <div class="watermark">🛡️</div>
+
+        <!-- Corner ornaments -->
+        <svg class="corner c-tl" viewBox="0 0 56 56" fill="none">
+            <path d="M4 4 L24 4 L4 24 Z" fill="#b8860b" opacity="0.45"/>
+            <path d="M4 4 L4 35 Q4 4 35 4 Z" stroke="#b8860b" stroke-width="1.5" fill="none"/>
+            <circle cx="4" cy="4" r="3.5" fill="#b8860b"/>
+        </svg>
+        <svg class="corner c-tr" viewBox="0 0 56 56" fill="none">
+            <path d="M4 4 L24 4 L4 24 Z" fill="#b8860b" opacity="0.45"/>
+            <path d="M4 4 L4 35 Q4 4 35 4 Z" stroke="#b8860b" stroke-width="1.5" fill="none"/>
+            <circle cx="4" cy="4" r="3.5" fill="#b8860b"/>
+        </svg>
+        <svg class="corner c-bl" viewBox="0 0 56 56" fill="none">
+            <path d="M4 4 L24 4 L4 24 Z" fill="#b8860b" opacity="0.45"/>
+            <path d="M4 4 L4 35 Q4 4 35 4 Z" stroke="#b8860b" stroke-width="1.5" fill="none"/>
+            <circle cx="4" cy="4" r="3.5" fill="#b8860b"/>
+        </svg>
+        <svg class="corner c-br" viewBox="0 0 56 56" fill="none">
+            <path d="M4 4 L24 4 L4 24 Z" fill="#b8860b" opacity="0.45"/>
+            <path d="M4 4 L4 35 Q4 4 35 4 Z" stroke="#b8860b" stroke-width="1.5" fill="none"/>
+            <circle cx="4" cy="4" r="3.5" fill="#b8860b"/>
+        </svg>
+
+        <!-- Content -->
+        <div class="cert-content">
+
+            <!-- Header -->
+            <div class="cert-header">
+                <div class="logo-circle">🛡️</div>
+                <div class="header-text">
+                    <div class="govt-label">Government of India — Disaster Management Authority</div>
+                    <div class="app-name">Sentinel AI</div>
+                    <div class="app-sub">Sentinel Disaster Response Network</div>
+                </div>
+                <div class="logo-circle">🏛️</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="cert-title">Certificate of Excellence</div>
+            <div class="cert-subtitle">In Recognition of Outstanding Contribution to Disaster Relief &amp; Community Protection</div>
+
+            <div class="presented-to">This Certificate is Proudly Presented To</div>
+
+            <div class="recipient-name">{{ user.username }}</div>
+
+            <div class="cert-body">
+                for demonstrating exceptional dedication, courage, and commitment to public safety
+                through active participation in disaster reporting, emergency response, and community
+                welfare initiatives on the <strong>Sentinel AI — Disaster Response Platform</strong>.
+                This honour is conferred in recognition of achieving <strong>{{ points | int }}</strong> contribution points.
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-num">{{ points | int }}</div>
+                    <div class="stat-lbl">Total Points</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-num">{{ completed_rescues }}</div>
+                    <div class="stat-lbl">Rescues Done</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-num">{{ date }}</div>
+                    <div class="stat-lbl">Date Awarded</div>
+                </div>
+            </div>
+
+            <div class="divider" style="width:50%; margin-bottom: 0.8rem;"></div>
+
+            <!-- Signatures -->
+            <div class="sig-row">
+                <div class="sig-block">
+                    <div class="sig-line"></div>
+                    <div class="sig-name">District Collector</div>
+                    <div class="sig-role">Emergency Division</div>
+                </div>
+
+                <div class="cert-seal">
+                    <div class="seal-icon">🏅</div>
+                    <div class="seal-text">Verified · {{ date }}</div>
+                </div>
+
+                <div class="sig-block">
+                    <div class="sig-line"></div>
+                    <div class="sig-name">Director General</div>
+                    <div class="sig-role">Sentinel AI Platform</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Cert ID -->
+        <div class="cert-id">Cert ID: {{ cert_id }}</div>
+
+    </div>
+
+</body>
+</html>

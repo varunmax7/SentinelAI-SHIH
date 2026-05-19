@@ -1,0 +1,798 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Debug Container */
+    .debug-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    /* Header Section */
+    .debug-header {
+        text-align: center;
+        padding: 1rem 0 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .debug-header h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .debug-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Stats Cards */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateY(-3px);
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        opacity: 0.8;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+    }
+
+    /* Table Styling */
+    .table-container {
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .table-responsive {
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .table {
+        margin-bottom: 0;
+        color: rgba(255, 255, 255, 0.9);
+        background: transparent;
+    }
+
+    .table thead th {
+        background: rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 600;
+        padding: 1.25rem 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .table tbody td {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+
+    .table tbody tr {
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateX(5px);
+    }
+
+    /* Badge Styling */
+    .badge {
+        padding: 0.5rem 0.75rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        margin: 0.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .bg-success {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(56, 142, 60, 0.9)) !important;
+        color: white;
+    }
+
+    .bg-secondary {
+        background: rgba(255, 255, 255, 0.15) !important;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .bg-primary {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9), rgba(66, 165, 245, 0.9)) !important;
+        color: white;
+    }
+
+    .bg-warning {
+        background: linear-gradient(135deg, rgba(255, 152, 0, 0.9), rgba(245, 124, 0, 0.9)) !important;
+        color: white;
+    }
+
+    .bg-danger {
+        background: linear-gradient(135deg, rgba(244, 67, 54, 0.9), rgba(211, 47, 47, 0.9)) !important;
+        color: white;
+    }
+
+    /* User Info Cards */
+    .user-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .user-card {
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .user-card:hover {
+        background: rgba(0, 0, 0, 0.6);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .user-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        margin-right: 1rem;
+        object-fit: cover;
+    }
+
+    .user-details {
+        flex: 1;
+    }
+
+    .username {
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.25rem;
+        font-size: 1.1rem;
+    }
+
+    .user-role {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.85rem;
+    }
+
+    .user-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .user-stat {
+        text-align: center;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+    }
+
+    .user-stat-number {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.25rem;
+    }
+
+    .user-stat-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.75rem;
+    }
+
+    /* Alert Preferences */
+    .alert-preferences {
+        margin-top: 1rem;
+    }
+
+    .preference-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .preference-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .preference-name {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+
+    .preference-status {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, rgba(66, 165, 245, 0.95) 0%, rgba(100, 181, 246, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-outline-primary {
+        border: 2px solid rgba(33, 150, 243, 0.5);
+        color: rgba(33, 150, 243, 0.9);
+        background: rgba(33, 150, 243, 0.1);
+    }
+
+    .btn-outline-primary:hover {
+        background: rgba(33, 150, 243, 0.2);
+        border-color: rgba(33, 150, 243, 0.8);
+        transform: translateY(-2px);
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    /* View Toggle */
+    .view-toggle {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 0.5rem;
+    }
+
+    .view-btn {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        text-align: center;
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 600;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .view-btn.active {
+        background: rgba(33, 150, 243, 0.2);
+        color: rgba(33, 150, 243, 0.9);
+        box-shadow: 0 4px 15px rgba(33, 150, 243, 0.2);
+    }
+
+    .view-btn:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .debug-container {
+            padding: 1.5rem 2rem;
+            margin: 1rem;
+            max-width: 95%;
+        }
+
+        .debug-header h2 {
+            font-size: 2rem;
+        }
+
+        .stats-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+        }
+
+        .user-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .table thead th,
+        .table tbody td {
+            padding: 1rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .debug-container {
+            padding: 1.25rem 1.5rem;
+            margin: 0.75rem;
+            max-width: 92%;
+        }
+
+        .debug-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .stats-container {
+            grid-template-columns: 1fr;
+        }
+
+        .user-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .btn {
+            padding: 0.6rem 1.25rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    /* Text Colors */
+    .text-muted {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    .text-success {
+        color: #4caf50 !important;
+    }
+
+    .text-warning {
+        color: #ff9800 !important;
+    }
+
+    .text-danger {
+        color: #f44336 !important;
+    }
+
+    .text-info {
+        color: #42a5f5 !important;
+    }
+
+    /* Hazard Type Colors */
+    .hazard-flood {
+        color: #2196f3;
+    }
+
+    .hazard-storm {
+        color: #ff9800;
+    }
+
+    .hazard-tsunami {
+        color: #f44336;
+    }
+
+    .hazard-erosion {
+        color: #9c27b0;
+    }
+
+    .hazard-other {
+        color: #607d8b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="debug-container">
+    <!-- Debug Header -->
+    <div class="debug-header">
+        <h2>🔧 User Location Debug</h2>
+        <p class="debug-subtitle">Monitor user locations and alert preferences for debugging purposes</p>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-number">{{ users|length }}</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+
+        {% set users_with_location = users|selectattr('location')|list %}
+        <div class="stat-card">
+            <div class="stat-icon">📍</div>
+            <div class="stat-number">{{ users_with_location|length }}</div>
+            <div class="stat-label">Users with Location</div>
+        </div>
+
+        {% set users_with_alerts = users|selectattr('alert_preferences')|list %}
+        <div class="stat-card">
+            <div class="stat-icon">🔔</div>
+            <div class="stat-number">{{ users_with_alerts|length }}</div>
+            <div class="stat-label">Users with Alerts</div>
+        </div>
+
+        {% set active_alerts = 0 %}
+        {% for user in users %}
+        {% if user.alert_preferences %}
+        {% for hazard, enabled in user.alert_preferences.items() %}
+        {% if enabled %}
+        {% set active_alerts = active_alerts + 1 %}
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+        {% endfor %}
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-number">{{ active_alerts }}</div>
+            <div class="stat-label">Active Alert Preferences</div>
+        </div>
+    </div>
+
+    <!-- View Toggle -->
+    <div class="view-toggle">
+        <button class="view-btn active" onclick="showTableView()">
+            <i class="fas fa-table me-2"></i>Table View
+        </button>
+        <button class="view-btn" onclick="showCardView()">
+            <i class="fas fa-id-card me-2"></i>Card View
+        </button>
+    </div>
+
+    <!-- Table View -->
+    <div id="tableView" class="view-content">
+        <div class="table-container">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>User Location Data</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Location</th>
+                            <th>Coordinates</th>
+                            <th>Alert Preferences</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if users %}
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('uploaded_file', filename=user.profile_image) if user.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                                        class="user-avatar me-2">
+                                    <div>
+                                        <strong>{{ user.username }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ user.email if user.email else 'No email' }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                        {% if user.role == 'official' %}bg-primary
+                                        {% elif user.role == 'analyst' %}bg-warning
+                                        {% else %}bg-secondary{% endif %}">
+                                    {{ user.role|title }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user.location %}
+                                <span class="text-success">
+                                    <i class="fas fa-map-marker-alt me-1"></i>{{ user.location }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>Not set
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.home_latitude and user.home_longitude %}
+                                <small class="text-info">
+                                    {{ "%.4f"|format(user.home_latitude) }}, {{ "%.4f"|format(user.home_longitude) }}
+                                </small>
+                                {% else %}
+                                <small class="text-muted">No coordinates</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap">
+                                    {% if user.alert_preferences %}
+                                    {% for hazard, enabled in user.alert_preferences.items() %}
+                                    <span
+                                        class="badge {% if enabled %}bg-success{% else %}bg-secondary{% endif %} me-1 mb-1">
+                                        {{ hazard|replace('_', ' ')|title }}: {% if enabled %}✅{% else %}❌{% endif %}
+                                    </span>
+                                    {% endfor %}
+                                    {% else %}
+                                    <span class="badge bg-secondary">No preferences</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if user.location and user.alert_preferences %}
+                                <span class="badge bg-success">Active</span>
+                                {% elif user.location %}
+                                <span class="badge bg-warning">No Alerts</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="empty-state">
+                                    <div class="empty-icon">👥</div>
+                                    <h4>No Users Found</h4>
+                                    <p class="text-muted">There are no users to display in the system.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card View -->
+    <div id="cardView" class="view-content" style="display: none;">
+        <div class="user-info-grid">
+            {% if users %}
+            {% for user in users %}
+            <div class="user-card">
+                <div class="user-header">
+                    <img src="{{ url_for('uploaded_file', filename=user.profile_image) if user.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                        class="user-avatar" alt="{{ user.username }}">
+                    <div class="user-details">
+                        <div class="username">{{ user.username }}</div>
+                        <div class="user-role">
+                            <span class="badge 
+                                    {% if user.role == 'official' %}bg-primary
+                                    {% elif user.role == 'analyst' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                {{ user.role|title }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-stats">
+                    <div class="user-stat">
+                        <div class="user-stat-number">
+                            {% if user.location %}✅{% else %}❌{% endif %}
+                        </div>
+                        <div class="user-stat-label">Location Set</div>
+                    </div>
+                    <div class="user-stat">
+                        <div class="user-stat-number">
+                            {% if user.alert_preferences %}{{ user.alert_preferences.items()|selectattr('1')|list|length
+                            }}{% else %}0{% endif %}
+                        </div>
+                        <div class="user-stat-label">Active Alerts</div>
+                    </div>
+                    <div class="user-stat">
+                        <div class="user-stat-number">
+                            {% if user.home_latitude and user.home_longitude %}✅{% else %}❌{% endif %}
+                        </div>
+                        <div class="user-stat-label">Coordinates</div>
+                    </div>
+                </div>
+
+                <div class="location-info mb-3">
+                    <h6><i class="fas fa-map-marker-alt me-2"></i>Location Information</h6>
+                    {% if user.location %}
+                    <p class="text-success mb-1">{{ user.location }}</p>
+                    {% if user.home_latitude and user.home_longitude %}
+                    <small class="text-info">
+                        Coordinates: {{ "%.4f"|format(user.home_latitude) }}, {{ "%.4f"|format(user.home_longitude) }}
+                    </small>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted mb-1">Location not set</p>
+                    {% endif %}
+                </div>
+
+                <div class="alert-preferences">
+                    <h6><i class="fas fa-bell me-2"></i>Alert Preferences</h6>
+                    {% if user.alert_preferences %}
+                    {% for hazard, enabled in user.alert_preferences.items() %}
+                    <div class="preference-item">
+                        <span class="preference-name hazard-{{ hazard|lower|replace('_', '-') }}">
+                            {{ hazard|replace('_', ' ')|title }}
+                        </span>
+                        <span class="preference-status {% if enabled %}text-success{% else %}text-muted{% endif %}">
+                            {% if enabled %}✅ Enabled{% else %}❌ Disabled{% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted text-center">No alert preferences set</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state w-100">
+                <div class="empty-icon">👥</div>
+                <h4>No Users Found</h4>
+                <p class="text-muted">There are no users to display in the system.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="table-container mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>System Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>User Distribution by Role</h6>
+                    {% set role_counts = {} %}
+                    {% for user in users %}
+                    {% if user.role in role_counts %}
+                    {% set _ = role_counts.update({user.role: role_counts[user.role] + 1}) %}
+                    {% else %}
+                    {% set _ = role_counts.update({user.role: 1}) %}
+                    {% endif %}
+                    {% endfor %}
+
+                    {% for role, count in role_counts.items() %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">{{ role|title }}</span>
+                        <span class="badge bg-primary">{{ count }} users</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <h6>Location Statistics</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Users with location</span>
+                        <span class="badge bg-success">{{ users_with_location|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Users without location</span>
+                        <span class="badge bg-danger">{{ users|length - users_with_location|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Active alert configurations</span>
+                        <span class="badge bg-warning">{{ active_alerts }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // View toggle functionality
+    function showTableView() {
+        document.getElementById('tableView').style.display = 'block';
+        document.getElementById('cardView').style.display = 'none';
+
+        // Update active button states
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelectorAll('.view-btn')[0].classList.add('active');
+    }
+
+    function showCardView() {
+        document.getElementById('tableView').style.display = 'none';
+        document.getElementById('cardView').style.display = 'block';
+
+        // Update active button states
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelectorAll('.view-btn')[1].classList.add('active');
+    }
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function () {
+        // Add hover effects to interactive elements
+        const interactiveElements = document.querySelectorAll('.user-card, .stat-card, .table tbody tr');
+        interactiveElements.forEach(element => {
+            element.style.cursor = 'pointer';
+        });
+
+        // Make table rows clickable for better UX
+        document.querySelectorAll('.table tbody tr').forEach(row => {
+            row.addEventListener('click', function () {
+                // You can add functionality here to show user details
+                console.log('User row clicked');
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Leaderboard Header -->
+    <div class="eco-dashboard mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold mb-2">
+                    <i class="fas fa-trophy me-3"></i>Eco Leaderboard
+                </h1>
+                <p class="lead mb-0">See who's making the biggest impact on our planet!</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{{ url_for('eco_tracker') }}" class="btn btn-light btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Tracker
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Carbon Savers -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-crown me-2"></i>Top Carbon Savers
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if top_carbon_savers %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User</th>
+                                    <th>Carbon Saved</th>
+                                    <th>Eco Points</th>
+                                    <th>Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in top_carbon_savers %}
+                                <tr>
+                                    <td>
+                                        {% if loop.index == 1 %}
+                                        <span class="badge bg-warning">🥇</span>
+                                        {% elif loop.index == 2 %}
+                                        <span class="badge bg-secondary">🥈</span>
+                                        {% elif loop.index == 3 %}
+                                        <span class="badge bg-danger">🥉</span>
+                                        {% else %}
+                                        <strong>#{{ loop.index }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div
+                                                class="nav-avatar rounded-circle d-flex align-items-center justify-content-center me-2 bg-primary text-white">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ user.username }}</strong>
+                                                {% if user.username == current_user.username %}
+                                                <span class="badge bg-primary ms-2">You</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">{{ user.total_carbon_saved|round(1) }} kg</strong>
+                                        <br>
+                                        <small class="text-muted">CO₂ saved</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ user.total_eco_points }}</span>
+                                        <br>
+                                        <small class="text-muted">points</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ (user.total_carbon_saved / 21.77)|round(0) }} trees equivalent
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-trophy fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No carbon savings data available yet.</p>
+                        <a href="{{ url_for('carbon_savings') }}" class="btn btn-warning">Be the First!</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Plastic Reducers -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-recycle me-2"></i>Top Plastic Reducers
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if top_plastic_reducers %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User</th>
+                                    <th>Plastic Reduced</th>
+                                    <th>Eco Points</th>
+                                    <th>Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in top_plastic_reducers %}
+                                <tr>
+                                    <td>
+                                        {% if loop.index == 1 %}
+                                        <span class="badge bg-warning">🥇</span>
+                                        {% elif loop.index == 2 %}
+                                        <span class="badge bg-secondary">🥈</span>
+                                        {% elif loop.index == 3 %}
+                                        <span class="badge bg-danger">🥉</span>
+                                        {% else %}
+                                        <strong>#{{ loop.index }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div
+                                                class="nav-avatar rounded-circle d-flex align-items-center justify-content-center me-2 bg-success text-white">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ user.username }}</strong>
+                                                {% if user.username == current_user.username %}
+                                                <span class="badge bg-success ms-2">You</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">{{ user.total_plastic_reduced|round(1) }}
+                                            kg</strong>
+                                        <br>
+                                        <small class="text-muted">plastic reduced</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ user.total_eco_points }}</span>
+                                        <br>
+                                        <small class="text-muted">points</small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ (user.total_plastic_reduced * 50)|round(0) }} bottles saved
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-recycle fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No plastic reduction data available yet.</p>
+                        <a href="{{ url_for('plastic_reduction') }}" class="btn btn-success">Be the First!</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Community Impact -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-globe-americas me-2"></i>Community Impact
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">
+                                    {{ (top_carbon_savers|sum(attribute='total_carbon_saved')|default(0) /
+                                    1000)|round(1) }}
+                                </div>
+                                <div class="metric-label">Tons CO₂ Saved</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">
+                                    {{ top_plastic_reducers|sum(attribute='total_plastic_reduced')|default(0)|round(1)
+                                    }}
+                                </div>
+                                <div class="metric-label">Kg Plastic Reduced</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">
+                                    {{ (top_carbon_savers|sum(attribute='total_carbon_saved')|default(0) /
+                                    21.77)|round(0) }}
+                                </div>
+                                <div class="metric-label">Trees Equivalent</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">
+                                    {{ (top_plastic_reducers|sum(attribute='total_plastic_reduced')|default(0) *
+                                    50)|round(0) }}
+                                </div>
+                                <div class="metric-label">Bottles Saved</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">
+                                    {{ (top_carbon_savers|sum(attribute='total_carbon_saved')|default(0) * 0.621371 /
+                                    0.404)|round(0) }}
+                                </div>
+                                <div class="metric-label">Car Miles Avoided</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">
+                                    {{ (top_carbon_savers|sum(attribute='total_eco_points')|default(0) +
+                                    top_plastic_reducers|sum(attribute='total_eco_points')|default(0)) }}
+                                </div>
+                                <div class="metric-label">Total Eco Points</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call to Action -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="mb-3">Ready to Climb the Leaderboard?</h3>
+                    <p class="text-muted mb-4">Every small action counts toward a bigger impact!</p>
+                    <div class="d-flex gap-3 justify-content-center flex-wrap">
+                        <a href="{{ url_for('plastic_reduction') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-recycle me-2"></i>Reduce Plastic
+                        </a>
+                        <a href="{{ url_for('carbon_savings') }}" class="btn btn-info btn-lg">
+                            <i class="fas fa-cloud me-2"></i>Save Carbon
+                        </a>
+                        <a href="{{ url_for('eco_tracker') }}" class="btn btn-warning btn-lg">
+                            <i class="fas fa-chart-line me-2"></i>Your Progress
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Premium Dashboard Theme */
+    body {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        color: #e9ecef;
+    }
+
+    .container-fluid {
+        background: rgba(33, 37, 41, 0.85);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 25px;
+        margin-top: 20px !important;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .card {
+        background: rgba(52, 58, 64, 0.7) !important;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e9ecef;
+        border-radius: 12px;
+    }
+
+    .card-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: white !important;
+    }
+
+    .card-header.bg-warning {
+        color: #000 !important;
+    }
+
+    .text-muted {
+        color: #adb5bd !important;
+    }
+
+    .text-dark {
+        color: #f8f9fa !important;
+    }
+
+    .bg-light {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: white !important;
+    }
+
+    .table {
+        color: #e9ecef;
+    }
+
+    .table-hover tbody tr:hover {
+        color: #e9ecef;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .metric-card {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #fff;
+    }
+
+    .metric-label {
+        font-size: 0.8rem;
+        color: #adb5bd;
+    }
+
+    .btn-light {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+    }
+</style>
+{% endblock %}

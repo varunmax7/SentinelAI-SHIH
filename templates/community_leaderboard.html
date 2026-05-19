@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    .community-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        max-width: 1200px;
+    }
+
+    .community-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .community-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .community-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.1rem;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #FFD700;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.95rem;
+    }
+
+    .leaderboard-table {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .table-header {
+        background: rgba(255, 255, 255, 0.05);
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        padding: 1.25rem 1.5rem;
+        display: grid;
+        grid-template-columns: 80px 1fr 150px 150px 150px 120px;
+        gap: 1rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .table-row {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1.25rem 1.5rem;
+        display: grid;
+        grid-template-columns: 80px 1fr 150px 150px 150px 120px;
+        gap: 1rem;
+        align-items: center;
+        transition: background 0.3s ease;
+        cursor: pointer;
+    }
+
+    .table-row:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .table-row:last-child {
+        border-bottom: none;
+    }
+
+    .table-row.current-user {
+        background: rgba(33, 150, 243, 0.15);
+        border: 2px solid rgba(33, 150, 243, 0.3);
+        border-bottom: 2px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .rank-badge {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.3rem;
+        margin: 0 auto;
+    }
+
+    .rank-1 {
+        background: linear-gradient(135deg, #FFD700, #FFA500);
+        color: #000;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    }
+
+    .rank-2 {
+        background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
+        color: #000;
+        box-shadow: 0 4px 15px rgba(192, 192, 192, 0.3);
+    }
+
+    .rank-3 {
+        background: linear-gradient(135deg, #CD7F32, #A56C28);
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(205, 127, 50, 0.3);
+    }
+
+    .rank-other {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .user-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .user-details h6 {
+        margin: 0;
+        color: white;
+        font-weight: 600;
+    }
+
+    .user-badge {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .points-display {
+        text-align: right;
+    }
+
+    .total-points {
+        font-size: 1.3rem;
+        font-weight: 800;
+        color: #FFD700;
+    }
+
+    .points-breakdown {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 0.25rem;
+    }
+
+    .points-badge {
+        display: inline-block;
+        background: rgba(33, 150, 243, 0.2);
+        color: #42a5f5;
+        padding: 0.4rem 0.8rem;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .experience-badge {
+        display: inline-block;
+        padding: 0.4rem 0.8rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .experience-beginner {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+    }
+
+    .experience-intermediate {
+        background: rgba(33, 150, 243, 0.2);
+        color: #42a5f5;
+    }
+
+    .experience-expert {
+        background: rgba(255, 152, 0, 0.2);
+        color: #ffa500;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .pagination-btn {
+        background: rgba(33, 150, 243, 0.8);
+        color: white;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: #42a5f5;
+        transform: translateY(-2px);
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .loading-spinner {
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top: 4px solid #42a5f5;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 992px) {
+        .table-header,
+        .table-row {
+            grid-template-columns: 70px 1fr 120px 120px;
+            gap: 0.75rem;
+        }
+
+        .table-header > :nth-child(4),
+        .table-row > :nth-child(4) {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .community-container {
+            padding: 1.5rem 2rem;
+            margin: 1rem;
+        }
+
+        .community-header h1 {
+            font-size: 2rem;
+        }
+
+        .stats-cards {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .table-header,
+        .table-row {
+            grid-template-columns: 60px 1fr 100px;
+            gap: 0.5rem;
+        }
+
+        .table-header > :nth-child(3),
+        .table-header > :nth-child(4),
+        .table-header > :nth-child(5),
+        .table-header > :nth-child(6),
+        .table-row > :nth-child(3),
+        .table-row > :nth-child(4),
+        .table-row > :nth-child(5),
+        .table-row > :nth-child(6) {
+            display: none;
+        }
+
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+        }
+
+        .rank-badge {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="community-container">
+    <!-- Header -->
+    <div class="community-header">
+        <h1><i class="fas fa-crown me-3"></i>Community Leaderboard</h1>
+        <p class="community-subtitle">Top contributors across all activities - Reports, Rescues, Eco Initiatives & More!</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-value" id="totalContributors">--</div>
+            <div class="stat-label">Total Contributors</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="topPoints">--</div>
+            <div class="stat-label">Top Score</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="avgPoints">--</div>
+            <div class="stat-label">Average Points</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="yourRank">--</div>
+            <div class="stat-label">Your Rank</div>
+        </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="leaderboard-table">
+        <div class="table-header">
+            <div>Rank</div>
+            <div>Contributor</div>
+            <div>Total Points</div>
+            <div>Breakdown</div>
+            <div>Rescues</div>
+            <div>Level</div>
+        </div>
+        <div id="leaderboardContent">
+            <div class="empty-state">
+                <div class="loading-spinner" style="margin: 0 auto; margin-bottom: 1rem;"></div>
+                Loading community leaderboard...
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="paginationControls" style="display: none;">
+        <button class="pagination-btn" id="prevBtn" onclick="previousPage()">← Previous</button>
+        <div id="pageIndicator" style="color: rgba(255, 255, 255, 0.7);"></div>
+        <button class="pagination-btn" id="nextBtn" onclick="nextPage()">Next →</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentPage = 1;
+    let totalPages = 1;
+    let allData = null;
+    const perPage = 50;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCommunityLeaderboard(1);
+    });
+
+    async function loadCommunityLeaderboard(page) {
+        try {
+            const response = await fetch(`/api/community_leaderboard?page=${page}&per_page=${perPage}`);
+            if (!response.ok) throw new Error('Failed to load leaderboard');
+            
+            const data = await response.json();
+            allData = data;
+            currentPage = page;
+            totalPages = data.pages;
+            
+            // Update stats
+            let totalPoints = 0;
+            let maxPoints = 0;
+            
+            data.leaderboard.forEach(contributor => {
+                totalPoints += contributor.total_points;
+                if (contributor.total_points > maxPoints) maxPoints = contributor.total_points;
+            });
+            
+            const avgPoints = Math.round(totalPoints / data.total);
+            
+            document.getElementById('totalContributors').textContent = data.total;
+            document.getElementById('topPoints').textContent = maxPoints.toLocaleString();
+            document.getElementById('avgPoints').textContent = avgPoints.toLocaleString();
+            
+            // Load user's rank
+            {% if current_user.is_authenticated %}
+            const userRank = data.leaderboard.find(c => c.user_id === {{ current_user.id }});
+            if (userRank) {
+                document.getElementById('yourRank').textContent = '🎯 #' + userRank.rank;
+            } else {
+                document.getElementById('yourRank').textContent = 'Unranked';
+            }
+            {% endif %}
+            
+            // Render leaderboard
+            renderCommunityLeaderboard(data.leaderboard);
+            
+            // Update pagination
+            updatePagination();
+            
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('leaderboardContent').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">⚠️</div>
+                    <div>Error loading leaderboard</div>
+                </div>
+            `;
+        }
+    }
+
+    function renderCommunityLeaderboard(contributors) {
+        let html = '';
+        
+        if (contributors.length === 0) {
+            html = `
+                <div class="empty-state">
+                    <div class="empty-icon">🏆</div>
+                    <div>No contributors yet!</div>
+                </div>
+            `;
+        } else {
+            contributors.forEach(contributor => {
+                const rankClass = contributor.rank === 1 ? 'rank-1' : 
+                                 contributor.rank === 2 ? 'rank-2' : 
+                                 contributor.rank === 3 ? 'rank-3' : 'rank-other';
+                const rankIcon = contributor.rank === 1 ? '🥇' : 
+                                contributor.rank === 2 ? '🥈' : 
+                                contributor.rank === 3 ? '🥉' : contributor.rank;
+                
+                const expClass = contributor.experience ? `experience-${contributor.experience.toLowerCase()}` : '';
+                const expLabel = contributor.experience ? contributor.experience.charAt(0).toUpperCase() + contributor.experience.slice(1) : 'N/A';
+                
+                const currentUserClass = ({{ current_user.id if current_user.is_authenticated else 'null' }} === contributor.user_id) ? 'current-user' : '';
+                
+                html += `
+                    <div class="table-row ${currentUserClass}">
+                        <div>
+                            <div class="rank-badge ${rankClass}">
+                                ${rankIcon}
+                            </div>
+                        </div>
+                        <div class="user-info">
+                            <img src="${contributor.profile_image || '/static/icons/default-avatar.png'}" alt="Avatar" class="user-avatar" onerror="this.src='/static/icons/default-avatar.png'">
+                            <div class="user-details">
+                                <h6>${contributor.username}</h6>
+                                <div class="user-badge">
+                                    ${contributor.role === 'official' ? '<i class="fas fa-badge"></i> Official' : 'Community Member'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="points-display">
+                            <div class="total-points">${contributor.total_points.toLocaleString()}</div>
+                        </div>
+                        <div class="points-display">
+                            <div class="points-breakdown">
+                                Reports: ${contributor.user_points}<br>
+                                Rescues: ${contributor.rescue_points}
+                            </div>
+                        </div>
+                        <div class="points-badge">
+                            ${contributor.rescues} ${contributor.rescues === 1 ? 'Rescue' : 'Rescues'}
+                        </div>
+                        <div>
+                            <div class="experience-badge ${expClass}">
+                                ${expLabel}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        document.getElementById('leaderboardContent').innerHTML = html;
+    }
+
+    function updatePagination() {
+        const controls = document.getElementById('paginationControls');
+        const pageIndicator = document.getElementById('pageIndicator');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        
+        if (totalPages > 1) {
+            controls.style.display = 'flex';
+            pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+        } else {
+            controls.style.display = 'none';
+        }
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages) {
+            loadCommunityLeaderboard(currentPage + 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function previousPage() {
+        if (currentPage > 1) {
+            loadCommunityLeaderboard(currentPage - 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+</script>
+{% endblock %}

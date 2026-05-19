@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Oceanic Theme Overrides */
+    body {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        color: #e9ecef;
+    }
+
+    .card {
+        background: rgba(52, 58, 64, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e9ecef;
+        border-radius: 15px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+        transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+    }
+
+    .card-header {
+        background: rgba(33, 37, 41, 0.85) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: #f8f9fa !important;
+        border-top-left-radius: 15px !important;
+        border-top-right-radius: 15px !important;
+        padding: 1.5rem;
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .form-control,
+    .form-select {
+        background: rgba(33, 37, 41, 0.7) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #e9ecef !important;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background: rgba(33, 37, 41, 0.9) !important;
+        border-color: #4e73df !important;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25) !important;
+        color: #ffffff !important;
+    }
+
+    .form-label {
+        color: #e9ecef;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 15px rgba(78, 115, 223, 0.4);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #224abe 0%, #1a365d 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(78, 115, 223, 0.6);
+    }
+
+    .btn-secondary {
+        background: rgba(108, 117, 125, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e9ecef;
+        padding: 0.75rem 1.5rem;
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(108, 117, 125, 0.5);
+        border-color: rgba(255, 255, 255, 0.3);
+        color: #fff;
+    }
+
+    /* Custom scrollbar for textarea */
+    textarea::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    textarea::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    textarea::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+    }
+
+    textarea::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card border-0">
+                <div class="card-header">
+                    <h4 class="mb-0 font-weight-bold">
+                        <i class="fas fa-plus-circle me-2 text-primary"></i>Create New Emergency Event
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.title.label(class="form-label") }}
+                                    {{ form.title(class="form-control") }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.hazard_type.label(class="form-label") }}
+                                    {{ form.hazard_type(class="form-select") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.severity.label(class="form-label") }}
+                                    {{ form.severity(class="form-select") }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.radius_km.label(class="form-label") }}
+                                    {{ form.radius_km(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="4") }}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.location.label(class="form-label") }}
+                                    {{ form.location(class="form-control") }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    {{ form.latitude.label(class="form-label") }}
+                                    {{ form.latitude(class="form-control") }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    {{ form.longitude.label(class="form-label") }}
+                                    {{ form.longitude(class="form-control") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('coordination_dashboard') }}"
+                                class="btn btn-secondary me-md-2">Cancel</a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

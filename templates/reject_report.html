@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    .reject-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        max-width: 800px;
+    }
+
+    .reject-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(244, 67, 54, 0.3);
+    }
+
+    .reject-header h2 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: #ff6b6b;
+    }
+
+    .report-preview {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .preview-header {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.2rem;
+    }
+
+    .preview-content {
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.6;
+    }
+
+    .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .preview-item {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+
+    .preview-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .preview-value {
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .form-section {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.2rem;
+    }
+
+    .form-label {
+        color: #ffffff;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    textarea.form-control {
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        color: #ffffff;
+        padding: 0.75rem 1rem;
+        width: 100%;
+        min-height: 150px;
+        resize: vertical;
+    }
+
+    textarea.form-control:focus {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: #42a5f5;
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(33, 150, 243, 0.25);
+        outline: none;
+    }
+
+    textarea.form-control::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .form-text {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+
+    .form-check {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-check-input {
+        width: 1.25em;
+        height: 1.25em;
+        background-color: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        margin-right: 0.75rem;
+    }
+
+    .form-check-input:checked {
+        background-color: #42a5f5;
+        border-color: #42a5f5;
+    }
+
+    .form-check-label {
+        color: rgba(255, 255, 255, 0.95);
+        font-weight: 500;
+        margin: 0;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+    }
+
+    .btn-custom {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .btn-danger-custom {
+        background: linear-gradient(135deg, rgba(244, 67, 54, 0.9) 0%, rgba(229, 57, 53, 0.9) 100%);
+        color: white;
+    }
+
+    .btn-outline-custom {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+
+    .btn-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .alert-rejection {
+        border-left: 4px solid #f44336;
+        background: rgba(244, 67, 54, 0.1);
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+
+    @media (max-width: 768px) {
+        .reject-container {
+            padding: 2rem;
+            margin: 1rem;
+        }
+
+        .preview-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reject-container">
+    <div class="reject-header">
+        <h2><i class="fas fa-times-circle me-2"></i>Reject Report</h2>
+        <p class="text-muted">You are about to reject this report. Please provide a detailed reason below.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show mb-4">
+        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="alert-rejection">
+        <div class="section-header">
+            <i class="fas fa-exclamation-triangle text-warning"></i>
+            Important Notice
+        </div>
+        <p class="mb-0">Rejecting a report will change its status to "rejected" and may notify the original reporter.
+            Please ensure your rejection reason is clear and constructive.</p>
+    </div>
+
+    <!-- Report Preview -->
+    <div class="report-preview">
+        <div class="preview-header">
+            <i class="fas fa-file-alt"></i>
+            Report Being Reviewed
+        </div>
+        <div class="preview-content">
+            <h4>{{ report.title }}</h4>
+            <p>{{ report.description }}</p>
+
+            <div class="preview-grid">
+                <div class="preview-item">
+                    <div class="preview-label">Hazard Type</div>
+                    <div class="preview-value">{{ report.hazard_type }}</div>
+                </div>
+                <div class="preview-item">
+                    <div class="preview-label">Location</div>
+                    <div class="preview-value">{{ report.location }}</div>
+                </div>
+                <div class="preview-item">
+                    <div class="preview-label">Reported By</div>
+                    <div class="preview-value">{{ report.author.username }}</div>
+                </div>
+                <div class="preview-item">
+                    <div class="preview-label">Date</div>
+                    <div class="preview-value">{{ report.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Form -->
+    <form action="{{ url_for('reject_report', report_id=report.id) }}" method="post">
+        <div class="form-section">
+            <div class="section-header">
+                <i class="fas fa-comment-dots"></i>
+                Rejection Details
+            </div>
+
+            <div class="mb-3">
+                <label for="rejectionReason" class="form-label">
+                    Reason for rejection *
+                </label>
+                <textarea class="form-control" id="rejectionReason" name="rejection_reason" rows="6" required
+                    placeholder="Please provide a clear and detailed reason for rejecting this report..."></textarea>
+                <div class="form-text">
+                    <i class="fas fa-info-circle me-1"></i>This reason will be shown to the user who submitted the
+                    report.
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-header">
+                <i class="fas fa-cog"></i>
+                Additional Options
+            </div>
+
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="scheduleDeletion" name="schedule_deletion" checked>
+                <label class="form-check-label" for="scheduleDeletion">
+                    <i class="fas fa-trash-alt me-2"></i>Schedule automatic deletion after 24 hours
+                </label>
+            </div>
+
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="notifyUser" name="notify_user" checked>
+                <label class="form-check-label" for="notifyUser">
+                    <i class="fas fa-bell me-2"></i>Notify user about rejection
+                </label>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <a href="{{ url_for('view_report', report_id=report.id) }}" class="btn-custom btn-outline-custom">
+                <i class="fas fa-arrow-left me-1"></i>Back to Report
+            </a>
+            <button type="submit" class="btn-custom btn-danger-custom">
+                <i class="fas fa-ban me-1"></i>Confirm Rejection
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Auto-focus on the textarea
+        const textarea = document.getElementById('rejectionReason');
+        if (textarea) {
+            textarea.focus();
+        }
+
+        // Form validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function (e) {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                e.preventDefault();
+                alert('Please provide a reason for rejection.');
+                document.getElementById('rejectionReason').focus();
+                return false;
+            }
+
+            // Confirm rejection
+            if (!confirm('Are you sure you want to reject this report? This action cannot be undone.')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
+</script>
+{% endblock %}

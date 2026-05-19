@@ -1,0 +1,676 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Alert Preferences Container */
+    .alert-preferences-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 800px;
+    }
+
+    /* Header Section */
+    .alert-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .alert-header h2 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .alert-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Cards */
+    .alert-card {
+        background: rgba(0, 0, 0, 0.45) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .alert-card:hover {
+        background: rgba(0, 0, 0, 0.6) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-header h2 {
+        color: white;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Alert Items */
+    .alert-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.3s ease;
+    }
+
+    .alert-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateX(8px);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .alert-item.active {
+        background: rgba(33, 150, 243, 0.15);
+        border-color: rgba(33, 150, 243, 0.4);
+    }
+
+    /* Form Switches */
+    .form-check-input {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        width: 3rem;
+        height: 1.5rem;
+        margin-right: 1rem;
+    }
+
+    .form-check-input:checked {
+        background-color: #42a5f5;
+        border-color: #42a5f5;
+    }
+
+    .form-check-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
+    }
+
+    .form-check-label {
+        color: rgba(255, 255, 255, 0.95);
+        font-weight: 600;
+        font-size: 1.1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Hazard Icons */
+    .hazard-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .tsunami {
+        background: rgba(33, 150, 243, 0.2);
+        color: #42a5f5;
+    }
+
+    .storm_surge {
+        background: rgba(156, 39, 176, 0.2);
+        color: #9c27b0;
+    }
+
+    .high_waves {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+    }
+
+    .swell_surge {
+        background: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+    }
+
+    .coastal_flooding {
+        background: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+    }
+
+    .abnormal_tides {
+        background: rgba(3, 169, 244, 0.2);
+        color: #03a9f4;
+    }
+
+    /* Hazard Info */
+    .hazard-info {
+        flex: 1;
+    }
+
+    .hazard-name {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .hazard-description {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .hazard-range {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, rgba(66, 165, 245, 0.95) 0%, rgba(100, 181, 246, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+    }
+
+    /* Summary Section */
+    .summary-section {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        border-left: 4px solid #42a5f5;
+    }
+
+    .summary-title {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .stat-item {
+        padding: 1rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #42a5f5;
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+    }
+
+    /* Toggle All Section */
+    .toggle-all-section {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .toggle-all-label {
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .alert-preferences-container {
+            padding: 1.5rem 2rem;
+            margin: 1rem;
+            max-width: 95%;
+        }
+
+        .alert-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .alert-item {
+            padding: 1rem;
+        }
+
+        .hazard-icon {
+            width: 35px;
+            height: 35px;
+            font-size: 1.1rem;
+            margin-right: 0.75rem;
+        }
+
+        .form-check-label {
+            font-size: 1rem;
+        }
+
+        .summary-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .toggle-all-section {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .alert-preferences-container {
+            padding: 1.25rem 1.5rem;
+            margin: 0.75rem;
+            max-width: 92%;
+        }
+
+        .alert-header h2 {
+            font-size: 1.6rem;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .alert-item {
+            padding: 0.75rem;
+        }
+
+        .hazard-icon {
+            width: 30px;
+            height: 30px;
+            font-size: 1rem;
+            margin-right: 0.5rem;
+        }
+
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .alert-preferences-container {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .alert-item {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    /* Switch Animation */
+    .form-check-input {
+        transition: all 0.3s ease;
+    }
+
+    /* Selection Counter */
+    .selection-counter {
+        background: rgba(33, 150, 243, 0.2);
+        color: #42a5f5;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="alert-preferences-container">
+    <!-- Header Section -->
+    <div class="alert-header">
+        <h2><i class="fas fa-bell me-2"></i>Alert Preferences</h2>
+        <p class="alert-subtitle">
+            Choose which types of coastal hazards you want to receive notifications about
+        </p>
+    </div>
+
+    <!-- Alert Preferences Card -->
+    <div class="alert-card">
+        <div class="card-header">
+            <h4><i class="fas fa-sliders-h me-2"></i>Hazard Notification Settings</h4>
+        </div>
+        <div class="card-body">
+            <!-- Toggle All Section -->
+            <div class="toggle-all-section">
+                <div class="toggle-all-label">
+                    <i class="fas fa-broadcast-tower me-2"></i>Quick Settings
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="selection-counter" id="selectionCounter">0 selected</span>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllBtn">
+                            <i class="fas fa-check-double me-1"></i>All
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="selectNoneBtn">
+                            <i class="fas fa-times me-1"></i>None
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" id="alertPreferencesForm">
+                {{ form.hidden_tag() }}
+
+                <div class="alert-list">
+                    {% for field in form %}
+                    {% if field.type != 'HiddenField' and field.type != 'CSRFTokenField' and field.type != 'SubmitField'
+                    %}
+                    {% set hazard_name = field.name %}
+                    {% set hazard_icon = {
+                    'tsunami_alerts': '🌊',
+                    'storm_surge_alerts': '🌀',
+                    'high_waves_alerts': '💨',
+                    'swell_surge_alerts': '🌪️',
+                    'coastal_flooding_alerts': '🏖️',
+                    'abnormal_tides_alerts': '🌅'
+                    }[field.name] or '⚠️' %}
+
+                    {% set hazard_description = {
+                    'tsunami_alerts': 'Large ocean waves caused by underwater earthquakes',
+                    'storm_surge_alerts': 'Rising sea levels during severe storms',
+                    'high_waves_alerts': 'Dangerously high wave conditions',
+                    'swell_surge_alerts': 'Powerful swells affecting coastal areas',
+                    'coastal_flooding_alerts': 'Flooding in coastal regions',
+                    'abnormal_tides_alerts': 'Unusual tidal patterns and levels'
+                    }[field.name] or 'Coastal hazard alerts' %}
+
+                    <div class="alert-item {% if field.data %}active{% endif %}" data-field="{{ field.name }}">
+                        <div class="form-check">
+                            {{ field(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ field.id }}">
+                                <div class="hazard-icon {{ field.name.replace('_alerts', '') }}">
+                                    {{ hazard_icon }}
+                                </div>
+                                <div class="hazard-info">
+                                    <div class="hazard-name">
+                                        {{ field.label.text }}
+                                    </div>
+                                    <div class="hazard-description">
+                                        {{ hazard_description }}
+                                    </div>
+                                    <div class="hazard-range">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        Alerts within {{ hazard_types[field.name.replace('_alerts', '')] }}km of your
+                                        location
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Summary Section -->
+                <div class="summary-section">
+                    <div class="summary-title">
+                        <i class="fas fa-chart-pie me-2"></i>Your Alert Summary
+                    </div>
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            <div class="stat-number" id="enabledCount">0</div>
+                            <div class="stat-label">Enabled Alerts</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="totalCount">
+                                {% set field_count = 0 %}
+                                {% for field in form %}
+                                {% if field.type != 'HiddenField' and field.type != 'CSRFTokenField' and field.type !=
+                                'SubmitField' %}
+                                {% set field_count = field_count + 1 %}
+                                {% endif %}
+                                {% endfor %}
+                                {{ field_count }}
+                            </div>
+                            <div class="stat-label">Total Types</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="coverageRange">
+                                {% if hazard_types and hazard_types.values() %}
+                                {{ hazard_types.values()|max }}km
+                                {% else %}
+                                0km
+                                {% endif %}
+                            </div>
+                            <div class="stat-label">Max Range</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <a href="{{ url_for('profile', username=current_user.username) }}"
+                        class="btn btn-secondary me-md-2">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Profile
+                    </a>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Information Card -->
+    <div class="alert-card">
+        <div class="card-header">
+            <h4><i class="fas fa-info-circle me-2"></i>About Alert Preferences</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="hazard-icon tsunami me-3">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div>
+                            <h6>Smart Notifications</h6>
+                            <p class="text-muted small mb-0">
+                                Receive alerts only for hazards that are relevant to your set location and preferences.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="hazard-icon storm_surge me-3">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </div>
+                        <div>
+                            <h6>Location-Based</h6>
+                            <p class="text-muted small mb-0">
+                                Alerts are triggered based on your distance from reported hazards.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="hazard-icon high_waves me-3">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div>
+                            <h6>Community Safety</h6>
+                            <p class="text-muted small mb-0">
+                                Your alert preferences help create a safer coastal community for everyone.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="hazard-icon coastal_flooding me-3">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <div>
+                            <h6>Easy Management</h6>
+                            <p class="text-muted small mb-0">
+                                You can update these preferences anytime from your profile settings.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('alertPreferencesForm');
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+        const enabledCount = document.getElementById('enabledCount');
+        const selectionCounter = document.getElementById('selectionCounter');
+        const selectAllBtn = document.getElementById('selectAllBtn');
+        const selectNoneBtn = document.getElementById('selectNoneBtn');
+        const totalCountElement = document.getElementById('totalCount');
+        const totalCount = parseInt(totalCountElement.textContent);
+
+        // Function to update counters
+        function updateCounters() {
+            const enabled = Array.from(checkboxes).filter(cb => cb.checked).length;
+            enabledCount.textContent = enabled;
+            selectionCounter.textContent = `${enabled} selected`;
+
+            // Update alert items active state
+            checkboxes.forEach(checkbox => {
+                const alertItem = checkbox.closest('.alert-item');
+                if (checkbox.checked) {
+                    alertItem.classList.add('active');
+                } else {
+                    alertItem.classList.remove('active');
+                }
+            });
+        }
+
+        // Initialize counters
+        updateCounters();
+
+        // Add event listeners to checkboxes
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateCounters);
+
+            // Add click event to entire alert item
+            const alertItem = checkbox.closest('.alert-item');
+            alertItem.addEventListener('click', function (e) {
+                if (e.target.type !== 'checkbox') {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+
+        // Select All button
+        selectAllBtn.addEventListener('click', function () {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateCounters();
+        });
+
+        // Select None button
+        selectNoneBtn.addEventListener('click', function () {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateCounters();
+        });
+
+        // Form submission handling
+        form.addEventListener('submit', function (e) {
+            const enabledCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+            if (enabledCount === 0) {
+                if (!confirm('You have disabled all alerts. You will not receive any hazard notifications. Continue?')) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+
+            // Show loading state
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+            submitButton.disabled = true;
+
+            return true;
+        });
+
+        // Add animation to alert items
+        const alertItems = document.querySelectorAll('.alert-item');
+        alertItems.forEach((item, index) => {
+            item.style.animationDelay = `${index * 0.1}s`;
+        });
+    });
+</script>
+{% endblock %}

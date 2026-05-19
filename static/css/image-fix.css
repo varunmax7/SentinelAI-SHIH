@@ -1,0 +1,16 @@
+/* Global image visibility fixes */
+img {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Ensure all images in reels are visible */
+.reel-media img,
+img.reel-media {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    max-width: 100%;
+    height: auto;
+}

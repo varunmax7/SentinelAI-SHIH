@@ -1,0 +1,555 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Edit Profile Container */
+    .edit-profile-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 600px;
+    }
+
+    /* Header Section */
+    .edit-profile-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .edit-profile-header h2 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .edit-profile-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1rem;
+    }
+
+    /* Profile Image Section */
+    .profile-image-section {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        border: 4px solid rgba(255, 255, 255, 0.2);
+        object-fit: cover;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .profile-avatar:hover {
+        border-color: rgba(33, 150, 243, 0.6);
+        transform: scale(1.05);
+    }
+
+    .avatar-upload-label {
+        display: block;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    /* Form Elements */
+    .form-label {
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-label i {
+        margin-right: 0.5rem;
+        color: #42a5f5;
+    }
+
+    .form-control {
+        background: rgba(255, 255, 255, 0.15) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border-radius: 12px;
+        color: white !important;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.2) !important;
+        border-color: rgba(33, 150, 243, 0.6) !important;
+        box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.15);
+        color: white !important;
+        transform: translateY(-1px);
+    }
+
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+
+    .form-text {
+        color: rgba(255, 255, 255, 0.7) !important;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    /* File Input Styling */
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+    }
+
+    .file-input-wrapper input[type=file] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+
+    .file-input-custom {
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px dashed rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.8);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .file-input-custom:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(33, 150, 243, 0.5);
+        transform: translateY(-2px);
+    }
+
+    .file-input-custom i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+        color: #42a5f5;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, rgba(66, 165, 245, 0.95) 0%, rgba(100, 181, 246, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-secondary {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-2px);
+    }
+
+    /* Form Groups */
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    /* Character Counter */
+    .char-counter {
+        text-align: right;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 0.25rem;
+    }
+
+    .char-counter.warning {
+        color: #ff9800;
+    }
+
+    .char-counter.danger {
+        color: #f44336;
+    }
+
+    /* Preview Section */
+    .preview-section {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        border-left: 4px solid #42a5f5;
+    }
+
+    .preview-title {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .preview-content {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+    }
+
+    /* Success Message */
+    .success-message {
+        background: rgba(76, 175, 80, 0.15);
+        border: 1px solid rgba(76, 175, 80, 0.3);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .edit-profile-container {
+            padding: 1.5rem 2rem;
+            margin: 1rem;
+            max-width: 95%;
+        }
+
+        .edit-profile-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+        }
+
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .edit-profile-container {
+            padding: 1.25rem 1.5rem;
+            margin: 0.75rem;
+            max-width: 92%;
+        }
+
+        .edit-profile-header h2 {
+            font-size: 1.6rem;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+        }
+
+        .file-input-custom {
+            padding: 1rem;
+        }
+    }
+
+    /* Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .edit-profile-container {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    /* Form Validation */
+    .is-invalid {
+        border-color: #f44336 !important;
+        box-shadow: 0 0 0 0.2rem rgba(244, 67, 54, 0.15) !important;
+    }
+
+    .invalid-feedback {
+        color: #ff6b6b;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    .is-valid {
+        border-color: #4caf50 !important;
+        box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.15) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-profile-container">
+    <!-- Header Section -->
+    <div class="edit-profile-header">
+        <h2><i class="fas fa-user-edit me-2"></i>Edit Profile</h2>
+        <p class="edit-profile-subtitle">Update your personal information and profile settings</p>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="success-message">
+        <i class="fas fa-check-circle me-2"></i>{{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="" enctype="multipart/form-data" id="editProfileForm">
+        {{ form.hidden_tag() }}
+
+        <!-- Profile Image Section -->
+        <div class="profile-image-section">
+            <img src="{{ url_for('uploaded_file', filename=current_user.profile_image) if current_user.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                class="profile-avatar" alt="Profile" id="profileAvatar">
+            <span class="avatar-upload-label">Click your photo to update</span>
+        </div>
+
+        <!-- Username Field -->
+        <div class="form-group">
+            <label for="username" class="form-label">
+                <i class="fas fa-user"></i>Username
+            </label>
+            {{ form.username(class="form-control", id="username") }}
+            {% if form.username.errors %}
+            <div class="invalid-feedback d-block">
+                {% for error in form.username.errors %}
+                <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bio Field -->
+        <div class="form-group">
+            <label for="bio" class="form-label">
+                <i class="fas fa-edit"></i>Bio
+            </label>
+            {{ form.bio(class="form-control", id="bio", rows="3", placeholder="Tell us about yourself and your interest
+            in safety intelligence...") }}
+            <div class="char-counter" id="bioCounter">
+                <span id="bioLength">0</span>/150 characters
+            </div>
+            {% if form.bio.errors %}
+            <div class="invalid-feedback d-block">
+                {% for error in form.bio.errors %}
+                <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bio Preview -->
+        <div class="preview-section" id="bioPreview" style="display: none;">
+            <div class="preview-title"><i class="fas fa-eye me-2"></i>Bio Preview</div>
+            <div class="preview-content" id="bioPreviewContent"></div>
+        </div>
+
+        <!-- Profile Image Upload -->
+        <div class="form-group">
+            <label class="form-label">
+                <i class="fas fa-camera"></i>Profile Photo
+            </label>
+            <div class="file-input-wrapper">
+                {{ form.profile_image(class="form-control", id="profileImageInput", style="display: none;") }}
+                <div class="file-input-custom" onclick="document.getElementById('profileImageInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <div>Click to upload new profile photo</div>
+                    <small class="text-muted">JPG, PNG, GIF - Max 5MB</small>
+                </div>
+            </div>
+            <div class="form-text">Recommended: Square image, 500x500 pixels or larger</div>
+            {% if form.profile_image.errors %}
+            <div class="invalid-feedback d-block">
+                {% for error in form.profile_image.errors %}
+                <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Current Settings Preview -->
+        <div class="preview-section">
+            <div class="preview-title"><i class="fas fa-info-circle me-2"></i>Current Profile</div>
+            <div class="preview-content">
+                <strong>Level:</strong> {{ current_user.level }}<br>
+                <strong>Role:</strong>
+                {% if current_user.role == 'official' %}
+                <i class="fas fa-shield-alt me-1"></i>Official
+                {% elif current_user.role == 'analyst' %}
+                <i class="fas fa-chart-bar me-1"></i>Analyst
+                {% else %}
+                <i class="fas fa-user me-1"></i>Citizen
+                {% endif %}
+                <br>
+                <strong>Points:</strong> {{ current_user.points }}<br>
+                <strong>Member since:</strong> {{ current_user.created_at.strftime('%B %Y') }}
+            </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="form-group button-group">
+            {{ form.submit(class="btn btn-primary", id="submitButton") }}
+            <a href="{{ url_for('profile', username=current_user.username) }}" class="btn btn-secondary">
+                <i class="fas fa-times me-2"></i>Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const bioTextarea = document.getElementById('bio');
+        const bioCounter = document.getElementById('bioCounter');
+        const bioLength = document.getElementById('bioLength');
+        const bioPreview = document.getElementById('bioPreview');
+        const bioPreviewContent = document.getElementById('bioPreviewContent');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileImageInput = document.getElementById('profileImageInput');
+        const submitButton = document.getElementById('submitButton');
+
+        // Bio character counter and preview
+        function updateBioCounter() {
+            const length = bioTextarea.value.length;
+            bioLength.textContent = length;
+
+            // Update counter color based on length
+            if (length > 140) {
+                bioCounter.classList.add('danger');
+                bioCounter.classList.remove('warning');
+            } else if (length > 120) {
+                bioCounter.classList.add('warning');
+                bioCounter.classList.remove('danger');
+            } else {
+                bioCounter.classList.remove('warning', 'danger');
+            }
+
+            // Update preview
+            if (length > 0) {
+                bioPreviewContent.textContent = bioTextarea.value;
+                bioPreview.style.display = 'block';
+            } else {
+                bioPreview.style.display = 'none';
+            }
+        }
+
+        // Initialize bio counter
+        updateBioCounter();
+        bioTextarea.addEventListener('input', updateBioCounter);
+
+        // Profile image preview
+        profileImageInput.addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    profileAvatar.src = e.target.result;
+
+                    // Show success feedback
+                    const fileInputCustom = document.querySelector('.file-input-custom');
+                    fileInputCustom.innerHTML = `
+                    <i class="fas fa-check-circle text-success"></i>
+                    <div>Photo selected: ${file.name}</div>
+                    <small class="text-success">Ready to upload</small>
+                `;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Click avatar to trigger file input
+        profileAvatar.addEventListener('click', function () {
+            profileImageInput.click();
+        });
+
+        // Form submission handling
+        const form = document.getElementById('editProfileForm');
+        form.addEventListener('submit', function (e) {
+            const bioLength = bioTextarea.value.length;
+            if (bioLength > 150) {
+                e.preventDefault();
+                alert('Bio must be 150 characters or less. Please shorten your bio.');
+                bioTextarea.focus();
+                return false;
+            }
+
+            // Show loading state
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            submitButton.disabled = true;
+
+            return true;
+        });
+
+        // Real-time username validation
+        const usernameInput = document.getElementById('username');
+        usernameInput.addEventListener('input', function () {
+            const username = this.value;
+            if (username.length < 3) {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            } else if (username.length > 20) {
+                this.classList.add('is-invalid');
+                this.classList.remove('is-valid');
+            } else {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            }
+        });
+
+        // Add animation to form elements
+        const formGroups = document.querySelectorAll('.form-group');
+        formGroups.forEach((group, index) => {
+            group.style.animationDelay = `${index * 0.1}s`;
+            group.style.animation = 'fadeInUp 0.5s ease-out forwards';
+            group.style.opacity = '0';
+        });
+    });
+</script>
+{% endblock %}

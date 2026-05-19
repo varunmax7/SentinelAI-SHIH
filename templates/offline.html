@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Offline - Sentinel AI{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center p-5 card bg-dark text-white border-primary shadow-lg">
+            <div class="mb-4">
+                <i class="fas fa-wifi-slash fa-5x text-warning animate-pulse"></i>
+            </div>
+            <h1 class="display-4 mb-3">You're Offline</h1>
+            <p class="lead mb-4">
+                It looks like you've lost your internet connection. Don't worry, Sentinel AI is still working for you.
+            </p>
+
+            <div class="alert alert-info bg-transparent border-info text-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                You can still view cached reports and dashboards.
+            </div>
+
+            <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                <button onclick="window.location.reload()" class="btn btn-primary btn-lg px-4 gap-3">
+                    <i class="fas fa-sync-alt me-2"></i>Try Again
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light btn-lg px-4">
+                    <i class="fas fa-home me-2"></i>Go to Dashboard
+                </a>
+            </div>
+
+            <div class="mt-5 pt-4 border-top border-secondary">
+                <h5>Emergency?</h5>
+                <p class="small text-muted">If you have an emergency to report, please call local emergency services
+                    immediately as offline reporting may be delayed.</p>
+                <a href="tel:112" class="btn btn-danger btn-lg rounded-pill px-5">
+                    <i class="fas fa-phone-alt me-2"></i>Call Emergency (112)
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(1.1);
+            opacity: 0.7;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .animate-pulse {
+        animation: pulse 2s infinite ease-in-out;
+    }
+
+    .card {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        border-radius: 20px;
+    }
+</style>
+{% endblock %}

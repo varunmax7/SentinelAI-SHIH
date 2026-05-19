@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4 pt-3">  <!-- Added mt-4 and pt-3 for top margin and padding -->
+    <!-- Eco Dashboard Header -->
+    <div class="eco-dashboard mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold mb-2">
+                    <i class="fas fa-leaf me-3"></i>Eco Tracker
+                </h1>
+                <p class="lead mb-0">Track your plastic reduction and carbon savings to earn points and badges!</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex gap-2 justify-content-md-end">
+                    <a href="{{ url_for('plastic_reduction') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-recycle me-2"></i>Reduce Plastic
+                    </a>
+                    <a href="{{ url_for('carbon_savings') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-cloud me-2"></i>Save Carbon
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card impact-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-recycle fa-2x mb-3"></i>
+                    <h3 class="metric-value">{{ total_plastic_reduced|default(0)|round(1) }} kg</h3>
+                    <p class="metric-label">Plastic Reduced</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card impact-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-cloud fa-2x mb-3"></i>
+                    <h3 class="metric-value">{{ total_carbon_saved|default(0)|round(1) }} kg</h3>
+                    <p class="metric-label">CO₂ Saved</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card impact-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-trophy fa-2x mb-3"></i>
+                    <h3 class="metric-value">{{ total_eco_points|default(0) }}</h3>
+                    <p class="metric-label">Eco Points</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card impact-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-tree fa-2x mb-3"></i>
+                    <h3 class="metric-value">{{ (total_carbon_saved|default(0) / 21.77)|round(0) }}</h3>
+                    <p class="metric-label">Trees Equivalent</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <!-- Recent Plastic Reduction -->
+        <div class="col-md-6 mb-4">
+            <div class="card plastic-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-recycle me-2"></i>Recent Plastic Reduction
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if plastic_usage %}
+                        <div class="list-group list-group-flush">
+                            {% for usage in plastic_usage %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ usage.plastic_type|replace('_', ' ')|title }}</h6>
+                                        <p class="mb-1 text-muted">{{ usage.quantity }} {{ usage.unit }} • {{ usage.date.strftime('%b %d, %Y') }}</p>
+                                        {% if usage.verified %}
+                                        <span class="badge bg-success">Verified</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-primary">{{ usage.points_earned }} points</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-recycle fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No plastic reduction recorded yet.</p>
+                            <a href="{{ url_for('plastic_reduction') }}" class="btn btn-success">Start Reducing Plastic</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Carbon Savings -->
+        <div class="col-md-6 mb-4">
+            <div class="card carbon-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cloud me-2"></i>Recent Carbon Savings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if carbon_savings %}
+                        <div class="list-group list-group-flush">
+                            {% for saving in carbon_savings %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ saving.activity_type|replace('_', ' ')|title }}</h6>
+                                        <p class="mb-1 text-muted">{{ saving.carbon_saved }} kg CO₂ • {{ saving.date.strftime('%b %d, %Y') }}</p>
+                                        <p class="mb-0 small">{{ saving.description[:50] }}{% if saving.description|length > 50 %}...{% endif %}</p>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-primary">{{ saving.points_earned }} points</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-cloud fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No carbon savings recorded yet.</p>
+                            <a href="{{ url_for('carbon_savings') }}" class="btn btn-info">Log Carbon Savings</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Environmental Impact -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Your Environmental Impact
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">{{ (total_carbon_saved|default(0) / 21.77)|round(0) }}</div>
+                                <div class="metric-label">Trees Planted Equivalent</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">{{ (total_carbon_saved|default(0) * 0.621371 / 0.404)|round(0) }}</div>
+                                <div class="metric-label">Car Miles Avoided</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">{{ (total_plastic_reduced|default(0) * 50)|round(0) }}</div>
+                                <div class="metric-label">Plastic Bottles Saved</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">{{ (total_carbon_saved|default(0) * 0.000163)|round(2) }}</div>
+                                <div class="metric-label">MWh Energy Saved</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">{{ (total_plastic_reduced|default(0) * 0.0015)|round(3) }}</div>
+                                <div class="metric-label">m³ Landfill Space</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="metric-card">
+                                <div class="metric-value">{{ total_eco_points|default(0) }}</div>
+                                <div class="metric-label">Total Eco Points</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4 mb-5">  <!-- Added mb-5 for bottom margin -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h4 class="mb-3">Ready to Make a Difference?</h4>
+                    <div class="d-flex gap-3 justify-content-center flex-wrap">
+                        <a href="{{ url_for('plastic_reduction') }}" class="btn btn-success btn-lg">
+                            <i class="fas fa-recycle me-2"></i>Reduce Plastic
+                        </a>
+                        <a href="{{ url_for('carbon_savings') }}" class="btn btn-info btn-lg">
+                            <i class="fas fa-cloud me-2"></i>Save Carbon
+                        </a>
+                        <a href="{{ url_for('eco_leaderboard') }}" class="btn btn-warning btn-lg">
+                            <i class="fas fa-trophy me-2"></i>View Leaderboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add custom CSS to ensure proper spacing -->
+<style>
+    .container-fluid {
+        padding-top: 20px !important;
+    }
+    
+    /* Ensure content doesn't overlap with fixed navbar */
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding-top: 25px !important;
+        }
+    }
+    
+    /* Additional spacing for mobile */
+    @media (max-width: 576px) {
+        .container-fluid {
+            padding-top: 30px !important;
+        }
+        
+        .eco-dashboard {
+            margin-top: 10px !important;
+        }
+    }
+</style>
+{% endblock %}

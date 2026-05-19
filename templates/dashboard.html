@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+    /* Home-page style integration */
+    .main-content-container {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+    }
+
+    .hero-subtitle {
+        font-size: 1.1rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 2rem;
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px;
+    }
+
+    #map {
+        height: 450px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .table {
+        color: #f8f9fa;
+    }
+
+    .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    /* Custom borders for stats */
+    .stat-blue {
+        border-left: 4px solid #0ea5e9 !important;
+    }
+
+    .stat-green {
+        border-left: 4px solid #10b981 !important;
+    }
+
+    .stat-orange {
+        border-left: 4px solid #f59e0b !important;
+    }
+
+    .stat-red {
+        border-left: 4px solid #ef4444 !important;
+    }
+
+    .pdf-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.95);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        flex-direction: column;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h1 class="hero-title">📊 Hazard Reports Dashboard</h1>
+            <p class="hero-subtitle mb-0">Live Incident Monitoring & Community Response</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('register_volunteer') }}" class="btn btn-success px-4 fw-bold shadow"><i
+                    class="fas fa-hands-helping me-2"></i>Be a Volunteer</a>
+            <button class="btn btn-primary px-4 fw-bold shadow" id="exportBtn"><i
+                    class="fas fa-file-pdf me-2"></i>Export PDF</button>
+            <button class="btn btn-outline-light px-4 border-secondary" id="refreshBtn"><i
+                    class="fas fa-sync-alt"></i></button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-5">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card h-100 p-3 stat-blue">
+                <div class="card-body d-flex justify-content-between align-items-center p-2">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1">Total Reports</div>
+                        <div class="h3 mb-0 fw-bold text-white">{{ reports|length }}</div>
+                    </div>
+                    <i class="fas fa-clipboard-list fa-2x text-primary opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card h-100 p-3 stat-red">
+                <div class="card-body d-flex justify-content-between align-items-center p-2">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1">Active Hazards</div>
+                        <div class="h3 mb-0 fw-bold text-white">
+                            {% set active = namespace(v=0) %}
+                            {% for r in reports %}{% if r.status != 'resolved' %}{% set active.v = active.v + 1 %}{%
+                            endif %}{% endfor %}
+                            {{ active.v }}
+                        </div>
+                    </div>
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card h-100 p-3 stat-green">
+                <div class="card-body d-flex justify-content-between align-items-center p-2">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1">Reports with Media</div>
+                        <div class="h3 mb-0 fw-bold text-white">{{ reports_with_media }}</div>
+                    </div>
+                    <i class="fas fa-camera fa-2x text-success opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card h-100 p-3 stat-orange">
+                <div class="card-body d-flex justify-content-between align-items-center p-2">
+                    <div>
+                        <div class="text-muted small text-uppercase fw-bold mb-1">Top Hazard Type</div>
+                        <div class="h3 mb-0 fw-bold text-white">
+                            <span style="font-size: 0.9rem;">{{ top_hazard_type }}</span>
+                            <span class="badge bg-warning text-dark ms-1">{{ top_hazard_count }}</span>
+                        </div>
+                    </div>
+                    <i class="fas fa-mountain fa-2x text-warning opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Section -->
+    <div class="row mb-5">
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100 overflow-hidden">
+                <div class="card-header py-3 bg-transparent d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 fw-bold text-white">Incident Hotspots Map</h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" id="toggleResilienceBtn"
+                            onclick="toggleResilienceView()">
+                            <i class="fas fa-shield-alt me-1"></i>Urban Resilience
+                        </button>
+                        <button class="btn btn-sm text-white opacity-50" onclick="resetMap()">
+                            <i class="fas fa-expand-arrows-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map"></div>
+                    <!-- Resilience Legend (hidden by default) -->
+                    <div id="resilienceLegend"
+                        style="display: none; position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 12px; z-index: 1000; border: 1px solid rgba(255,255,255,0.2);">
+                        <h6 class="text-white mb-2" style="font-size: 0.85rem;">Urban Resilience Index</h6>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span
+                                style="width: 20px; height: 20px; background: #28a745; border-radius: 4px; display: inline-block;"></span>
+                            <span class="text-white" style="font-size: 0.75rem;">High (70-100)</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span
+                                style="width: 20px; height: 20px; background: #ffc107; border-radius: 4px; display: inline-block;"></span>
+                            <span class="text-white" style="font-size: 0.75rem;">Medium (40-69)</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span
+                                style="width: 20px; height: 20px; background: #dc3545; border-radius: 4px; display: inline-block;"></span>
+                            <span class="text-white" style="font-size: 0.75rem;">Low (0-39)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header py-3 bg-transparent">
+                    <h6 class="m-0 fw-bold text-white">Hazard Distribution</h6>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <div style="height: 300px; width: 100%;">
+                        <canvas id="hazardTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Table -->
+    <div class="card mb-4 overflow-hidden border-0">
+        <div class="card-header py-3 bg-transparent divider-bottom">
+            <h6 class="m-0 fw-bold text-white">Recent Submissions</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="bg-white bg-opacity-10 text-muted small">
+                        <tr>
+                            <th class="ps-4">INCIDENT</th>
+                            <th>TYPE</th>
+                            <th>LOCATION</th>
+                            <th>STATUS</th>
+                            <th class="pe-4">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center gap-3">
+                                    {% if report.image_file %}
+                                    <img src="{{ url_for('uploaded_file', filename=report.image_file) }}"
+                                        style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;">
+                                    {% endif %}
+                                    <div class="fw-bold">{{ report.title }}</div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-secondary bg-opacity-50 text-white">{{ report.hazard_type
+                                    }}</span></td>
+                            <td><span class="small text-muted">{{ report.location }}</span></td>
+                            <td>
+                                {% if report.status == 'resolved' %}
+                                <span
+                                    class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">Resolved</span>
+                                {% else %}
+                                <span
+                                    class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25">Active</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4"><a href="{{ url_for('view_report', report_id=report.id) }}"
+                                    class="btn btn-sm btn-outline-light border-0"><i class="fas fa-arrow-right"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="pdf-loading">
+    <div class="spinner-border text-primary mb-3"></div>
+    <h5 class="text-white">Generating Digital Analysis...</h5>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+    // Initialize data correctly
+    const allReportsData = {{ reports| tojson | safe }};
+    let mainMap;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        initChart();
+        document.getElementById('refreshBtn').onclick = () => window.location.reload();
+        document.getElementById('exportBtn').onclick = exportPDF;
+    });
+
+    function initMap() {
+        mainMap = L.map('map').setView([20.5, 78.9], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(mainMap);
+
+        if (allReportsData.length) {
+            // Add heatmap layer
+            const heatmapPoints = allReportsData.map(r => [r.latitude, r.longitude, 0.5]);
+            L.heatLayer(heatmapPoints, { radius: 25, blur: 15 }).addTo(mainMap);
+
+            // Add circle markers
+            const markers = [];
+            allReportsData.forEach(r => {
+                const marker = L.circleMarker([r.latitude, r.longitude], {
+                    radius: 8,
+                    color: r.status === 'resolved' ? '#10b981' : '#ef4444',
+                    fillColor: r.status === 'resolved' ? '#10b981' : '#ef4444',
+                    fillOpacity: 0.8,
+                    weight: 2
+                }).addTo(mainMap).bindPopup(`
+                    <div style="color:#222; min-width:150px">
+                        <h6 style="margin:0 0 5px">${r.title}</h6>
+                        <p style="margin:0; font-size:12px"><b>Type:</b> ${r.hazard_type}</p>
+                        <p style="margin:0; font-size:12px"><b>Status:</b> ${r.status}</p>
+                        <hr style="margin:8px 0">
+                        <a href="/view_report/${r.id}" class="btn btn-sm btn-primary text-white w-100">View Details</a>
+                    </div>
+                `);
+                markers.push(marker);
+            });
+
+            // Auto-fit map to markers
+            if (markers.length > 0) {
+                const group = new L.featureGroup(markers);
+                mainMap.fitBounds(group.getBounds().pad(0.2));
+            }
+        }
+    }
+
+    function resetMap() {
+        if (allReportsData.length) {
+            const latlngs = allReportsData.map(r => [r.latitude, r.longitude]);
+            mainMap.fitBounds(L.latLngBounds(latlngs).pad(0.2));
+        }
+    }
+
+    function initChart() {
+        const typesCount = {};
+        allReportsData.forEach(r => {
+            typesCount[r.hazard_type] = (typesCount[r.hazard_type] || 0) + 1;
+        });
+
+        const ctx = document.getElementById('hazardTypeChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(typesCount),
+                datasets: [{
+                    data: Object.values(typesCount),
+                    backgroundColor: ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#64748b'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#94a3b8', font: { size: 10, family: 'Outfit' }, padding: 15 }
+                    }
+                },
+                cutout: '75%'
+            }
+        });
+    }
+
+    function exportPDF() {
+        const loader = document.querySelector('.pdf-loading');
+        loader.style.display = 'flex';
+        html2canvas(document.querySelector('.main-content-container'), {
+            scale: 2,
+            backgroundColor: '#0f172a',
+            useCORS: true
+        }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save('Sentinel-AI-Dashboard-Report.pdf');
+            loader.style.display = 'none';
+        });
+    }
+
+    // =============================================================================
+    // URBAN RESILIENCE INDEX (URI) VISUALIZATION
+    // =============================================================================
+
+    let resilienceLayer = null;
+    let resilienceActive = false;
+
+    function getResilienceColor(score) {
+        if (score === null || score === undefined) return '#6c757d';
+        if (score >= 70) return '#28a745';
+        if (score >= 40) return '#ffc107';
+        return '#dc3545';
+    }
+
+    function getTrendIcon(trend) {
+        if (trend === 'improving') return '↑';
+        if (trend === 'declining') return '↓';
+        return '→';
+    }
+
+    function getTrendColor(trend) {
+        if (trend === 'improving') return '#28a745';
+        if (trend === 'declining') return '#dc3545';
+        return '#6c757d';
+    }
+
+    async function toggleResilienceView() {
+        const btn = document.getElementById('toggleResilienceBtn');
+        const legend = document.getElementById('resilienceLegend');
+
+        if (resilienceActive) {
+            if (resilienceLayer) {
+                mainMap.removeLayer(resilienceLayer);
+                resilienceLayer = null;
+            }
+            legend.style.display = 'none';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+            resilienceActive = false;
+            return;
+        }
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+
+            const response = await fetch('/api/resilience/zones');
+            if (!response.ok) throw new Error('Failed to fetch resilience data');
+
+            const zones = await response.json();
+
+            if (zones.length === 0) {
+                alert('No resilience zones found yet. Zones are created automatically when reports are submitted.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-shield-alt me-1"></i>Urban Resilience';
+                return;
+            }
+
+            resilienceLayer = L.layerGroup();
+
+            zones.forEach(zone => {
+                const color = getResilienceColor(zone.latest_score);
+                const bounds = [
+                    [zone.center_latitude - 0.05, zone.center_longitude - 0.05],
+                    [zone.center_latitude + 0.05, zone.center_longitude + 0.05]
+                ];
+
+                const rectangle = L.rectangle(bounds, {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.3,
+                    weight: 2,
+                    dashArray: '5, 5'
+                }).bindPopup('<div style="color:#222; min-width:200px"><h6 style="margin:0 0 10px; color: ' + color + '"><i class="fas fa-shield-alt"></i> ' + zone.display_name + '</h6><div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 10px;"><div style="font-size: 24px; font-weight: bold; color: ' + color + '; text-align: center;">' + (zone.latest_score !== null ? zone.latest_score.toFixed(1) : 'N/A') + '/100</div><div style="text-align: center; font-size: 12px; color: #666; margin-top: 5px;"><span style="color: ' + getTrendColor(zone.trend) + '">' + getTrendIcon(zone.trend) + ' ' + zone.trend + '</span></div></div>' + (zone.metrics && zone.metrics.total_reports !== undefined ? '<div style="font-size: 12px; line-height: 1.6;"><p style="margin: 5px 0;"><b>Reports (30d):</b> ' + zone.metrics.total_reports + '</p><p style="margin: 5px 0;"><b>Verified:</b> ' + (zone.metrics.verified_reports || 0) + '</p><p style="margin: 5px 0;"><b>Avg Response:</b> ' + (zone.metrics.avg_response_time_minutes ? zone.metrics.avg_response_time_minutes.toFixed(1) + ' min' : 'N/A') + '</p><p style="margin: 5px 0;"><b>Volunteers:</b> ' + (zone.metrics.volunteers_in_zone || 0) + '</p></div>' : '<p style="font-size: 12px; color: #666;">No data available yet</p>') + '<hr style="margin: 10px 0;"><button onclick="viewZoneDetails(' + zone.id + ')" class="btn btn-sm btn-primary w-100" style="font-size: 11px;">View Full Details</button></div>');
+
+                resilienceLayer.addLayer(rectangle);
+            });
+
+            resilienceLayer.addTo(mainMap);
+            legend.style.display = 'block';
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-primary');
+            resilienceActive = true;
+
+            console.log('✅ Loaded ' + zones.length + ' resilience zones');
+
+        } catch (error) {
+            console.error('Error loading resilience data:', error);
+            alert('Failed to load resilience data. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-shield-alt me-1"></i>Urban Resilience';
+        }
+    }
+
+    function viewZoneDetails(zoneId) {
+        fetch('/api/resilience/zone/' + zoneId)
+            .then(response => response.json())
+            .then(zone => {
+                const score30d = zone.score_30d || {};
+                const metrics30d = score30d.metrics || {};
+
+                const modalHtml = '<div class="modal fade" id="zoneDetailModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content" style="background: #1e293b; color: white;"><div class="modal-header border-secondary"><h5 class="modal-title"><i class="fas fa-shield-alt text-primary"></i> ' + zone.display_name + '</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="text-center mb-4"><h2 style="color: ' + getResilienceColor(zone.latest_score) + '; font-size: 3rem; font-weight: bold;">' + (zone.latest_score !== null ? zone.latest_score.toFixed(1) : 'N/A') + '/100</h2><p class="text-muted"><span style="color: ' + getTrendColor(zone.trend) + '; font-size: 1.2rem;">' + getTrendIcon(zone.trend) + ' ' + zone.trend + '</span></p></div><h6 class="text-white mb-3">Contributing Factors:</h6><div class="row mb-3"><div class="col-6 mb-2"><div class="card bg-dark border-secondary p-3"><small class="text-muted">Incident Pressure</small><h5 class="text-warning mb-0">' + (metrics30d.incident_pressure_score ? metrics30d.incident_pressure_score.toFixed(1) : '0') + '/30</h5></div></div><div class="col-6 mb-2"><div class="card bg-dark border-secondary p-3"><small class="text-muted">Response Effectiveness</small><h5 class="text-success mb-0">' + (metrics30d.response_effectiveness_score ? metrics30d.response_effectiveness_score.toFixed(1) : '0') + '/30</h5></div></div><div class="col-6 mb-2"><div class="card bg-dark border-secondary p-3"><small class="text-muted">Community Readiness</small><h5 class="text-info mb-0">' + (metrics30d.community_readiness_score ? metrics30d.community_readiness_score.toFixed(1) : '0') + '/20</h5></div></div><div class="col-6 mb-2"><div class="card bg-dark border-secondary p-3"><small class="text-muted">Stability Trend</small><h5 class="text-primary mb-0">' + (metrics30d.stability_trend_score ? metrics30d.stability_trend_score.toFixed(1) : '0') + '/20</h5></div></div></div><h6 class="text-white mb-3">Key Metrics (Last 30 Days):</h6><ul class="list-unstyled"><li class="mb-2">📊 <b>Total Reports:</b> ' + (metrics30d.total_reports || 0) + '</li><li class="mb-2">✅ <b>Verified Reports:</b> ' + (metrics30d.verified_reports || 0) + '</li><li class="mb-2">🔁 <b>Repeat Incidents:</b> ' + (metrics30d.repeat_incidents || 0) + '</li><li class="mb-2">⏱️ <b>Avg Response Time:</b> ' + (metrics30d.avg_response_time_minutes ? metrics30d.avg_response_time_minutes.toFixed(1) + ' min' : 'N/A') + '</li><li class="mb-2">✔️ <b>Completion Rate:</b> ' + (metrics30d.completion_rate ? (metrics30d.completion_rate * 100).toFixed(1) + '%' : 'N/A') + '</li><li class="mb-2">👥 <b>Volunteers in Zone:</b> ' + (metrics30d.volunteers_in_zone || 0) + '</li><li class="mb-2">📍 <b>Volunteer Density:</b> ' + (metrics30d.volunteer_density ? metrics30d.volunteer_density.toFixed(3) + ' per km²' : 'N/A') + '</li></ul></div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div></div></div></div>';
+
+                const existingModal = document.getElementById('zoneDetailModal');
+                if (existingModal) existingModal.remove();
+
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                const modal = new bootstrap.Modal(document.getElementById('zoneDetailModal'));
+                modal.show();
+
+                document.getElementById('zoneDetailModal').addEventListener('hidden.bs.modal', function () {
+                    this.remove();
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching zone details:', error);
+                alert('Failed to load zone details');
+            });
+    }
+
+</script>
+{% endblock %}

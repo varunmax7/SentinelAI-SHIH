@@ -1,0 +1,655 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    .leaderboard-container {
+        max-width: 1000px;
+        margin: 3rem auto;
+        padding: 2rem;
+    }
+
+    .leaderboard-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .leaderboard-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ffd54f 0%, #ffb74d 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+
+    .leaderboard-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1.1rem;
+    }
+
+    .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, rgba(26, 54, 93, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #4caf50 0%, #81c784 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+    }
+
+    .user-rank-section {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%);
+        border: 1px solid rgba(76, 175, 80, 0.3);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+
+    .user-rank-header {
+        font-weight: 600;
+        color: #4caf50;
+        margin-bottom: 1rem;
+    }
+
+    .user-rank-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .rank-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .rank-label {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.8rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .rank-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: white;
+    }
+
+    .leaderboard-table {
+        background: linear-gradient(135deg, rgba(26, 54, 93, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .leaderboard-table-head {
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: 80px 2fr 1fr 1fr 1fr;
+        gap: 1.5rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .leaderboard-row {
+        padding: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        display: grid;
+        grid-template-columns: 80px 2fr 1fr 1fr 1fr;
+        gap: 1.5rem;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+
+    .leaderboard-row:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .leaderboard-row:last-child {
+        border-bottom: none;
+    }
+
+    .rank-badge {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.5rem;
+    }
+
+    .rank-1 {
+        background: linear-gradient(135deg, #ffd54f 0%, #ffb74d 100%);
+        color: #333;
+    }
+
+    .rank-2 {
+        background: linear-gradient(135deg, #c0c0c0 0%, #a9a9a9 100%);
+        color: #333;
+    }
+
+    .rank-3 {
+        background: linear-gradient(135deg, #cd7f32 0%, #b87533 100%);
+        color: white;
+    }
+
+    .rank-other {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    .user-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .user-name {
+        font-weight: 600;
+        color: white;
+        margin-bottom: 0.3rem;
+    }
+
+    .user-badge {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .badge-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.25rem 0.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .badge-verified {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+    }
+
+    .badge-expert {
+        background: rgba(33, 150, 243, 0.2);
+        color: #64b5f6;
+    }
+
+    .points-value {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #ffd54f;
+    }
+
+    .rescues-value {
+        color: rgba(255, 255, 255, 0.8);
+        text-align: center;
+    }
+
+    .experience-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .experience-beginner {
+        background: rgba(76, 175, 80, 0.2);
+        color: #4caf50;
+    }
+
+    .experience-intermediate {
+        background: rgba(33, 150, 243, 0.2);
+        color: #64b5f6;
+    }
+
+    .experience-expert {
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffd54f;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+    }
+
+    .pagination-btn {
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pagination-btn.active {
+        background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        border-color: #4caf50;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 2rem;
+        height: 2rem;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 992px) {
+        .leaderboard-table-head,
+        .leaderboard-row {
+            grid-template-columns: 70px 2fr 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .experience-badge {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .leaderboard-container {
+            padding: 1.5rem 1rem;
+            margin: 1rem 0.5rem;
+        }
+
+        .leaderboard-table-head,
+        .leaderboard-row {
+            grid-template-columns: 60px 1.5fr 1fr;
+            gap: 0.75rem;
+            padding: 0.75rem;
+        }
+
+        .points-value,
+        .rescues-value,
+        .experience-badge {
+            display: none;
+        }
+
+        .rank-badge {
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+        }
+
+        .leaderboard-header h1 {
+            font-size: 2rem;
+        }
+
+        .leaderboard-subtitle {
+            font-size: 1rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .leaderboard-container {
+            padding: 1rem;
+            margin: 0.5rem;
+        }
+
+        .leaderboard-table-head,
+        .leaderboard-row {
+            grid-template-columns: 50px 1fr;
+            gap: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        .rank-badge {
+            width: 45px;
+            height: 45px;
+            font-size: 1rem;
+        }
+
+        .leaderboard-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .stats-overview {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .stat-card {
+            padding: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="leaderboard-container">
+    <!-- Header -->
+    <div class="leaderboard-header">
+        <h1><i class="fas fa-trophy me-3"></i>Rescue Heroes Leaderboard</h1>
+        <p class="leaderboard-subtitle">Top volunteers by points earned from completed rescues</p>
+    </div>
+
+    <!-- District / Regional League Filter -->
+    <div class="filter-section" style="margin-bottom: 2rem; text-align: center;">
+        <label for="districtFilter" style="color: rgba(255,255,255,0.7); display: block; margin-bottom: 0.8rem; font-weight: 600; font-size: 1.1rem;">🌍 Regional League Selection</label>
+        <select id="districtFilter" class="form-select bg-dark text-white border-secondary" style="max-width: 350px; margin: 0 auto; display: inline-block; padding: 0.75rem 1rem; border-radius: 12px; font-weight: bold; border: 2px solid rgba(255,255,255,0.2) !important; background-color: #1e293b !important;" onchange="loadLeaderboard(1)">
+            <option value="all" style="font-weight: bold; color: #ffd54f;">🌍 Global Rankings (All Regions)</option>
+            <option value="Hyderabad">🏆 Hyderabad District</option>
+            <option value="Medchal-Malkajgiri">🏆 Medchal-Malkajgiri</option>
+            <option value="Rangareddy">🏆 Rangareddy</option>
+            <option value="Warangal">🏆 Warangal</option>
+            <option value="Adilabad">🏆 Adilabad</option>
+            <option value="Karimnagar">🏆 Karimnagar</option>
+            <option value="Khammam">🏆 Khammam</option>
+            <option value="Nizamabad">🏆 Nizamabad</option>
+            <option value="Yadadri">🏆 Yadadri Bhuvanagiri</option>
+        </select>
+    </div>
+
+    <!-- User's Rank Section -->
+    {% if current_user.volunteer_profile %}
+    <div class="user-rank-section">
+        <div class="user-rank-header">
+            <i class="fas fa-star me-2"></i>Your Rank
+        </div>
+        <div class="user-rank-content" id="userRankContent">
+            <div style="text-align: center; color: rgba(255, 255, 255, 0.7);">
+                <div class="loading-spinner" style="margin: 0 auto; margin-bottom: 1rem;"></div>
+                Loading your rank...
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Stats Overview -->
+    <div class="stats-overview" id="statsOverview">
+        <div class="stat-card">
+            <div class="stat-value" id="totalVolunteers">--</div>
+            <div class="stat-label">Total Volunteers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="topVolunteerPoints">--</div>
+            <div class="stat-label">Top Volunteer Points</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="totalRescues">--</div>
+            <div class="stat-label">Total Rescues Completed</div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <div class="leaderboard-table">
+        <div class="leaderboard-table-head" style="grid-template-columns: 80px 2.5fr 1fr 1fr 1.5fr;">
+            <div>Rank</div>
+            <div>Volunteer</div>
+            <div>Points</div>
+            <div>Rescues</div>
+            <div style="text-align: right; margin-right: 15px;">Bounty Rewards</div>
+        </div>
+        <div id="leaderboardContent">
+            <div class="empty-state">
+                <div class="loading-spinner" style="margin: 0 auto; margin-bottom: 1rem;"></div>
+                Loading leaderboard...
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="paginationControls" style="display: none;">
+        <button class="pagination-btn" id="prevBtn" onclick="previousPage()">← Previous</button>
+        <div id="pageIndicator" style="color: rgba(255, 255, 255, 0.7); padding: 0.5rem 1rem;"></div>
+        <button class="pagination-btn" id="nextBtn" onclick="nextPage()">Next →</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentPage = 1;
+    let totalPages = 1;
+    const perPage = 50;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadLeaderboard(1);
+        {% if current_user.volunteer_profile %}
+        loadUserRank();
+        {% endif %}
+    });
+
+    async function loadLeaderboard(page) {
+        try {
+            const districtFilter = document.getElementById('districtFilter');
+            const district = districtFilter ? districtFilter.value : 'all';
+            const response = await fetch(`/api/leaderboard?page=${page}&per_page=${perPage}&district=${district}`);
+            if (!response.ok) throw new Error('Failed to load leaderboard');
+            
+            const data = await response.json();
+            currentPage = page;
+            totalPages = data.pages;
+            
+            // Update stats
+            let totalRescues = 0;
+            let topPoints = 0;
+            
+            data.leaderboard.forEach(vol => {
+                totalRescues += vol.rescues;
+                if (vol.points > topPoints) topPoints = vol.points;
+            });
+            
+            document.getElementById('totalVolunteers').textContent = data.total;
+            document.getElementById('topVolunteerPoints').textContent = topPoints.toLocaleString();
+            document.getElementById('totalRescues').textContent = totalRescues.toLocaleString();
+            
+            // Render leaderboard
+            renderLeaderboard(data.leaderboard);
+            
+            // Update pagination
+            updatePagination();
+            
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('leaderboardContent').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <div>Error loading leaderboard: ${error.message}</div>
+                </div>
+            `;
+        }
+    }
+
+    function renderLeaderboard(volunteers) {
+        let html = '';
+        
+        if (volunteers.length === 0) {
+            html = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏆</div>
+                    <div>No volunteers yet. Start completing rescues to join the leaderboard!</div>
+                </div>
+            `;
+        } else {
+            volunteers.forEach(vol => {
+                const rankClass = vol.rank === 1 ? 'rank-1' : vol.rank === 2 ? 'rank-2' : vol.rank === 3 ? 'rank-3' : 'rank-other';
+                const rankIcon = vol.rank === 1 ? '🥇' : vol.rank === 2 ? '🥈' : vol.rank === 3 ? '🥉' : vol.rank;
+                const expClass = `experience-${vol.experience}`;
+                const expLabel = vol.experience.charAt(0).toUpperCase() + vol.experience.slice(1);
+                
+                // Format location for display
+                const locText = vol.location !== 'Unknown' ? vol.location.split(',')[0].substring(0, 15) : 'Unknown Area';
+                
+                // Construct Regional Title badge if won
+                const titleBadge = vol.title ? `<div style="color: #10b981; font-size: 0.85rem; font-weight: 800; margin-top: 6px; letter-spacing: 0.5px; text-transform: uppercase;">${vol.title}</div>` : '';
+                
+                // Progress Bar logic for Government Certification
+                const certGoal = 500;
+                const pts = vol.points;
+                const percent = Math.min((pts / certGoal) * 100, 100);
+                const progressText = pts >= certGoal ? 
+                    '<span style="color:#10b981;"><i class="fas fa-lock-open"></i> Cert Unlocked</span>' : 
+                    `<span style="color:#ffb74d;">${certGoal - pts} pts to Govt Cert</span>`;
+                
+                html += `
+                    <div class="leaderboard-row" style="grid-template-columns: 80px 2.5fr 1fr 1fr 1.5fr;">
+                        <div>
+                            <div class="rank-badge ${rankClass}">
+                                ${rankIcon}
+                            </div>
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name">${vol.username} <span style="font-size: 0.8rem; color: #94a3b8; font-weight: normal; margin-left: 5px;">📍 ${locText}</span></div>
+                            <div class="user-badge" style="margin-bottom: 2px;">
+                                ${vol.is_verified ? '<span class="badge-item badge-verified"><i class="fas fa-check-circle"></i> Verified</span>' : ''}
+                                ${vol.experience === 'expert' ? '<span class="badge-item badge-expert"><i class="fas fa-star"></i> Expert</span>' : ''}
+                            </div>
+                            ${titleBadge}
+                        </div>
+                        <div>
+                            <div class="points-value">${vol.points.toLocaleString()}</div>
+                        </div>
+                        <div>
+                            <div class="rescues-value">${vol.rescues}</div>
+                        </div>
+                        <div>
+                            <div class="progress-container" style="width: 100%; max-width: 180px; margin-left: auto;">
+                                <div style="font-size: 0.75rem; font-weight: bold; margin-bottom: 6px; color: #fff;">Milestone Progress</div>
+                                <div style="height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 6px;">
+                                    <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #f59e0b, #fcd34d); transition: width 1s ease-out;"></div>
+                                </div>
+                                <div style="font-size: 0.7rem; text-align: right; font-weight: 700; letter-spacing: 0.3px;">${progressText}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        document.getElementById('leaderboardContent').innerHTML = html;
+    }
+
+    async function loadUserRank() {
+        try {
+            const response = await fetch(`/api/leaderboard/user/{{ current_user.id }}`);
+            if (!response.ok) throw new Error('Not ranked yet');
+            
+            const data = await response.json();
+            
+            let rankEmoji = '🏅';
+            if (data.rank === 1) rankEmoji = '🥇';
+            else if (data.rank === 2) rankEmoji = '🥈';
+            else if (data.rank === 3) rankEmoji = '🥉';
+            
+            document.getElementById('userRankContent').innerHTML = `
+                <div class="rank-item">
+                    <div class="rank-label">Your Rank</div>
+                    <div class="rank-value">${rankEmoji} #${data.rank}</div>
+                </div>
+                <div class="rank-item">
+                    <div class="rank-label">Total Points</div>
+                    <div class="rank-value" style="color: #ffd54f;">${data.points}</div>
+                </div>
+                <div class="rank-item">
+                    <div class="rank-label">Rescues Completed</div>
+                    <div class="rank-value" style="color: #4caf50;">${data.rescues}</div>
+                </div>
+            `;
+        } catch (error) {
+            document.getElementById('userRankContent').innerHTML = `
+                <div class="empty-state">
+                    <div style="font-size: 1.2rem; margin-bottom: 1rem;">No rescues completed yet</div>
+                    <div style="color: rgba(255, 255, 255, 0.5);">Complete an assignment to appear on the leaderboard!</div>
+                </div>
+            `;
+        }
+    }
+
+    function updatePagination() {
+        const controls = document.getElementById('paginationControls');
+        const pageIndicator = document.getElementById('pageIndicator');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        
+        if (totalPages > 1) {
+            controls.style.display = 'flex';
+            pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+        } else {
+            controls.style.display = 'none';
+        }
+    }
+
+    function previousPage() {
+        if (currentPage > 1) {
+            loadLeaderboard(currentPage - 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages) {
+            loadLeaderboard(currentPage + 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Oceanic Theme Overrides */
+    body {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        color: #e9ecef;
+    }
+
+    .card {
+        background: rgba(52, 58, 64, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e9ecef;
+        border-radius: 15px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+    }
+
+    .card-header {
+        background: rgba(33, 37, 41, 0.85) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: #f8f9fa !important;
+        border-top-left-radius: 15px !important;
+        border-top-right-radius: 15px !important;
+        padding: 1.5rem;
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .form-control,
+    .form-select {
+        background: rgba(33, 37, 41, 0.7) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #e9ecef !important;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background: rgba(33, 37, 41, 0.9) !important;
+        border-color: #4e73df !important;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25) !important;
+        color: #ffffff !important;
+    }
+
+    .form-label {
+        color: #e9ecef;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 15px rgba(78, 115, 223, 0.4);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #224abe 0%, #1a365d 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(78, 115, 223, 0.6);
+    }
+
+    .btn-secondary {
+        background: rgba(108, 117, 125, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e9ecef;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .btn-secondary:hover {
+        background: rgba(108, 117, 125, 0.5);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .error-message {
+        color: #ff6b6b;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .header-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header-section h1 {
+        color: #4e73df;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+    }
+
+    .header-section p {
+        color: #b0bec5;
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="header-section">
+                <h1 class="mb-2">
+                    <i class="fas fa-user-plus me-2"></i>{{ title }}
+                </h1>
+                <p class="text-muted">Share your skills and availability to help during emergencies</p>
+            </div>
+
+            <!-- Registration Form Card -->
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <!-- Skills Field -->
+                        <div class="form-group">
+                            <label for="skills" class="form-label">
+                                <i class="fas fa-star me-2 text-warning"></i>Skills & Expertise
+                            </label>
+                            {% if form.skills.errors %}
+                                {{ form.skills(class="form-control is-invalid", rows="4", placeholder="List your skills and areas of expertise...") }}
+                                <div class="error-message">
+                                    {% for error in form.skills.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.skills(class="form-control", rows="4", placeholder="List your skills and areas of expertise...") }}
+                            {% endif %}
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Example: First Aid, Medical Training, Heavy Equipment Operation, etc.
+                            </small>
+                        </div>
+
+                        <!-- Experience Level Field -->
+                        <div class="form-group">
+                            <label for="experience_level" class="form-label">
+                                <i class="fas fa-chart-line me-2 text-info"></i>Experience Level
+                            </label>
+                            {% if form.experience_level.errors %}
+                                {{ form.experience_level(class="form-select is-invalid") }}
+                                <div class="error-message">
+                                    {% for error in form.experience_level.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.experience_level(class="form-select") }}
+                            {% endif %}
+                        </div>
+
+                        <!-- Certifications Field -->
+                        <div class="form-group">
+                            <label for="certifications" class="form-label">
+                                <i class="fas fa-certificate me-2 text-success"></i>Certifications
+                            </label>
+                            {% if form.certifications.errors %}
+                                {{ form.certifications(class="form-control is-invalid", rows="3", placeholder="List any relevant certifications...") }}
+                                <div class="error-message">
+                                    {% for error in form.certifications.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.certifications(class="form-control", rows="3", placeholder="List any relevant certifications...") }}
+                            {% endif %}
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Optional: CPR certification, disaster management training, etc.
+                            </small>
+                        </div>
+
+                        <!-- Location Field -->
+                        <div class="form-group">
+                            <label for="location" class="form-label">
+                                <i class="fas fa-map-marker-alt me-2 text-danger"></i>Current Location
+                            </label>
+                            {% if form.location.errors %}
+                                {{ form.location(class="form-control is-invalid", placeholder="Your current location") }}
+                                <div class="error-message">
+                                    {% for error in form.location.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.location(class="form-control", placeholder="Your current location") }}
+                            {% endif %}
+                        </div>
+
+                        <!-- Location Coordinates (Hidden by default, can be filled programmatically) -->
+                        <div class="form-group" style="display: none;">
+                            <label for="latitude" class="form-label">Latitude</label>
+                            {{ form.latitude(class="form-control") }}
+                        </div>
+
+                        <div class="form-group" style="display: none;">
+                            <label for="longitude" class="form-label">Longitude</label>
+                            {{ form.longitude(class="form-control") }}
+                        </div>
+
+                        <!-- Availability Field -->
+                        <div class="form-group">
+                            <label for="availability" class="form-label">
+                                <i class="fas fa-clock me-2 text-primary"></i>Availability
+                            </label>
+                            {% if form.availability.errors %}
+                                {{ form.availability(class="form-select is-invalid") }}
+                                <div class="error-message">
+                                    {% for error in form.availability.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.availability(class="form-select") }}
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex gap-3 mt-4 pt-3 border-top border-secondary">
+                            {{ form.submit(class="btn btn-primary btn-lg flex-grow-1") }}
+                            <a href="{{ url_for('volunteer_management') }}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Information Card -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-lightbulb me-2 text-warning"></i>Why Register as a Volunteer?
+                    </h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Make a Difference:</strong> Help your community during critical times
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Quick Matching:</strong> Get matched with appropriate disaster relief tasks based on your skills
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Flexible Schedule:</strong> Update your availability anytime
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <strong>Impact Tracking:</strong> See the difference you're making
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-fill coordinates from location if geolocation is available
+    document.addEventListener('DOMContentLoaded', function() {
+        const locationInput = document.getElementById('location');
+        const latitudeInput = document.getElementById('latitude');
+        const longitudeInput = document.getElementById('longitude');
+        
+        // Try to get user's current location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude.toFixed(6);
+                    const lng = position.coords.longitude.toFixed(6);
+                    
+                    // Fill in the coordinates
+                    latitudeInput.value = lat;
+                    longitudeInput.value = lng;
+                    
+                    // Try to reverse geocode to get location name (using a simple API)
+                    // For now, we'll just show the coordinates
+                    if (!locationInput.value) {
+                        locationInput.value = `${lat}, ${lng}`;
+                    }
+                    
+                    // Show success message
+                    console.log('Location detected: ' + lat + ', ' + lng);
+                },
+                function(error) {
+                    console.log('Geolocation error: ' + error.message);
+                    // Silently fail - user can enter location manually
+                }
+            );
+        }
+    });
+</script>
+{% endblock %}

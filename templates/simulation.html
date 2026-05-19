@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Climate Risk Simulation{% endblock %}
+
+{% block head_extra %}
+<link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+<style>
+    .simulation-container {
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 2.5rem;
+        margin: 2rem auto;
+        max-width: 1500px;
+        color: white;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .simulation-map {
+        height: 700px;
+        width: 100%;
+        border-radius: 24px;
+        background: #080a0f;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        position: relative;
+        z-index: 1;
+    }
+
+    .control-panel {
+        background: rgba(30, 41, 59, 0.6);
+        padding: 2rem;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .slider-group {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 1.25rem;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .slider-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    .custom-range {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 100%;
+        height: 4px;
+        background: rgba(59, 130, 246, 0.2);
+        border-radius: 2px;
+        outline: none;
+    }
+
+    .custom-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #3b82f6;
+        cursor: pointer;
+        border-radius: 50%;
+        border: 3px solid #0f172a;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        transition: all 0.2s ease;
+    }
+
+    .custom-range::-webkit-slider-thumb:hover {
+        transform: scale(1.15);
+        background: #60a5fa;
+    }
+
+    .horizon-toggle {
+        display: flex;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 4px;
+        margin-top: 5px;
+    }
+
+    .horizon-btn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .horizon-btn.active {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .sector-progress {
+        margin-bottom: 1rem;
+    }
+
+    .sector-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: rgba(255, 255, 255, 0.5);
+        margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .progress {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        background: linear-gradient(90deg, #3b82f6, #ef4444);
+        transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .ai-report-box {
+        background: rgba(16, 185, 129, 0.05);
+        border: 1px solid rgba(16, 185, 129, 0.15);
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-top: 1rem;
+    }
+
+    .ai-pulse {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        margin-right: 8px;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        }
+
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+        }
+
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        }
+    }
+
+    .metrics-grid-compact {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .compact-stat {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 0.75rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .compact-stat .val {
+        font-size: 1.1rem;
+        font-weight: 700;
+        display: block;
+    }
+
+    .compact-stat .lab {
+        font-size: 0.6rem;
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: uppercase;
+    }
+
+    .map-tiles {
+        filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="simulation-container">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-primary rounded-pill px-3 py-1" style="font-size: 0.7rem;">COMPLIANT</span>
+                <span class="badge bg-info rounded-pill px-3 py-1" style="font-size: 0.7rem;">PREDICTIVE AI
+                    ACTIVE</span>
+            </div>
+            <h2 class="fw-bold mb-0">🛡️ Sentinel Resilience Engine</h2>
+            <p class="text-white-50 mb-0">Multi-Source Climate Risk Assessment & Strategic Impact Modeling</p>
+        </div>
+        <div class="d-flex gap-3">
+            <button class="btn btn-outline-light px-4 rounded-pill fw-bold" onclick="resetSimulation()">Reset</button>
+            <button class="btn btn-primary px-5 rounded-pill fw-bold shadow-lg" onclick="runSimulation()"
+                id="simulateBtn">
+                <i class="fas fa-bolt me-2"></i>GENERATE ASSESSMENT
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- ADVANCED CONTROLS -->
+        <div class="col-lg-4">
+            <div class="control-panel">
+
+                <div class="slider-group">
+                    <div
+                        class="simulator-section-title d-flex justify-content-between small fw-bold mb-3 text-white-50">
+                        <span>CLIMATE PARAMETERS</span>
+                        <i class="fas fa-sliders-h"></i>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="slider-label">
+                            <span><i class="fas fa-cloud-showers-heavy me-2 text-info"></i>Rainfall Intensity</span>
+                            <span id="rainVal" class="text-info">0 mm/h</span>
+                        </div>
+                        <input type="range" class="custom-range" id="rainSlider" min="0" max="300" value="0"
+                            oninput="updateVals()">
+                    </div>
+
+                    <div class="mb-0">
+                        <div class="slider-label">
+                            <span><i class="fas fa-water me-2 text-primary"></i>Sea Level Rise</span>
+                            <span id="seaVal" class="text-primary">0.0 m</span>
+                        </div>
+                        <input type="range" class="custom-range" id="seaSlider" min="0" max="15" step="0.1" value="0"
+                            oninput="updateVals()">
+                    </div>
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-label mb-2">
+                        <span><i class="fas fa-history me-2 text-warning"></i>Projected Time Horizon</span>
+                    </div>
+                    <div class="horizon-toggle">
+                        <button class="horizon-btn active" onclick="setHorizon('Current', this)">Current</button>
+                        <button class="horizon-btn" onclick="setHorizon('2030', this)">2030</button>
+                        <button class="horizon-btn" onclick="setHorizon('2050', this)">2050</button>
+                    </div>
+                    <small class="text-white-50 mt-2 d-inline-block" style="font-size: 0.65rem;">
+                        <i class="fas fa-info-circle me-1"></i>Adjusts model based on IPCC climate warming trajectories.
+                    </small>
+                </div>
+
+                <div class="slider-group">
+                    <div class="simulator-section-title small fw-bold mb-3 text-white-50">
+                        SECTORAL IMPACT ASSESSMENT
+                    </div>
+
+                    <div class="sector-progress">
+                        <div class="sector-label">POWER GRID <span><span id="powerDmg">0</span>%</span></div>
+                        <div class="progress">
+                            <div class="progress-bar" id="powerBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="sector-progress">
+                        <div class="sector-label">WATER SUPPLY <span><span id="waterDmg">0</span>%</span></div>
+                        <div class="progress">
+                            <div class="progress-bar" id="waterBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="sector-progress">
+                        <div class="sector-label">TELECOM <span><span id="teleDmg">0</span>%</span></div>
+                        <div class="progress">
+                            <div class="progress-bar" id="teleBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid-compact">
+                    <div class="compact-stat">
+                        <span class="lab">Pop. at Risk</span>
+                        <span class="val text-danger" id="popVal">0</span>
+                    </div>
+                    <div class="compact-stat">
+                        <span class="lab">Financial Risk</span>
+                        <span class="val text-warning" id="econVal">$0M</span>
+                    </div>
+                </div>
+
+                <div class="ai-report-box">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="ai-pulse"></div>
+                        <span class="fw-bold small" style="color: #10b981;">AI STRATEGIC INSIGHT</span>
+                    </div>
+                    <p class="small mb-0 text-white-50" id="aiSummary" style="line-height: 1.5;">
+                        Initialize scenario parameters to generate predictive cross-sector impact analysis.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- HIGH-TECH MAP -->
+        <div class="col-lg-8">
+            <div class="position-relative">
+                <div id="simulationMap" class="simulation-map"></div>
+
+                <!-- Map Overlay Legend -->
+                <div class="position-absolute bottom-0 start-0 m-4 p-3 rounded-4 bg-dark bg-opacity-75 border border-white border-opacity-10"
+                    style="z-index: 1000; backdrop-filter: blur(10px); width: 220px;">
+                    <h6 class="small fw-bold mb-3">RISK INTENSITY LEGEND</h6>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <div style="width: 12px; height: 12px; border-radius: 3px; background: #ef4444;"></div>
+                        <span class="small text-white-50">High / Inundated</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <div style="width: 12px; height: 12px; border-radius: 3px; background: #f59e0b;"></div>
+                        <span class="small text-white-50">Moderate / Warning</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div style="width: 12px; height: 12px; border-radius: 3px; background: #3b82f6;"></div>
+                        <span class="small text-white-50">Potential Spillover</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<script src="{{ url_for('static', filename='js/god-mode-maps.js') }}"></script>
+<script>
+    let sMap;
+    let currentTimeHorizon = 'Current';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+    });
+
+    function initMap() {
+        sMap = new GodModeMap('simulationMap');
+    }
+
+    function setHorizon(h, btn) {
+        currentTimeHorizon = h;
+        document.querySelectorAll('.horizon-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Auto-run if sliders are active
+        if (document.getElementById('rainSlider').value > 0 || document.getElementById('seaSlider').value > 0) {
+            runSimulation();
+        }
+    }
+
+    function updateVals() {
+        const rain = document.getElementById('rainSlider').value;
+        const sea = document.getElementById('seaSlider').value;
+        document.getElementById('rainVal').innerText = rain + ' mm/h';
+        document.getElementById('seaVal').innerText = sea + ' m';
+        if (sMap) sMap.setRainEffect(Number(rain));
+    }
+
+    function resetSimulation() {
+        document.getElementById('rainSlider').value = 0;
+        document.getElementById('seaSlider').value = 0;
+        updateVals();
+        if (sMap) sMap.clearDynamicData();
+
+        // Reset stats
+        document.getElementById('powerBar').style.width = '0%';
+        document.getElementById('waterBar').style.width = '0%';
+        document.getElementById('teleBar').style.width = '0%';
+        // ... more resets
+    }
+
+    async function runSimulation() {
+        const rainfall = document.getElementById('rainSlider').value;
+        const sea_level = document.getElementById('seaSlider').value;
+        const btn = document.getElementById('simulateBtn');
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>ANALYZING...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/api/simulate_impact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() if csrf_token is defined else '' }}"
+                },
+                body: JSON.stringify({
+                    rainfall,
+                    sea_level,
+                    time_horizon: currentTimeHorizon
+                })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                renderAdvancedSimulation(data.zones, data.stats, data.ai_summary);
+            }
+        } catch (error) {
+            console.error('Simulation Failed:', error);
+        } finally {
+            btn.innerHTML = '<i class="fas fa-bolt me-2"></i>GENERATE ASSESSMENT';
+            btn.disabled = false;
+        }
+    }
+
+    function renderAdvancedSimulation(zones, stats, aiSummary) {
+        // Update Text Stats
+        document.getElementById('popVal').innerText = stats.people_affected.toLocaleString();
+        document.getElementById('econVal').innerText = '$' + stats.financial_risk + 'M';
+        document.getElementById('aiSummary').innerText = aiSummary;
+
+        // Update Progress Bars
+        document.getElementById('powerBar').style.width = stats.sector_damage.power_grid + '%';
+        document.getElementById('powerDmg').innerText = stats.sector_damage.power_grid;
+
+        document.getElementById('waterBar').style.width = stats.sector_damage.water_supply + '%';
+        document.getElementById('waterDmg').innerText = stats.sector_damage.water_supply;
+
+        document.getElementById('teleBar').style.width = stats.sector_damage.telecom + '%';
+        document.getElementById('teleDmg').innerText = stats.sector_damage.telecom;
+
+        if (zones.length === 0) return;
+
+        // Delegate entirely to GodModeMap class
+        if (sMap) {
+            sMap.renderSimulationZones(zones);
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,991 @@
+<!-- templates/volunteer_management.html -->
+{% extends "base.html" %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    /* Enhanced UI Styling */
+    .page-header {
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .page-title {
+        color: white;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--stat-color);
+        opacity: 0.8;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+    }
+
+    .card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-header {
+        background: transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .card-title {
+        color: white;
+        font-weight: 700;
+    }
+
+    .table th {
+        border-top: none;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+
+    .table td {
+        border-color: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.8);
+        vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-group .btn {
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .btn-group .btn:hover {
+        transform: scale(1.05);
+    }
+
+    /* Tab Styling */
+    .nav-tabs {
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+        margin-bottom: 2rem;
+    }
+
+    .nav-tabs .nav-link {
+        color: rgba(255, 255, 255, 0.6);
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #00BCD4;
+        border-bottom-color: #00BCD4;
+        background: transparent;
+    }
+
+    /* Hazard Select Styling */
+    .form-select {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 2px solid rgba(255, 255, 255, 0.15) !important;
+        color: white !important;
+        border-radius: 10px !important;
+        transition: all 0.3s ease;
+    }
+
+    .form-select:focus {
+        border-color: #00BCD4 !important;
+        box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+        background: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    .form-select option {
+        background: #1a1f3a;
+        color: white;
+    }
+
+    /* Alert Styling */
+    .proximity-alert {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(56, 142, 60, 0.08) 100%);
+        border-left: 4px solid #4CAF50;
+        border-radius: 8px;
+        padding: 1.2rem;
+        margin-bottom: 1.5rem;
+        color: #81C784;
+        font-weight: 500;
+    }
+
+    /* Volunteer Card Styling */
+    .volunteer-card-compact {
+        background: linear-gradient(135deg, rgba(52, 168, 224, 0.1) 0%, rgba(102, 187, 224, 0.05) 100%);
+        border: 2px solid rgba(52, 168, 224, 0.25);
+        border-radius: 12px;
+        padding: 1.2rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .volunteer-card-compact::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0) 0%, rgba(76, 175, 80, 0.1) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .volunteer-card-compact:hover {
+        background: linear-gradient(135deg, rgba(52, 168, 224, 0.15) 0%, rgba(102, 187, 224, 0.1) 100%);
+        border-color: rgba(76, 175, 80, 0.5);
+        transform: translateX(8px);
+        box-shadow: 0 8px 24px rgba(76, 175, 80, 0.2);
+    }
+
+    .volunteer-card-compact:hover::before {
+        opacity: 1;
+    }
+
+    .volunteer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+        gap: 1rem;
+    }
+
+    .volunteer-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.25rem;
+    }
+
+    .volunteer-meta {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.7);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .distance-badge-new {
+        background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+
+    .badges-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .exp-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(255, 193, 7, 0.2);
+        color: #FFC107;
+        border: 1px solid rgba(255, 193, 7, 0.4);
+    }
+
+    .exp-badge.intermediate {
+        background: rgba(33, 150, 243, 0.2);
+        color: #64B5F6;
+        border-color: rgba(33, 150, 243, 0.4);
+    }
+
+    .exp-badge.beginner {
+        background: rgba(76, 175, 80, 0.2);
+        color: #81C784;
+        border-color: rgba(76, 175, 80, 0.4);
+    }
+
+    .verified-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        border: 1px solid rgba(76, 175, 80, 0.4);
+    }
+
+    .volunteer-skills {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .assign-btn {
+        width: 100%;
+        padding: 0.65rem;
+        background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+
+    .assign-btn:hover {
+        transform: scale(1.02);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+
+    .assign-btn:active {
+        transform: scale(0.98);
+    }
+
+    .assign-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background: linear-gradient(135deg, #999 0%, #666 100%);
+    }
+
+    .assign-btn.loading::after {
+        content: '';
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .volunteers-count-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        font-size: 1rem;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .empty-state i {
+        color: rgba(255, 255, 255, 0.3);
+        margin-bottom: 1rem;
+    }
+
+    /* Additional enhancements */
+    .btn-success {
+        background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%) !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4) !important;
+    }
+
+    .stat-number {
+        color: white;
+    }
+
+    .card-body {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .text-muted {
+        color: rgba(255, 255, 255, 0.5) !important;
+    }
+
+    .badge {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 768px) {
+        .stat-card {
+            margin-bottom: 1rem;
+        }
+
+        .assign-btn {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .volunteer-card-compact {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="container-xl">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <div>
+                    <h1 class="page-title mb-2">
+                        <i class="fas fa-hands-helping me-3"></i>Volunteer Management
+                    </h1>
+                    <p class="page-subtitle">
+                        <i class="fas fa-info-circle me-2"></i>Coordinate volunteer assignments and manage rescue
+                        operations
+                    </p>
+                </div>
+                <a href="{{ url_for('register_volunteer') }}" class="btn btn-success px-4 py-2 fw-bold shadow">
+                    <i class="fas fa-user-plus me-2"></i>Register Volunteer
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="row mb-4 g-3">
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card h-100" style="--stat-color: #2196F3;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="stat-number">{{ total_volunteers }}</div>
+                                <div class="text-muted fw-600 mt-2">Total Volunteers</div>
+                            </div>
+                            <i class="fas fa-people-group fa-2x opacity-25" style="color: #2196F3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card h-100" style="--stat-color: #4CAF50;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="stat-number">{{ available_volunteers }}</div>
+                                <div class="text-muted fw-600 mt-2">Available</div>
+                            </div>
+                            <i class="fas fa-check-circle fa-2x opacity-25" style="color: #4CAF50;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card h-100" style="--stat-color: #FF9800;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="stat-number">{{ assigned_volunteers }}</div>
+                                <div class="text-muted fw-600 mt-2">Deployed</div>
+                            </div>
+                            <i class="fas fa-tasks fa-2x opacity-25" style="color: #FF9800;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card h-100" style="--stat-color: #00BCD4;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="stat-number">{{ trained_volunteers }}</div>
+                                <div class="text-muted fw-600 mt-2">Trained</div>
+                            </div>
+                            <i class="fas fa-star fa-2x opacity-25" style="color: #00BCD4;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="card-text mb-0">Trained</p>
+    </div>
+    <i class="fas fa-certificate fa-2x opacity-75"></i>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Tabs for different views -->
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="volunteers-tab" data-bs-toggle="tab" data-bs-target="#volunteers-pane"
+            type="button" role="tab">
+            <i class="fas fa-list me-2"></i>All Volunteers
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="assign-tab" data-bs-toggle="tab" data-bs-target="#assign-pane" type="button"
+            role="tab">
+            <i class="fas fa-map-marker-alt me-2"></i>Assign to Hazard
+        </button>
+    </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content">
+    <!-- Volunteers List Tab -->
+    <div class="tab-pane fade show active" id="volunteers-pane" role="tabpanel">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-list me-2"></i>Volunteer List
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if volunteers %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Contact</th>
+                                <th scope="col">Skills</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Assigned To</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for volunteer in volunteers %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div
+                                            class="avatar-sm bg-success rounded-circle me-3 d-flex align-items-center justify-content-center text-white">
+                                            <span class="fw-bold">{{ volunteer.name[0] if volunteer.name else 'U'
+                                                }}</span>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-white">{{ volunteer.name }}</h6>
+                                            <small class="text-muted">ID: {{ (volunteer.id|string)[:8] if volunteer.id
+                                                else 'N/A' }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="text-white fw-medium">{{ volunteer.phone or 'N/A' }}</div>
+                                        <small class="text-muted">{{ volunteer.email or 'No email' }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if volunteer.skills %}
+                                    {% for skill in volunteer.skills.split(',')[:2] %}
+                                    <span class="badge bg-info me-1 mb-1">{{ skill.strip() }}</span>
+                                    {% endfor %}
+                                    {% if volunteer.skills.split(',')|length > 2 %}
+                                    <span class="badge bg-secondary">+{{ volunteer.skills.split(',')|length - 2
+                                        }}</span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">No skills listed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span
+                                        class="badge bg-{{ 'success' if volunteer.status == 'available' else 'warning' if volunteer.status == 'assigned' else 'secondary' }}">
+                                        {{ volunteer.status|title if volunteer.status else 'Unknown' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if volunteer.assigned_event %}
+                                    <span class="fw-medium text-success">{{ volunteer.assigned_event }}</span>
+                                    {% else %}
+                                    <span class="text-muted">Not assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-people-group fa-4x mb-3"></i>
+                    <h5 class="text-white mb-2">No Volunteers Registered</h5>
+                    <p class="text-muted mb-3">Get started by registering your first volunteer.</p>
+                    <a href="{{ url_for('register_volunteer') }}" class="btn btn-success">
+                        <i class="fas fa-user-plus me-2"></i>Register Volunteer
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign to Hazard Tab -->
+    <div class="tab-pane fade" id="assign-pane" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-map-location-dot me-2"></i>Assign Volunteers to Hazard
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Hazard Selection -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-white">Select Hazard/Emergency</label>
+                    <select id="hazardSelect" class="form-select form-select-lg"
+                        style="background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); color: white;">
+                        <option value="">-- Select a hazard to view nearby volunteers --</option>
+                        <option value="loading">Loading hazards...</option>
+                    </select>
+                </div>
+
+                <!-- Proximity Alert -->
+                <div id="proximityAlert" class="proximity-alert d-none">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>50km Proximity Filter Active:</strong> Showing volunteers within 50km of the selected hazard
+                    location.
+                </div>
+
+                <!-- Volunteers Count Badge -->
+                <div id="volunteersCountBadge" class="mb-3 d-none">
+                    <span class="volunteers-count-badge">
+                        <i class="fas fa-users me-2"></i>
+                        <span id="volunteersCount">0</span> Volunteers Available
+                    </span>
+                </div>
+
+                <!-- Nearby Volunteers -->
+                <div id="nearbyVolunteersContainer" class="d-none">
+                    <h6 class="mb-3 fw-bold text-white">
+                        <i class="fas fa-location-dot me-2" style="color: #4caf50;"></i>Volunteers Near Hazard
+                    </h6>
+                    <div id="nearbyVolunteersList"></div>
+                </div>
+
+                <!-- No Volunteers Message -->
+                <div id="noVolunteersMessage" class="empty-state d-none">
+                    <i class="fas fa-map-location-dot fa-4x mb-3"></i>
+                    <h5 class="text-white mb-2">No Volunteers Found</h5>
+                    <p class="text-muted">No available volunteers within 50km of the selected hazard.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+
+<!-- Success Modal -->
+<div id="assignmentSuccessModal" class="modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-dialog"
+        style="background: white; border-radius: 16px; padding: 2rem; max-width: 400px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); animation: slideUp 0.3s ease-out;">
+        <div class="modal-content" style="text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">
+                <i class="fas fa-check-circle" style="color: #4CAF50;"></i>
+            </div>
+            <h2 style="color: #333; margin-bottom: 0.5rem; font-weight: 700;">Successfully Assigned!</h2>
+            <p style="color: #666; margin-bottom: 1.5rem; line-height: 1.6;">
+                The volunteer has been assigned to the hazard.<br>
+                <span id="volunteerNameDisplay" style="font-weight: 600; color: #2196F3;"></span>
+            </p>
+            <p style="color: #999; font-size: 0.9rem; margin-bottom: 2rem;">
+                A notification has been sent to the volunteer with accept/decline options.
+            </p>
+            <button type="button" onclick="closeAssignmentModal()"
+                style="width: 100%; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                <i class="fas fa-check me-2"></i>Done
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes slideUp {
+        from {
+            transform: translateY(30px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>
+
+<script>
+    // Load active hazards
+    async function loadHazards() {
+        try {
+            const response = await fetch('/api/hazards/active');
+            const data = await response.json();
+
+            const select = document.getElementById('hazardSelect');
+            select.innerHTML = '<option value="">-- Select a hazard to view nearby volunteers --</option>';
+
+            if (data.hazards && data.hazards.length > 0) {
+                // Group hazards by type
+                const emergencies = data.hazards.filter(h => h.type === 'emergency');
+                const reports = data.hazards.filter(h => h.type === 'report');
+
+                // Add Emergency Events group
+                if (emergencies.length > 0) {
+                    const emergenciesGroup = document.createElement('optgroup');
+                    emergenciesGroup.label = '🔴 Emergency Events';
+                    emergencies.forEach(hazard => {
+                        const statusLabel = hazard.status === 'active' ? 'ACTIVE' : 'Resolved';
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({ id: hazard.id, type: 'emergency' });
+                        option.textContent = `${statusLabel} - ${hazard.title} (${hazard.location})`;
+                        emergenciesGroup.appendChild(option);
+                    });
+                    select.appendChild(emergenciesGroup);
+                }
+
+                // Add Approved Reports group
+                if (reports.length > 0) {
+                    const reportsGroup = document.createElement('optgroup');
+                    reportsGroup.label = '✓ Approved Posts';
+                    reports.forEach(hazard => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({ id: hazard.id, type: 'report' });
+                        option.textContent = `${hazard.title} by @${hazard.author} (${hazard.location})`;
+                        reportsGroup.appendChild(option);
+                    });
+                    select.appendChild(reportsGroup);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading hazards:', error);
+        }
+    }
+
+    // Load nearby volunteers when hazard is selected
+    document.getElementById('hazardSelect').addEventListener('change', async function () {
+        const selectedValue = this.value;
+
+        if (!selectedValue) {
+            document.getElementById('proximityAlert').classList.add('d-none');
+            document.getElementById('hazardMap').classList.add('d-none');
+            document.getElementById('nearbyVolunteersContainer').classList.add('d-none');
+            document.getElementById('noVolunteersMessage').classList.add('d-none');
+            document.getElementById('volunteersCountBadge').classList.add('d-none');
+            return;
+        }
+
+        try {
+            // Parse the hazard data
+            const hazardData = JSON.parse(selectedValue);
+            const hazardId = hazardData.id;
+            const hazardType = hazardData.type;
+
+            document.getElementById('proximityAlert').classList.remove('d-none');
+
+            // Call API with both hazard ID and type
+            const response = await fetch(`/api/coordination/volunteers/nearby?emergency_event_id=${hazardId}&hazard_type=${hazardType}`);
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            const volunteersList = document.getElementById('nearbyVolunteersList');
+            volunteersList.innerHTML = '';
+
+            if (data.volunteers && data.volunteers.length > 0) {
+                document.getElementById('nearbyVolunteersContainer').classList.remove('d-none');
+                document.getElementById('noVolunteersMessage').classList.add('d-none');
+                document.getElementById('volunteersCountBadge').classList.remove('d-none');
+                document.getElementById('volunteersCount').textContent = data.volunteers.length;
+
+                data.volunteers.forEach(volunteer => {
+                    const card = document.createElement('div');
+                    card.className = 'volunteer-card-compact';
+                    const expLevel = volunteer.experience_level || 'Intermediate';
+                    const expClass = expLevel.toLowerCase().replace(' ', '-');
+                    card.innerHTML = `
+                    <div class="volunteer-header">
+                        <div>
+                            <div class="volunteer-name">${volunteer.name}</div>
+                            <div class="volunteer-meta">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${volunteer.distance_km.toFixed(1)}km away</span>
+                            </div>
+                        </div>
+                        <div class="distance-badge-new">
+                            <i class="fas fa-location-dot"></i>
+                            ${volunteer.distance_km.toFixed(1)} km
+                        </div>
+                    </div>
+                    
+                    <div class="volunteer-details">
+                        <div class="badges-container">
+                            <span class="exp-badge ${expClass}">
+                                <i class="fas fa-star"></i> ${expLevel}
+                            </span>
+                            ${volunteer.is_verified ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> Verified</span>' : ''}
+                            ${volunteer.availability === 'busy' ? '<span class="badge bg-danger ms-2"><i class="fas fa-clock"></i> Busy</span>' : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="volunteer-skills">
+                        <i class="fas fa-briefcase"></i>
+                        <span>${volunteer.skills || 'Skills not listed'}</span>
+                    </div>
+                    
+                    <button type="button" class="assign-btn" data-volunteer-id="${volunteer.id}" data-hazard-id="${hazardId}" data-hazard-type="${hazardType}">
+                        <i class="fas fa-check-circle"></i> Assign Volunteer
+                    </button>
+                `;
+                    volunteersList.appendChild(card);
+
+                    // Add event listener to the button
+                    const assignButton = card.querySelector('.assign-btn');
+                    assignButton.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        console.log('[BUTTON] Assign button clicked!');
+
+                        // Disable button and show loading state
+                        if (this.disabled) {
+                            console.log('[BUTTON] Button already disabled, ignoring click');
+                            return;
+                        }
+
+                        this.disabled = true;
+                        const originalText = this.innerHTML;
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning...';
+
+                        const volId = parseInt(this.getAttribute('data-volunteer-id'));
+                        const hzId = parseInt(this.getAttribute('data-hazard-id'));
+                        const hzType = this.getAttribute('data-hazard-type');
+
+                        console.log(`[BUTTON] Extracted data: vol=${volId}, hazard=${hzId}, type=${hzType}`);
+
+                        // Store button reference
+                        const buttonRef = this;
+
+                        assignVolunteer(volId, hzId, hzType)
+                            .then(() => {
+                                console.log('[BUTTON] Assignment completed successfully');
+                                // Re-enable button after a short delay
+                                setTimeout(() => {
+                                    buttonRef.disabled = false;
+                                    buttonRef.innerHTML = originalText;
+                                }, 500);
+                            })
+                            .catch((error) => {
+                                console.error('[BUTTON] Assignment failed:', error);
+                                // Re-enable button on error
+                                buttonRef.disabled = false;
+                                buttonRef.innerHTML = originalText;
+                            });
+                    });
+                });
+            } else {
+                document.getElementById('nearbyVolunteersContainer').classList.add('d-none');
+                document.getElementById('noVolunteersMessage').classList.remove('d-none');
+                document.getElementById('volunteersCountBadge').classList.add('d-none');
+            }
+        } catch (error) {
+            console.error('Error loading volunteers:', error);
+            alert('Error loading volunteers. Please try again.');
+            document.getElementById('proximityAlert').classList.add('d-none');
+        }
+    });
+
+    // Assign volunteer to hazard
+    async function assignVolunteer(volunteerId, hazardId, hazardType = 'emergency') {
+        console.log(`[FRONTEND] Starting assignment: vol=${volunteerId}, hazard=${hazardId}, type=${hazardType}`);
+
+        if (!volunteerId || !hazardId) {
+            console.error('[FRONTEND ERROR] Missing required parameters', { volunteerId, hazardId });
+            alert('❌ Error: Missing volunteer or hazard information');
+            return Promise.reject('Missing parameters');
+        }
+
+        try {
+            const payload = {
+                volunteer_id: volunteerId,
+                emergency_event_id: hazardId,
+                hazard_type: hazardType
+            };
+
+            console.log('[FRONTEND] Sending payload:', payload);
+
+            const response = await fetch('/api/coordination/assign-volunteer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            console.log(`[FRONTEND] Response received, status: ${response.status}`);
+
+            let data;
+            try {
+                data = await response.json();
+                console.log(`[FRONTEND] Response data:`, data);
+            } catch (parseError) {
+                console.error('[FRONTEND ERROR] Failed to parse response:', parseError);
+                alert('❌ Server error: Invalid response format');
+                return Promise.reject('Invalid response');
+            }
+
+            if (response.ok && data.success) {
+                console.log('[FRONTEND] ✓ Assignment successful!', data);
+
+                // Show success modal
+                showAssignmentSuccessModal(data.volunteer_username || 'Volunteer');
+
+                // Update the button in the UI
+                const btn = document.querySelector(`.assign-btn[data-volunteer-id="${volunteerId}"]`);
+                if (btn) {
+                    btn.className = 'btn btn-success btn-sm w-100 mt-2';
+                    btn.innerHTML = '<i class="fas fa-check"></i> Assigned! Check Notifs';
+                    btn.disabled = true;
+                }
+
+                return Promise.resolve(data);
+            } else {
+                console.error('[FRONTEND ERROR] Assignment failed:', data);
+                const errorMsg = data.error || 'Unknown error occurred';
+                alert(`❌ Assignment Failed: ${errorMsg}\n\nHint: If role error, try logging out and in again.`);
+                return Promise.reject(errorMsg);
+            }
+        } catch (error) {
+            console.error('[FRONTEND ERROR] Exception during assignment:', error);
+            if (error.message && error.message.includes('Failed to fetch')) {
+                alert('❌ Network Error: Unable to connect to server. Please check your connection.');
+            } else {
+                alert(`❌ Error: ${error.message || 'An unexpected error occurred'}`);
+            }
+            return Promise.reject(error);
+        }
+    }
+
+    // Show success modal
+    function showAssignmentSuccessModal(volunteerName) {
+        const modal = document.getElementById('assignmentSuccessModal');
+        const nameDisplay = document.getElementById('volunteerNameDisplay');
+        nameDisplay.textContent = `✓ ${volunteerName} has been assigned`;
+        modal.style.display = 'flex';
+
+        // Close modal automatically after 4 seconds
+        setTimeout(() => {
+            closeAssignmentModal();
+        }, 4000);
+    }
+
+    // Close success modal
+    function closeAssignmentModal() {
+        const modal = document.getElementById('assignmentSuccessModal');
+        modal.style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function (event) {
+        const modal = document.getElementById('assignmentSuccessModal');
+        if (modal && event.target === modal) {
+            closeAssignmentModal();
+        }
+    });
+
+    // Load hazards on page load
+    document.addEventListener('DOMContentLoaded', loadHazards);
+</script>
+{% endblock %}

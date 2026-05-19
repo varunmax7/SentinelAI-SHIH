@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Home-page style integration */
+    .main-content-container {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+    }
+
+    .hero-subtitle {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 2rem;
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .form-control,
+    .form-select {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 12px;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--primary-color);
+        color: white;
+        box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.25);
+    }
+
+    .agency-card.hidden {
+        display: none;
+    }
+
+    .x-small {
+        font-size: 0.7rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+        <div>
+            <h1 class="hero-title">🏢 Agency Management</h1>
+            <p class="hero-subtitle mb-0">Manage government and NGO partner agencies</p>
+        </div>
+        <a href="{{ url_for('new_agency') }}" class="btn btn-primary px-4 py-2 fw-bold shadow">
+            <i class="fas fa-plus me-2"></i>Register Agency
+        </a>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-5">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 h-100" style="border-left: 4px solid #0ea5e9 !important;">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Total Agencies</div>
+                        <h3 class="fw-bold text-white mb-0">{{ agencies|length }}</h3>
+                    </div>
+                    <i class="fas fa-building fa-2x text-primary opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 h-100" style="border-left: 4px solid #10b981 !important;">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Government</div>
+                        <h3 class="fw-bold text-white mb-0">{{ agencies|selectattr('type', 'equalto',
+                            'government')|list|length }}</h3>
+                    </div>
+                    <i class="fas fa-landmark fa-2x text-success opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 h-100" style="border-left: 4px solid #06b6d4 !important;">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">NGO Partners</div>
+                        <h3 class="fw-bold text-white mb-0">{{ agencies|selectattr('type', 'equalto', 'ngo')|list|length
+                            }}</h3>
+                    </div>
+                    <i class="fas fa-hands-helping fa-2x text-info opacity-25"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 h-100" style="border-left: 4px solid #f59e0b !important;">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div>
+                        <div class="text-muted small fw-bold text-uppercase mb-1">Active Status</div>
+                        <h3 class="fw-bold text-white mb-0">{{ agencies|selectattr('is_active', 'equalto',
+                            true)|list|length }}</h3>
+                    </div>
+                    <i class="fas fa-check-circle fa-2x text-warning opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-5 border-0 bg-transparent">
+        <div class="card-body p-0">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-white border-opacity-10 text-muted"><i
+                                class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Search agencies..." id="agencySearch">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="agencyTypeFilter">
+                        <option value="">All Types</option>
+                        <option value="government">Government</option>
+                        <option value="ngo">NGO</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="agencyStatusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if agencies %}
+    <div class="row" id="agenciesGrid">
+        {% for agency in agencies %}
+        <div class="col-xl-4 col-lg-6 col-md-12 mb-4 agency-card-item" data-type="{{ agency.type }}"
+            data-status="{{ 'active' if agency.is_active else 'inactive' }}" data-name="{{ agency.name.lower() }}">
+            <div class="card h-100">
+                <div class="card-header border-0 py-3 bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-white text-truncate">{{ agency.name }}</h5>
+                    <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25">{{
+                        agency.type|title }}</span>
+                </div>
+
+                <div class="card-body">
+                    <div class="mb-4">
+                        {% if agency.contact_email %}
+                        <div class="d-flex align-items-center mb-2 small text-muted">
+                            <i class="fas fa-envelope me-2 opacity-50"></i>{{ agency.contact_email }}
+                        </div>
+                        {% endif %}
+                        {% if agency.contact_phone %}
+                        <div class="d-flex align-items-center small text-muted">
+                            <i class="fas fa-phone me-2 opacity-50"></i>{{ agency.contact_phone }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if agency.resources %}
+                    <div class="mb-4">
+                        <label class="x-small text-muted fw-bold text-uppercase d-block mb-2">Resources</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% set res = agency.resources|fromjson if agency.resources is string else agency.resources
+                            %}
+                            {% for r in res[:3] %}
+                            <span
+                                class="badge bg-white bg-opacity-5 x-small text-white border border-white border-opacity-10">{{
+                                r }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div
+                        class="d-flex justify-content-between align-items-center x-small text-muted mt-auto pt-3 border-top border-white border-opacity-10">
+                        <span><i class="fas fa-calendar-check me-1"></i>{{ agency.created_at.strftime('%b %d, %Y')
+                            }}</span>
+                        <span
+                            class="badge {{ 'bg-success' if agency.is_active else 'bg-secondary' }} bg-opacity-25 {{ 'text-success' if agency.is_active else 'text-muted' }}">{{
+                            'Active' if agency.is_active else 'Inactive' }}</span>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent border-0 pb-4">
+                    <div class="btn-group w-100 gap-2">
+                        <a href="#" class="btn btn-sm btn-outline-light border-secondary flex-fill">View</a>
+                        <a href="#" class="btn btn-sm btn-outline-warning flex-fill">Edit</a>
+                        <a href="#"
+                            class="btn btn-sm btn-{{ 'danger' if agency.is_active else 'success' }} bg-opacity-25 border-{{ 'danger' if agency.is_active else 'success' }} border-opacity-25 flex-fill">
+                            {{ 'Suspend' if agency.is_active else 'Activate' }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card py-5 text-center bg-transparent border-0 opacity-50">
+        <i class="fas fa-building fa-4x mb-4"></i>
+        <h3>No Registered Agencies</h3>
+        <p>Registration of partner agencies is required for coordinated response.</p>
+        <div class="mt-4"><a href="{{ url_for('new_agency') }}" class="btn btn-primary px-4">Register Agency</a></div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const query = document.getElementById('agencySearch');
+        const type = document.getElementById('agencyTypeFilter');
+        const status = document.getElementById('agencyStatusFilter');
+        const items = document.querySelectorAll('.agency-card-item');
+
+        function update() {
+            const q = query.value.toLowerCase();
+            const t = type.value;
+            const s = status.value;
+
+            items.forEach(i => {
+                const mq = i.getAttribute('data-name').includes(q);
+                const mt = !t || i.getAttribute('data-type') === t;
+                const ms = !s || i.getAttribute('data-status') === s;
+                i.style.display = (mq && mt && ms) ? 'block' : 'none';
+            });
+        }
+
+        query.oninput = update;
+        type.onchange = update;
+        status.onchange = update;
+    });
+</script>
+{% endblock %}

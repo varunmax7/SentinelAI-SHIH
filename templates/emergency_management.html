@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Home-page style integration */
+    .main-content-container {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+    }
+
+    .hero-subtitle {
+        font-size: 1.15rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 2rem;
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .x-small {
+        font-size: 0.7rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+        <div>
+            <h1 class="hero-title">🛡️ Emergency Management</h1>
+            <p class="hero-subtitle mb-0">Multi-Agency Incident Coordination & Command</p>
+        </div>
+        <a href="{{ url_for('new_emergency') }}" class="btn btn-danger px-4 py-2 fw-bold shadow-lg">
+            <i class="fas fa-plus-circle me-2"></i>Declare Emergency
+        </a>
+    </div>
+
+    {% if emergencies %}
+    <div class="row">
+        {% for event in emergencies %}
+        <div class="col-xl-4 col-lg-6 mb-4">
+            <div class="card h-100 border-0"
+                style="border-left: 4px solid {{ '#ef4444' if event.severity == 'critical' else '#f59e0b' if event.severity == 'high' else '#10b981' }} !important;">
+
+                <div class="card-header border-0 d-flex justify-content-between align-items-center py-3 bg-transparent">
+                    <h6 class="mb-0 fw-bold text-white text-truncate">{{ event.title }}</h6>
+                    <span class="badge {{ 'bg-danger' if event.status == 'active' else 'bg-success' }} text-uppercase"
+                        style="font-size: 0.6rem;">
+                        {{ event.status }}
+                    </span>
+                </div>
+
+                <div class="card-body">
+                    <p class="small text-muted mb-4">{{ event.description[:120] }}{% if event.description|length > 120
+                        %}...{% endif %}</p>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <label class="text-muted x-small fw-bold opacity-50 d-block mb-1">HAZARD</label>
+                            <span class="badge bg-dark bg-opacity-50 border border-secondary px-2"><i
+                                    class="fas fa-bolt me-1"></i>{{ event.hazard_type|title }}</span>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-muted x-small fw-bold opacity-50 d-block mb-1">SEVERITY</label>
+                            <span
+                                class="badge bg-{{ 'danger' if event.severity == 'critical' else 'warning text-dark' if event.severity == 'high' else 'info' }} text-uppercase">
+                                {{ event.severity }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center p-3 rounded mb-4"
+                        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);">
+                        <i class="fas fa-location-dot text-danger me-3"></i>
+                        <div>
+                            <div class="fw-bold text-white small">{{ event.location }}</div>
+                            <div class="text-muted x-small">Affected Area: {{ event.radius_km }}km Radius</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center text-muted x-small opacity-75">
+                        <span><i class="fas fa-calendar-alt me-1"></i>{{ event.created_at.strftime('%b %d, %H:%M')
+                            }}</span>
+                        <span><i class="fas fa-user-shield me-1"></i>{{ event.coordinator_name or 'Auto-Command'
+                            }}</span>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent border-0 pt-0 pb-4">
+                    <div class="btn-group w-100 gap-2">
+                        <a href="#" class="btn btn-sm btn-outline-light border-secondary py-2 flex-grow-1">Details</a>
+                        <a href="#" class="btn btn-sm btn-outline-warning py-2 flex-grow-1">Edit</a>
+                        <a href="#"
+                            class="btn btn-sm btn-{{ 'success' if event.status == 'active' else 'secondary' }} py-2 flex-grow-1">
+                            {{ 'Resolve' if event.status == 'active' else 'Reopen' }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Quick Stats Summary -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body py-4 d-flex justify-content-around flex-wrap gap-4 text-center">
+                    <div>
+                        <div class="h4 mb-0 fw-bold text-white">{{ emergencies|length }}</div>
+                        <div class="x-small text-muted text-uppercase fw-bold">Total Operations</div>
+                    </div>
+                    <div>
+                        <div class="h4 mb-0 fw-bold text-danger">{{ emergencies|selectattr('status', 'equalto',
+                            'active')|list|length }}</div>
+                        <div class="x-small text-muted text-uppercase fw-bold">Active Fronts</div>
+                    </div>
+                    <div>
+                        <div class="h4 mb-0 fw-bold text-warning">{{ emergencies|selectattr('severity', 'equalto',
+                            'high')|list|length }}</div>
+                        <div class="x-small text-muted text-uppercase fw-bold">In-Progress</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="card py-5 text-center">
+        <div class="card-body opacity-50">
+            <i class="fas fa-shield-check fa-4x mb-4 text-success"></i>
+            <h3 class="fw-bold">No Active Emergencies</h3>
+            <p class="text-muted mx-auto" style="max-width: 400px;">AI monitoring indicates safe conditions.
+                Declare an emergency only when coordinated multi-agency response is required.</p>
+            <div class="mt-4 d-flex justify-content-center gap-3">
+                <a href="{{ url_for('new_emergency') }}" class="btn btn-primary px-4">Declarative Command</a>
+                <a href="{{ url_for('coordination_dashboard') }}" class="btn btn-outline-light">Global View</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

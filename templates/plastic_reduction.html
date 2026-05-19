@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-recycle me-2"></i>Log Plastic Reduction
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Track your plastic reduction efforts and earn points for helping the environment!
+                        Upload a photo as proof for verification and bonus points.
+                    </p>
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.plastic_type.label(class="form-label") }}
+                                    {{ form.plastic_type(class="form-select") }}
+                                    {% if form.plastic_type.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.plastic_type.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    {{ form.quantity.label(class="form-label") }}
+                                    {{ form.quantity(class="form-control", placeholder="e.g., 5") }}
+                                    {% if form.quantity.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.quantity.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    {{ form.unit.label(class="form-label") }}
+                                    {{ form.unit(class="form-select") }}
+                                    {% if form.unit.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.unit.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.image_proof.label(class="form-label") }}
+                            {{ form.image_proof(class="form-control") }}
+                            <div class="form-text">
+                                Upload a photo showing your plastic reduction (optional, but recommended for verification)
+                            </div>
+                            {% if form.image_proof.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.image_proof.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows="3", placeholder="Describe how you reduced plastic usage...") }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.description.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Points Preview -->
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-2"></i>Points System</h6>
+                            <ul class="mb-0">
+                                <li>Base points: 10 points per activity</li>
+                                <li>Photo verification: +5 bonus points</li>
+                                <li>Large quantities: Additional points based on impact</li>
+                                <li>Carbon savings calculated automatically</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-success btn-lg") }}
+                            <a href="{{ url_for('eco_tracker') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Plastic Reduction Tips -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Plastic Reduction Tips
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use reusable bags instead of plastic</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Carry a reusable water bottle</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Say no to plastic straws</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Choose products with minimal packaging</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Use reusable containers for food</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Avoid single-use plastic cutlery</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Buy in bulk to reduce packaging</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Choose glass or metal containers</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

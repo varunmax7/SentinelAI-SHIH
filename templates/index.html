@@ -1,0 +1,1338 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    /* Custom styles for index page only */
+    body.index-page {
+        background: transparent !important;
+        color: #ffffff;
+        overflow-x: hidden;
+    }
+
+    /* Deep Oceanic Gradient for the index background */
+    .index-background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -2;
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%);
+    }
+
+    /* Add a subtle wave-like overlay */
+    .index-background::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('https://www.transparenttextures.com/patterns/cubes.png');
+        opacity: 0.05;
+        pointer-events: none;
+    }
+
+    /* Main Content Container - Full Width Dashboard */
+    .main-content-container {
+        background: transparent;
+        padding: 2rem;
+        margin: 0;
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* ===== Map Background Section ===== */
+    .hero-map-wrapper {
+        position: relative;
+        width: 100vw;
+        height: 100vh; /* Fill entire screen */
+        margin-left: calc(-50vw + 50%);
+        margin-top: -80px; /* Pull up behind the fixed navbar */
+        margin-bottom: 2rem;
+        z-index: 1;
+        overflow: hidden;
+    }
+
+    #heroMap {
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+    }
+
+    /* Dark overlay on top of map to ensure text readability */
+    .hero-map-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(180deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.4) 30%, rgba(15,23,42,0.4) 70%, rgba(15,23,42,0.9) 100%);
+    }
+
+    .hero-location-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(14, 165, 233, 0.25);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(14, 165, 233, 0.4);
+        border-radius: 50px;
+        padding: 0.5rem 1.2rem;
+        color: #7dd3fc;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.5s ease;
+        margin-bottom: 2rem;
+    }
+
+    .hero-location-badge i {
+        font-size: 1rem;
+    }
+
+    /* Pulsing ring animation for the user marker */
+    @keyframes pulse-ring {
+        0% {
+            transform: scale(0.5);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(3);
+            opacity: 0;
+        }
+    }
+
+    .pulse-marker {
+        position: relative;
+    }
+
+    .pulse-marker .pulse-dot {
+        width: 16px;
+        height: 16px;
+        background: #0ea5e9;
+        border: 3px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 12px rgba(14, 165, 233, 0.7);
+    }
+
+    .pulse-marker .pulse-ring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: rgba(14, 165, 233, 0.4);
+        animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+
+    .pulse-marker .pulse-ring:nth-child(2) {
+        animation-delay: 0.7s;
+    }
+
+    /* Zoom status indicator */
+    .map-zoom-status {
+        position: absolute;
+        bottom: 16px;
+        left: 16px;
+        z-index: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        padding: 0.45rem 0.9rem;
+        color: rgba(255,255,255,0.85);
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all 0.4s ease;
+    }
+
+    .map-zoom-status .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        animation: pulse-ring 2s infinite;
+    }
+
+    /* Hero section padding */
+    .hero-section {
+        padding: 4rem 0 3rem 0;
+        text-align: center;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+        color: #ffffff;
+        text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .hero-subtitle {
+        font-size: 1.15rem;
+        font-weight: 400;
+        margin-bottom: 1.5rem;
+        color: rgba(255, 255, 255, 0.9);
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        .hero-subtitle {
+            font-size: 1rem;
+            max-width: 90%;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+        .hero-location-badge {
+            font-size: 0.78rem;
+            padding: 0.4rem 0.9rem;
+        }
+    }
+
+    /* Enhanced Blinking animation for the alert */
+    @keyframes blink {
+        0% {
+            opacity: 1;
+            background: rgba(255, 193, 7, 0.4);
+            box-shadow: 0 0 20px rgba(255, 193, 7, 0.6);
+        }
+
+        50% {
+            opacity: 0.3;
+            background: rgba(255, 193, 7, 0.2);
+            box-shadow: 0 0 30px rgba(255, 193, 7, 0.8);
+        }
+
+        100% {
+            opacity: 1;
+            background: rgba(255, 193, 7, 0.4);
+            box-shadow: 0 0 20px rgba(255, 193, 7, 0.6);
+        }
+    }
+
+    .blinking-alert {
+        animation: blink 2s infinite ease-in-out;
+        background: rgba(245, 158, 11, 0.15);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 50px;
+        padding: 0.75rem 1.5rem;
+        margin-bottom: 0;
+        font-size: 1rem;
+        max-width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+        font-weight: 600;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        color: #f59e0b;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.1);
+    }
+
+    .blinking-alert::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        animation: shine 3s infinite;
+    }
+
+    @keyframes shine {
+        0% {
+            left: -100%;
+        }
+
+        100% {
+            left: 100%;
+        }
+    }
+
+    /* Enhanced Glass Effect - Dark Transparent */
+    .glass-effect-enhanced {
+        background: rgba(0, 0, 0, 0.5) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 20px;
+    }
+
+    .card.glass-effect-enhanced {
+        background: rgba(0, 0, 0, 0.45) !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card.glass-effect-enhanced:hover {
+        background: rgba(0, 0, 0, 0.6) !important;
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Quick Search Buttons - Clean Modern Theme */
+    .quick-search-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+        justify-content: center;
+    }
+
+    .quick-search-btn {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        color: white !important;
+        border-radius: 25px !important;
+        padding: 10px 20px !important;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+        min-width: 140px;
+    }
+
+    .quick-search-btn:hover {
+        background: linear-gradient(135deg, rgba(66, 165, 245, 0.95) 0%, rgba(100, 181, 246, 0.95) 100%) !important;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(33, 150, 243, 0.4);
+        border-color: rgba(255, 255, 255, 0.4) !important;
+    }
+
+    .btn-icon {
+        font-size: 1.1em;
+        margin-right: 6px;
+    }
+
+    /* Trending Hazards Badges */
+    .quick-search-trending {
+        background: linear-gradient(135deg, rgba(25, 118, 210, 0.9) 0%, rgba(30, 136, 229, 0.9) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        border-radius: 20px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        padding: 10px 16px;
+    }
+
+    .quick-search-trending:hover {
+        background: linear-gradient(135deg, rgba(30, 136, 229, 0.95) 0%, rgba(66, 165, 245, 0.95) 100%) !important;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(25, 118, 210, 0.35);
+    }
+
+    /* Search Input Group Enhancement */
+    .search-group {
+        border-radius: 16px;
+        overflow: hidden;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.3s ease;
+    }
+
+    .search-group:hover {
+        border-color: rgba(255, 255, 255, 0.25);
+        box-shadow: 0 8px 25px rgba(33, 150, 243, 0.15);
+    }
+
+    .search-group .input-group-text {
+        border: none;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.9);
+        padding: 0.9rem 1.1rem;
+        font-size: 1.05rem;
+    }
+
+    .search-group .form-control {
+        border: none;
+        background: transparent;
+        color: white;
+        padding: 0.9rem 0;
+        font-size: 1.05rem;
+        font-weight: 400;
+    }
+
+    .search-group .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 300;
+    }
+
+    .search-group #search-button {
+        border: none;
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        color: white;
+        padding: 0.9rem 1.8rem;
+        font-weight: 600;
+        font-size: 1.05rem;
+        transition: all 0.3s ease;
+    }
+
+    .search-group #search-button:hover {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(14, 165, 233, 0.4);
+    }
+
+    /* Focus Glow Effect */
+    .search-group:focus-within {
+        box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3);
+        border-color: rgba(33, 150, 243, 0.5);
+        transform: scale(1.02);
+    }
+
+    /* Feature Cards Enhancement */
+    .feature-card {
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        border: none;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    .feature-icon {
+        transition: all 0.5s ease;
+        margin-bottom: 1.5rem;
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+    }
+
+    .feature-card:hover .feature-icon {
+        transform: scale(1.2) rotate(5deg);
+        filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.4));
+    }
+
+    /* Stat Numbers Enhancement */
+    .stat-number {
+        text-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(135deg, #ffffff 0%, #0ea5e9 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 800;
+        font-size: 2.5rem;
+        line-height: 1;
+        margin-bottom: 5px;
+    }
+
+    @media (max-width: 576px) {
+        .stat-number {
+            font-size: 1.8rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            display: block;
+            line-height: 1.2;
+        }
+    }
+
+    /* Report Cards Enhancement */
+    .report-card {
+        transition: all 0.4s ease;
+        border-left: 4px solid transparent;
+        cursor: pointer;
+        background: rgba(0, 0, 0, 0.4) !important;
+        margin-bottom: 1rem;
+    }
+
+    .report-card:hover {
+        transform: translateX(6px);
+        border-left: 4px solid #42a5f5 !important;
+        background: rgba(0, 0, 0, 0.6) !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Activity Items Enhancement */
+    .activity-item {
+        transition: all 0.4s ease;
+        padding: 0.9rem;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.35);
+        margin-bottom: 1rem;
+    }
+
+    .activity-item:hover {
+        background: rgba(0, 0, 0, 0.5);
+        transform: translateX(6px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Alert Enhancement */
+    .alert.glass-effect-enhanced {
+        border-left: 4px solid;
+        border-radius: 14px;
+        font-weight: 600;
+        font-size: 1.05rem;
+    }
+
+    /* Text Enhancements */
+    .text-white {
+        color: #ffffff !important;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .text-light {
+        color: rgba(255, 255, 255, 0.95) !important;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+        font-weight: 700;
+        margin-bottom: 1rem;
+        font-size: 1.3rem;
+    }
+
+    /* Button Enhancements */
+    .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.4s ease;
+        border: none;
+        font-size: 0.95rem;
+        padding: 0.8rem 1.5rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #42a5f5 0%, #64b5f6 100%);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-outline-light {
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.95);
+        background: rgba(0, 0, 0, 0.3);
+        font-weight: 600;
+    }
+
+    .btn-outline-light:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.6);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(255, 255, 255, 0.15);
+    }
+
+    /* Badge Enhancements */
+    .badge {
+        font-weight: 600;
+        border-radius: 12px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.8rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .main-content-container {
+            padding: 1.5rem;
+        }
+
+        .hero-title {
+            font-size: 2.8rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .main-content-container {
+            padding: 1rem;
+            margin: 0;
+        }
+
+        .hero-title {
+            font-size: 2.4rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            max-width: 90%;
+        }
+
+        .hero-section {
+            padding: 2rem 0 2.5rem 0;
+        }
+
+        .quick-search-buttons {
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .quick-search-btn {
+            flex: 1;
+            min-width: 120px;
+            margin: 3px;
+            padding: 8px 16px !important;
+            font-size: 0.85rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+        }
+
+        .blinking-alert {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            max-width: 90%;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .main-content-container {
+            padding: 0.75rem;
+            margin: 0;
+        }
+
+        .hero-title {
+            font-size: 2rem;
+        }
+
+        .hero-section {
+            padding: 1.5rem 0 2rem 0;
+        }
+
+        .quick-search-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .quick-search-btn {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 12px 10px !important;
+            min-width: unset;
+        }
+
+        .display-4 {
+            font-size: 1.8rem;
+        }
+
+        .blinking-alert {
+            padding: 0.9rem 1.5rem;
+            font-size: 1rem;
+            max-width: 95%;
+        }
+
+        .search-group .form-control {
+            font-size: 0.95rem;
+        }
+
+        .card-body {
+            padding: 1.5rem !important;
+        }
+    }
+
+    @media (max-width: 400px) {
+        .main-content-container {
+            padding: 0.5rem;
+            margin: 0;
+        }
+
+        .hero-title {
+            font-size: 1.8rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1rem;
+        }
+
+        .blinking-alert {
+            padding: 0.8rem 1.2rem;
+            font-size: 0.95rem;
+        }
+    }
+
+    /* Smooth hover transitions */
+    .btn,
+    .card,
+    .badge,
+    .activity-item,
+    .report-card {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Section Spacing */
+    .section-spacing {
+        margin-bottom: 2.5rem;
+    }
+
+    /* Loading Animation */
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.4;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    .loading-pulse {
+        animation: pulse 1.5s infinite;
+    }
+
+    /* Compact spacing for better utilization */
+    .compact-spacing {
+        margin-bottom: 2rem;
+    }
+
+    /* Enhanced readability */
+    .card-text {
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.95rem;
+    }
+
+    /* Improved icon styling */
+    .feature-icon i {
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    }
+
+    /* Better text wrapping */
+    .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .text-truncate-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Transparent Background Restored for Content Below Map -->
+<div class="index-background"></div>
+
+<!-- Add index-page class to body -->
+<script>
+    document.body.classList.add('index-page');
+</script>
+
+<!-- Hero Map Section (Full screen background) -->
+<div class="hero-map-wrapper">
+    <div id="heroMap"></div>
+    <div class="hero-map-overlay">
+        <div class="text-center">
+            <h1 class="hero-title">🛡️ {{ translate('coastal_alert') }}</h1>
+            <p class="hero-subtitle">{{ translate('maximum_intelligence') }}</p>
+            
+            <div class="hero-location-badge" id="locationBadge" style="pointer-events: auto;">
+                <i class="fas fa-location-crosshairs"></i>
+                <span id="locationText">Locating you...</span>
+            </div>
+
+            <br>
+            <!-- Emergency Alert Banner with Enhanced Blinking Effect -->
+            <div class="alert alert-warning glass-effect-enhanced blinking-alert d-inline-flex align-items-center mt-3"
+                style="pointer-events: auto;" role="alert">
+                <i class="fas fa-exclamation-triangle me-3"></i>
+                <div>
+                    <strong>{{ translate('coastal_alert') }} {{ translate('active') }}</strong> - {{ translate('protecting_coastal_communities') }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="map-zoom-status" id="mapStatus">
+        <span class="status-dot"></span>
+        <span id="mapStatusText">Initializing map...</span>
+    </div>
+</div>
+
+<!-- Main Content Container - Wider -->
+<div class="main-content-container">
+    <div class="row mt-4">
+        <div class="col-lg-8">
+            <!-- Enhanced Search Bar Section -->
+            <div class="card index-card glass-effect-enhanced mb-4 border-0 compact-spacing">
+                <div class="card-body p-4">
+                    <h5 class="card-title text-white mb-3">🔍 {{ translate('search') }} {{ translate('coastal_alert') }}
+                    </h5>
+                    <form action="{{ url_for('search') }}" method="get">
+                        <div class="input-group input-group-lg search-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-white">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control bg-transparent border-start-0 text-white" name="q"
+                                placeholder="{{ translate('search') }} users, reports, locations, hazards..."
+                                id="searchInput" autocomplete="off" aria-label="{{ translate('search') }}"
+                                aria-describedby="search-button">
+                            <button class="btn btn-primary glass-effect-enhanced" type="submit" id="search-button">
+                                {{ translate('search') }}
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-3">
+                        <small class="text-light mb-2 d-block text-center fw-semibold">{{ translate('quick_search')
+                            }}:</small>
+                        <div class="quick-search-buttons">
+                            <button class="btn quick-search-btn" onclick="quickSearch('tsunami')">
+                                <span class="btn-icon">🌊</span> {{ translate('tsunami') }}
+                            </button>
+                            <button class="btn quick-search-btn" onclick="quickSearch('storm surge')">
+                                <span class="btn-icon">🌪</span> {{ translate('storm_surge') }}
+                            </button>
+                            <button class="btn quick-search-btn" onclick="quickSearch('chennai')">
+                                <span class="btn-icon">📍</span> Chennai
+                            </button>
+                            <button class="btn quick-search-btn" onclick="quickSearch('high waves')">
+                                <span class="btn-icon">🌀</span> {{ translate('high_waves') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Search Results -->
+            <div id="searchResults" class="mb-4" style="display: none;">
+                <!-- Search results will appear here dynamically -->
+            </div>
+
+            <!-- Main Content (shown when not searching) -->
+            <div id="mainContent">
+                <!-- Features Grid -->
+                <div class="row g-4 mb-4 section-spacing">
+                    <div class="col-md-6">
+                        <div class="card index-card glass-effect-enhanced border-0 h-100 text-center feature-card">
+                            <div class="card-body p-4">
+                                <div class="feature-icon mb-3">
+                                    <i class="fas fa-edit fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="card-title text-white mb-2">📝 {{ translate('report_hazard') }}</h5>
+                                <p class="card-text text-light mb-3 text-truncate-3">{{
+                                    translate('report_hazard_description') }}</p>
+                                {% if current_user.is_authenticated %}
+                                <a href="{{ url_for('report') }}"
+                                    class="btn btn-primary glass-effect-enhanced mt-2 px-3 py-2">
+                                    <i class="fas fa-plus me-2"></i> {{ translate('submit_report') }}
+                                </a>
+                                {% else %}
+                                <a href="{{ url_for('register') }}"
+                                    class="btn btn-primary glass-effect-enhanced mt-2 px-3 py-2">
+                                    <i class="fas fa-user-plus me-2"></i> {{ translate('register_to_report') }}
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card index-card glass-effect-enhanced border-0 h-100 text-center feature-card">
+                            <div class="card-body p-4">
+                                <div class="feature-icon mb-3">
+                                    <i class="fas fa-chart-bar fa-3x text-info"></i>
+                                </div>
+                                <h5 class="card-title text-white mb-2">📊 {{ translate('analytics_dashboard') }}</h5>
+                                <p class="card-text text-light mb-3 text-truncate-3">{{
+                                    translate('analytics_description') }}</p>
+                                <a href="{{ url_for('dashboard') }}"
+                                    class="btn btn-outline-light glass-effect-enhanced mt-2 px-3 py-2">
+                                    <i class="fas fa-tachometer-alt me-2"></i> {{ translate('view_dashboard') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats Section -->
+                {% if current_user.is_authenticated %}
+                <div class="card index-card glass-effect-enhanced border-0 mb-4 compact-spacing">
+                    <div class="card-body p-3">
+                        <h5 class="card-title text-white mb-3">⭐ {{ translate('your_contribution') }}</h5>
+                        <div class="row text-center g-2">
+                            <div class="col-4">
+                                <div class="stat-number text-primary fw-bold">{{ current_user.points }}</div>
+                                <small class="text-light fw-semibold stat-label">{{ translate('points') }}</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-number text-success fw-bold">{{ current_user.reports|length }}</div>
+                                <small class="text-light fw-semibold stat-label">{{ translate('reports_submitted')
+                                    }}</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="stat-number text-warning fw-bold">{{ current_user.level }}</div>
+                                <small class="text-light fw-semibold stat-label">{{ translate('level') }}</small>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('leaderboard') }}"
+                                class="btn btn-outline-light glass-effect-enhanced px-3">
+                                <i class="fas fa-trophy me-2"></i> {{ translate('view_leaderboard') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Community Activity -->
+                <div class="card index-card glass-effect-enhanced border-0 compact-spacing">
+                    <div class="card-body p-3">
+                        <h5 class="card-title text-white mb-3">👥 {{ translate('community_activity') }}</h5>
+                        <div class="activity-feed">
+                            {% if reports %}
+                            {% for report in reports[:3] %}
+                            <div class="activity-item">
+                                <div class="d-flex align-items-center">
+                                    <div class="activity-avatar me-3">
+                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center"
+                                            style="width: 40px; height: 40px; min-width: 40px;">
+                                            <i class="fas fa-user text-white" style="font-size: 0.9rem;"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 overflow-hidden">
+                                        <h6 class="mb-0 text-white fw-semibold text-truncate">{{ report.title }}</h6>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge bg-info bg-opacity-25 text-info px-2 py-1"
+                                                style="font-size: 0.7rem; border: 1px solid rgba(6, 182, 212, 0.2);">{{
+                                                report.hazard_type }}</span>
+                                            <small class="text-light text-truncate"
+                                                style="font-size: 0.75rem; opacity: 0.8;">{{ report.location }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <p class="text-light text-center py-3 fw-medium">{{ translate('no_recent_activity') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Recent Reports Sidebar -->
+            <div class="card index-card glass-effect-enhanced border-0 mb-4">
+                <div class="card-body p-3">
+                    <h5 class="card-title text-white mb-3">📋 {{ translate('live_reports') }}</h5>
+                    <div id="recent-reports">
+                        {% if reports %}
+                        {% for report in reports[:4] %}
+                        <div class="report-card p-2 glass-effect-enhanced rounded"
+                            onclick="window.location.href='/view_report/{{ report.id }}'">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0 text-white fw-semibold text-truncate-2">{{ report.title }}</h6>
+                                <span class="badge bg-info px-2 py-1">{{ report.hazard_type }}</span>
+                            </div>
+                            <p class="mb-2 text-light small fw-medium text-truncate-2">{{ report.location }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted fw-medium">
+                                    {% if report.timestamp is string %}
+                                    {{ report.timestamp }}
+                                    {% else %}
+                                    {{ report.timestamp.strftime('%H:%M') }}
+                                    {% endif %}
+                                </small>
+                                {% if report.image_file %}
+                                <i class="fas fa-camera text-warning"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-light text-center py-3 fw-medium">{{ translate('no_reports_yet') }}</p>
+                        {% endif %}
+                    </div>
+                    {% if reports %}
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('search') }}?q=" class="btn btn-outline-light glass-effect-enhanced px-3">
+                            <i class="fas fa-list me-2"></i> {{ translate('view_all_reports') }}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Trending Hazards -->
+            <div class="card index-card glass-effect-enhanced border-0 mb-4">
+                <div class="card-body p-3">
+                    <h5 class="card-title text-white mb-3"> {{ translate('Recent Hazards') }}</h5>
+                    <div id="trending-hazards">
+                        <div class="text-center py-3 loading-pulse">
+                            <div class="spinner-border text-light mb-2" role="status">
+                                <span class="visually-hidden">{{ translate('loading') }}</span>
+                            </div>
+                            <small class="text-light fw-medium">{{ translate('loading_live_trends') }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card index-card glass-effect-enhanced border-0">
+                <div class="card-body p-3 text-center">
+                    <h6 class="text-white mb-3 fw-semibold">🚀 {{ translate('quick_actions') }}</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reels') }}" class="btn btn-outline-light glass-effect-enhanced py-2">
+                            <i class="fas fa-bullhorn me-2"></i>{{ translate('community_feed') }}
+                        </a>
+                        <a href="{{ url_for('set_location') }}"
+                            class="btn btn-outline-light glass-effect-enhanced py-2">
+                            <i class="fas fa-map-marker-alt me-2"></i>{{ translate('set_location') }}
+                        </a>
+                        <button class="btn btn-outline-light glass-effect-enhanced py-2" data-bs-toggle="modal"
+                            data-bs-target="#chatbotModal">
+                            <i class="fas fa-robot me-2"></i>{{ translate('ai_assistant') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // ===== Hero Map Initialization =====
+    (function() {
+        const map = L.map('heroMap', {
+            zoomControl: false,
+            attributionControl: false,
+            scrollWheelZoom: false,
+            dragging: false,
+            doubleClickZoom: false,
+            touchZoom: false,
+            keyboard: false
+        }).setView([20, 0], 2);
+
+        // Satellite map tiles
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        }).addTo(map);
+
+        const statusText = document.getElementById('mapStatusText');
+        const locationText = document.getElementById('locationText');
+        const locationBadge = document.getElementById('locationBadge');
+
+        // Create custom pulsing marker icon
+        const pulseIcon = L.divIcon({
+            className: 'pulse-marker',
+            html: '<div class="pulse-ring"></div><div class="pulse-ring"></div><div class="pulse-dot"></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        function animateZoom(lat, lng) {
+            statusText.textContent = 'Zooming to your location...';
+
+            // Smooth zoom in 4 seconds
+            map.flyTo([lat, lng], 15, { duration: 4, easeLinearity: 0.25 });
+
+            setTimeout(() => {
+                L.marker([lat, lng], { icon: pulseIcon }).addTo(map);
+
+                // Add a translucent radius circle
+                L.circle([lat, lng], {
+                    radius: 500,
+                    color: '#0ea5e9',
+                    fillColor: '#0ea5e9',
+                    fillOpacity: 0.08,
+                    weight: 1.5,
+                    opacity: 0.4
+                }).addTo(map);
+
+                statusText.textContent = 'Location locked';
+            }, 4100);
+        }
+
+        function reverseGeocode(lat, lng) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`)
+                .then(r => r.json())
+                .then(data => {
+                    const addr = data.address || {};
+                    const city = addr.city || addr.town || addr.village || addr.county || '';
+                    const state = addr.state || '';
+                    const country = addr.country || '';
+                    let parts = [city, state, country].filter(Boolean);
+                    locationText.textContent = parts.join(', ') || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    locationBadge.style.background = 'rgba(16, 185, 129, 0.25)';
+                    locationBadge.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+                    locationBadge.style.color = '#6ee7b7';
+                })
+                .catch(() => {
+                    locationText.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                });
+        }
+
+        // Request geolocation
+        if (navigator.geolocation) {
+            statusText.textContent = 'Requesting location access...';
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    statusText.textContent = 'Location found!';
+                    animateZoom(lat, lng);
+                    reverseGeocode(lat, lng);
+                },
+                function(err) {
+                    // Fallback: default to a cool world view
+                    statusText.textContent = 'Location unavailable — showing global view';
+                    locationText.textContent = 'Global Overview';
+                    locationBadge.querySelector('i').className = 'fas fa-globe';
+                    map.flyTo([20, 78], 5, { duration: 3 }); // Default India
+                    setTimeout(() => {
+                        statusText.textContent = 'Monitoring active';
+                    }, 3500);
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        } else {
+            statusText.textContent = 'Geolocation not supported';
+            locationText.textContent = 'Global Overview';
+            map.flyTo([20, 78], 5, { duration: 3 });
+        }
+    })();
+</script>
+<script>
+    // Index page specific JavaScript
+    document.addEventListener('DOMContentLoaded', function () {
+        // Search functionality
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const mainContent = document.getElementById('mainContent');
+        const trendingHazards = document.getElementById('trending-hazards');
+
+        // Load trending hazards on page load
+        loadTrendingHazards();
+
+        // Search as you type functionality
+        let searchTimeout;
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+
+            if (query.length === 0) {
+                searchResults.style.display = 'none';
+                mainContent.style.display = 'block';
+                return;
+            }
+
+            if (query.length < 2) return;
+
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 300);
+        });
+
+        // Search input auto-focus removed to prevent automatic scrolling down on page load
+
+        function performSearch(query) {
+            searchResults.style.display = 'block';
+            mainContent.style.display = 'none';
+
+            searchResults.innerHTML = `
+            <div class="card glass-effect-enhanced border-0">
+                <div class="card-body text-center py-4">
+                    <div class="spinner-border text-primary mb-3" style="width: 2.5rem; height: 2.5rem;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h6 class="text-white mb-2">Searching database...</h6>
+                    <p class="text-light mb-0 fw-medium">Looking for "${query}"</p>
+                </div>
+            </div>
+        `;
+
+            fetch(`/api/search?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    displaySearchResults(query, data);
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    searchResults.innerHTML = `
+                    <div class="alert alert-danger glass-effect-enhanced">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error performing search. Please try again.
+                    </div>
+                `;
+                });
+        }
+
+        function displaySearchResults(query, data) {
+            let html = '';
+
+            if (!data.users || data.users.length === 0 && !data.reports || data.reports.length === 0) {
+                html = `
+                <div class="alert alert-info glass-effect-enhanced">
+                    <h6 class="text-white mb-2">🔍 No results found for "${query}"</h6>
+                    <p class="text-light mb-0 fw-medium">Try searching for users, hazard types, or locations.</p>
+                </div>
+            `;
+            } else {
+                if (data.users && data.users.length > 0) {
+                    html += `
+                    <div class="card glass-effect-enhanced border-0 mb-3">
+                        <div class="card-header bg-transparent border-bottom-0 p-3">
+                            <h6 class="text-white mb-0 fw-semibold">👥 Users (${data.users.length})</h6>
+                        </div>
+                        <div class="card-body p-3">
+                `;
+
+                    data.users.forEach(user => {
+                        html += `
+                        <a href="/profile/${user.username}" class="text-decoration-none">
+                            <div class="card glass-effect-enhanced mb-2 p-3" style="transition: all 0.3s ease;">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 50px; height: 50px;">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 text-white fw-semibold text-truncate-2">${user.username}</h6>
+                                        <small class="text-light fw-medium text-truncate-2">${user.email}</small>
+                                    </div>
+                                    <span class="badge bg-primary px-2 py-1">Level ${user.level}</span>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                    });
+
+                    html += `</div></div>`;
+                }
+
+                if (data.reports && data.reports.length > 0) {
+                    html += `
+                    <div class="card glass-effect-enhanced border-0 mb-3">
+                        <div class="card-header bg-transparent border-bottom-0 p-3">
+                            <h6 class="text-white mb-0 fw-semibold">📋 Reports (${data.reports.length})</h6>
+                        </div>
+                        <div class="card-body p-3">
+                `;
+
+                    data.reports.forEach(report => {
+                        html += `
+                        <a href="/view_report/${report.id}" class="text-decoration-none">
+                            <div class="card glass-effect-enhanced mb-2 p-3" style="transition: all 0.3s ease;">
+                                <h6 class="text-white mb-2 fw-semibold text-truncate-2">${report.title}</h6>
+                                <p class="text-light mb-2 fw-medium text-truncate-2">${report.hazard_type} at ${report.location}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted fw-medium">
+                                        By ${report.author} • ${new Date(report.timestamp).toLocaleDateString()}
+                                    </small>
+                                    <span class="badge bg-info px-2 py-1">Report</span>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                    });
+
+                    html += `</div></div>`;
+                }
+            }
+
+            searchResults.innerHTML = html;
+        }
+
+        function loadTrendingHazards() {
+            fetch('/api/search?q=')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.trending_hazards && data.trending_hazards.length > 0) {
+                        let html = '';
+                        data.trending_hazards.slice(0, 5).forEach(hazard => {
+                            html += `
+                            <div class="mb-2">
+                                <span class="badge quick-search-trending p-2 w-100 text-start" 
+                                      style="cursor: pointer;" 
+                                      onclick="quickSearch('${hazard.name}')">
+                                    ${hazard.icon || '⚠️'} ${hazard.name}
+                                    <span class="badge bg-light text-dark float-end px-2 py-1">${hazard.count}</span>
+                                </span>
+                            </div>
+                        `;
+                        });
+
+                        trendingHazards.innerHTML = html;
+                    } else {
+                        trendingHazards.innerHTML = '<p class="text-light text-center py-3 fw-medium">No trending hazards detected</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading trending hazards:', error);
+                    trendingHazards.innerHTML = '<p class="text-light text-center py-3 fw-medium">Unable to load trending data</p>';
+                });
+        }
+    });
+
+    // Global functions
+    function quickSearch(query) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.value = query;
+
+            const event = new Event('input', {
+                bubbles: true,
+                cancelable: true,
+            });
+            searchInput.dispatchEvent(event);
+        }
+    }
+
+    function searchHazard(hazardName) {
+        quickSearch(hazardName);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,151 @@
+<!-- templates/new_situation_report.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-file-medical me-2"></i>New Situation Report
+                </h1>
+                <a href="{{ url_for('situation_reports') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Reports
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Report Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('new_situation_report') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    {{ form.title.label(class="form-label fw-bold") }}
+                                    {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Enter report title") }}
+                                    {% if form.title.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.title.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    {{ form.priority.label(class="form-label fw-bold") }}
+                                    {{ form.priority(class="form-select" + (" is-invalid" if form.priority.errors else "")) }}
+                                    {% if form.priority.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.priority.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.report_type.label(class="form-label fw-bold") }}
+                                    {{ form.report_type(class="form-select" + (" is-invalid" if form.report_type.errors else "")) }}
+                                    {% if form.report_type.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.report_type.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form.emergency_event.label(class="form-label fw-bold") }}
+                                    {{ form.emergency_event(class="form-select" + (" is-invalid" if form.emergency_event.errors else "")) }}
+                                    {% if form.emergency_event.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.emergency_event.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-group">
+                                {{ form.content.label(class="form-label fw-bold") }}
+                                {{ form.content(class="form-control" + (" is-invalid" if form.content.errors else ""), placeholder="Provide detailed situation report...", rows="8") }}
+                                {% if form.content.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.content.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-group">
+                                {{ form.recommendations.label(class="form-label fw-bold") }}
+                                {{ form.recommendations(class="form-control" + (" is-invalid" if form.recommendations.errors else ""), placeholder="Provide recommendations for action...", rows="4") }}
+                                {% if form.recommendations.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.recommendations.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('situation_reports') }}" class="btn btn-secondary me-md-2">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    {{ form.submit(class="btn btn-info") }}
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #0dcaf0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 202, 240, 0.25);
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+}
+</style>
+{% endblock %}

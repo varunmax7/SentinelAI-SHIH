@@ -1,0 +1,573 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* About Page Specific Styles - Black Transparent Theme */
+    .about-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 95%;
+    }
+
+    .about-hero {
+        text-align: center;
+        margin-bottom: 3rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .about-hero h2 {
+        font-size: 2.8rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: #ffffff;
+        text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .about-hero .lead {
+        font-size: 1.3rem;
+        font-weight: 300;
+        color: rgba(255, 255, 255, 0.95);
+        max-width: 700px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* Feature Cards Enhancement - Black Transparent */
+    .feature-card {
+        background: rgba(0, 0, 0, 0.45) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 20px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-bottom: 1.5rem;
+        border-left: 4px solid transparent;
+    }
+
+    .feature-card:hover {
+        background: rgba(0, 0, 0, 0.6) !important;
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        border-left: 4px solid #42a5f5 !important;
+    }
+
+    .feature-card .card-body {
+        padding: 2rem;
+        position: relative;
+    }
+
+    .feature-card .card-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .feature-card .card-title i {
+        font-size: 1.6rem;
+        background: linear-gradient(135deg, #42a5f5, #2196f3);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .feature-card .card-text {
+        color: rgba(255, 255, 255, 0.9);
+        line-height: 1.6;
+        font-size: 1rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Mission Section */
+    .mission-section {
+        border-left-color: #4caf50 !important;
+    }
+
+    .mission-section:hover {
+        border-left-color: #4caf50 !important;
+    }
+
+    /* INCOIS Section */
+    .incois-section {
+        border-left-color: #03a9f4 !important;
+    }
+
+    .incois-section:hover {
+        border-left-color: #03a9f4 !important;
+    }
+
+    /* Features Section */
+    .features-section {
+        border-left-color: #9c27b0 !important;
+    }
+
+    .features-section:hover {
+        border-left-color: #9c27b0 !important;
+    }
+
+    /* Hazards Section */
+    .hazards-section {
+        border-left-color: #ff9800 !important;
+    }
+
+    .hazards-section:hover {
+        border-left-color: #ff9800 !important;
+    }
+
+    /* Get Involved Section */
+    .involvement-section {
+        border-left-color: #e91e63 !important;
+        text-align: center;
+    }
+
+    .involvement-section:hover {
+        border-left-color: #e91e63 !important;
+    }
+
+    /* List Group Styling */
+    .list-group-item {
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+        padding: 1.25rem 0;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+
+    .list-group-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateX(8px);
+        border-radius: 8px;
+    }
+
+    .list-group-item strong {
+        color: #ffffff;
+        font-weight: 700;
+        background: linear-gradient(135deg, #42a5f5, #2196f3);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* Hazard List Styling */
+    .hazard-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .hazard-list li {
+        padding: 0.75rem 0;
+        color: rgba(255, 255, 255, 0.9);
+        position: relative;
+        padding-left: 2rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .hazard-list li:hover {
+        color: #ffffff;
+        transform: translateX(5px);
+    }
+
+    .hazard-list li::before {
+        content: '🌊';
+        position: absolute;
+        left: 0;
+        top: 0.75rem;
+        font-size: 1.1rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    /* Button Styling */
+    .btn-about {
+        border-radius: 12px;
+        padding: 0.9rem 2.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        font-size: 1rem;
+        margin: 0.25rem;
+    }
+
+    .btn-about-primary {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%) !important;
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+        color: white !important;
+    }
+
+    .btn-about-primary:hover {
+        background: linear-gradient(135deg, rgba(66, 165, 245, 0.95) 0%, rgba(100, 181, 246, 0.95) 100%) !important;
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(33, 150, 243, 0.4);
+        color: white !important;
+    }
+
+    .btn-about-outline {
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.95);
+        background: rgba(0, 0, 0, 0.3);
+        font-weight: 600;
+    }
+
+    .btn-about-outline:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.6);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(255, 255, 255, 0.15);
+        color: white !important;
+    }
+
+    /* Section Spacing */
+    .section-spacing {
+        margin-bottom: 2rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .about-container {
+            max-width: 97%;
+            padding: 2rem 2.5rem;
+        }
+
+        .about-hero h2 {
+            font-size: 2.4rem;
+        }
+
+        .about-hero .lead {
+            font-size: 1.2rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .about-container {
+            padding: 1.5rem 2rem;
+            margin: 1rem;
+            border-radius: 20px;
+            max-width: 95%;
+        }
+
+        .about-hero h2 {
+            font-size: 2.2rem;
+        }
+
+        .about-hero .lead {
+            font-size: 1.1rem;
+            max-width: 90%;
+        }
+
+        .feature-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .feature-card .card-title {
+            font-size: 1.2rem;
+        }
+
+        .btn-about {
+            padding: 0.8rem 2rem;
+            font-size: 0.95rem;
+        }
+
+        .hazard-list li {
+            padding-left: 1.75rem;
+            font-size: 0.95rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .about-container {
+            padding: 1.25rem 1.5rem;
+            margin: 0.75rem;
+            border-radius: 18px;
+            max-width: 92%;
+        }
+
+        .about-hero h2 {
+            font-size: 1.8rem;
+        }
+
+        .about-hero {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+        }
+
+        .feature-card .card-body {
+            padding: 1.25rem;
+        }
+
+        .feature-card .card-title {
+            font-size: 1.1rem;
+        }
+
+        .list-group-item {
+            padding: 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        .btn-about {
+            width: 100%;
+            margin: 0.5rem 0;
+        }
+
+        .hazard-list li {
+            padding-left: 1.5rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    /* Animation for cards */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .feature-card {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .feature-card:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .feature-card:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .feature-card:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .feature-card:nth-child(4) {
+        animation-delay: 0.4s;
+    }
+
+    .feature-card:nth-child(5) {
+        animation-delay: 0.5s;
+    }
+
+    /* Text enhancements */
+    .text-white {
+        color: #ffffff !important;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    /* Better readability */
+    .card-text {
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Compact spacing for better utilization */
+    .compact-spacing {
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Main Content Container with Black Transparent Background -->
+<div class="about-container">
+    <!-- Hero Section -->
+    <div class="about-hero">
+        <h2>🛡️ About Sentinel AI</h2>
+        <p class="lead">Empowering communities through collaborative hazard reporting and real-time intelligence
+        </p>
+    </div>
+
+    <!-- Mission Section -->
+    <div class="card feature-card mission-section section-spacing">
+        <div class="card-body">
+            <h4 class="card-title">
+                <i class="fas fa-bullseye"></i>Our Mission
+            </h4>
+            <p class="card-text">
+                This platform enables citizens, residents, volunteers, and disaster managers to
+                report observations during hazardous events and monitor public communication trends
+                via a unified system. We bridge the gap between community observations and official response
+                systems to enhance overall safety.
+            </p>
+        </div>
+    </div>
+
+    <!-- INCOIS Section -->
+    <div class="card feature-card incois-section section-spacing">
+        <div class="card-body">
+            <h4 class="card-title">
+                <i class="fas fa-university"></i>Our Technology
+            </h4>
+            <p class="card-text">
+                Sentinel AI is developed by <strong>Tech Max</strong>. It leverages advanced data processing
+                and advisory services to support disaster risk reduction and ensure safety for all
+                stakeholders.
+            </p>
+            <p class="card-text">
+                Our intelligence services cover a wide range of hazards, enabling authorities and communities
+                to make informed decisions during emergencies and critical incidents.
+            </p>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="card feature-card features-section section-spacing">
+        <div class="card-body">
+            <h4 class="card-title">
+                <i class="fas fa-star"></i>Key Features
+            </h4>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item">
+                    <strong>📱 Citizen Reporting:</strong> Submit geotagged reports with photos or videos of observed
+                    hazards with real-time location tracking
+                </div>
+                <div class="list-group-item">
+                    <strong>📊 Real-time Monitoring:</strong> Aggregate and visualize crowdsourced data on dynamic
+                    dashboards with live updates
+                </div>
+                <div class="list-group-item">
+                    <strong>👥 Role-based Access:</strong> Different access levels for citizens, officials, and analysts
+                    with customized interfaces
+                </div>
+                <div class="list-group-item">
+                    <strong>🤖 AI Integration:</strong> Advanced analysis of hazard reports to ensure accuracy and
+                    speed up emergency response
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hazards Section -->
+    <div class="card feature-card hazards-section section-spacing">
+        <div class="card-body">
+            <h4 class="card-title">
+                <i class="fas fa-exclamation-triangle"></i>Supported Hazard Types
+            </h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="hazard-list">
+                        <li>🌪️ Tsunamis</li>
+                        <li>🌀 Storm Surges</li>
+                        <li>💨 High Waves</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="hazard-list">
+                        <li>🌊 Swell Surges</li>
+                        <li>🏖️ Coastal Flooding</li>
+                        <li>🌅 Abnormal Tides</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Get Involved Section -->
+    <div class="card feature-card involvement-section section-spacing">
+        <div class="card-body">
+            <h4 class="card-title">
+                <i class="fas fa-hands-helping"></i>Get Involved
+            </h4>
+            <p class="card-text">
+                Join our community of stakeholders working together to enhance safety and
+                disaster preparedness. Your reports can make a difference in early warning systems and
+                emergency response coordination.
+            </p>
+            {% if not current_user.is_authenticated %}
+            <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                <a href="{{ url_for('register') }}" class="btn btn-about btn-about-primary me-md-2">
+                    <i class="fas fa-user-plus me-2"></i>Register Now
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-about btn-about-outline">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                </a>
+            </div>
+            {% else %}
+            <div class="mt-4">
+                <a href="{{ url_for('report') }}" class="btn btn-about btn-about-primary">
+                    <i class="fas fa-edit me-2"></i>Submit a Report
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Add scroll animations
+        const cards = document.querySelectorAll('.feature-card');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+
+        // Add hover effects for list items
+        const listItems = document.querySelectorAll('.list-group-item');
+        listItems.forEach(item => {
+            item.addEventListener('mouseenter', function () {
+                this.style.transform = 'translateX(8px)';
+            });
+
+            item.addEventListener('mouseleave', function () {
+                this.style.transform = 'translateX(0)';
+            });
+        });
+
+        // Add hover effects for hazard list items
+        const hazardItems = document.querySelectorAll('.hazard-list li');
+        hazardItems.forEach(item => {
+            item.addEventListener('mouseenter', function () {
+                this.style.transform = 'translateX(5px)';
+            });
+
+            item.addEventListener('mouseleave', function () {
+                this.style.transform = 'translateX(0)';
+            });
+        });
+    });
+</script>
+{% endblock %}

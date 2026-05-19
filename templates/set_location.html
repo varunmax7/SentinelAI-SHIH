@@ -1,0 +1,709 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+    /* Location Container */
+    .location-container {
+        background: radial-gradient(circle at 50% 50%, #1a365d 0%, #0f172a 100%) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 2.5rem 3rem;
+        margin: 2rem auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+        position: relative;
+        z-index: 1;
+        max-width: 800px;
+    }
+
+    /* Header Section */
+    .location-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .location-header h2 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .location-subtitle {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.1rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* Cards */
+    .location-card {
+        background: rgba(0, 0, 0, 0.45) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .location-card:hover {
+        background: rgba(0, 0, 0, 0.6) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-header h2,
+    .card-header h4 {
+        color: white;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Form Elements */
+    .form-label {
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-label i {
+        margin-right: 0.5rem;
+        color: #42a5f5;
+    }
+
+    .form-control {
+        background: rgba(255, 255, 255, 0.15) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border-radius: 12px;
+        color: white !important;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        background: rgba(255, 255, 255, 0.2) !important;
+        border-color: rgba(33, 150, 243, 0.6) !important;
+        box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.15);
+        color: white !important;
+        transform: translateY(-1px);
+    }
+
+    .form-text {
+        color: rgba(255, 255, 255, 0.7) !important;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.9) 0%, rgba(66, 165, 245, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, rgba(66, 165, 245, 0.95) 0%, rgba(100, 181, 246, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+    }
+
+    .btn-outline-info {
+        border: 2px solid rgba(23, 162, 184, 0.5);
+        color: rgba(23, 162, 184, 0.9);
+        background: rgba(23, 162, 184, 0.1);
+    }
+
+    .btn-outline-info:hover {
+        background: rgba(23, 162, 184, 0.2);
+        border-color: rgba(23, 162, 184, 0.8);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(23, 162, 184, 0.3);
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.9) 0%, rgba(56, 142, 60, 0.9) 100%);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+    }
+
+    .btn-success:hover {
+        background: linear-gradient(135deg, rgba(56, 142, 60, 0.95) 0%, rgba(46, 125, 50, 0.95) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+    }
+
+    /* Status Alerts */
+    .alert {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        color: rgba(255, 255, 255, 0.9);
+        padding: 1rem 1.25rem;
+    }
+
+    .alert-info {
+        background: rgba(23, 162, 184, 0.15);
+        border-color: rgba(23, 162, 184, 0.3);
+    }
+
+    .alert-success {
+        background: rgba(76, 175, 80, 0.15);
+        border-color: rgba(76, 175, 80, 0.3);
+    }
+
+    .alert-danger {
+        background: rgba(244, 67, 54, 0.15);
+        border-color: rgba(244, 67, 54, 0.3);
+    }
+
+    /* Map Preview */
+    .map-preview {
+        height: 300px;
+        border-radius: 16px;
+        margin-top: 1.5rem;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .map-preview:hover {
+        border-color: rgba(33, 150, 243, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .map-preview iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    /* Instructions Section */
+    .instructions-section {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .instructions-section h4 {
+        color: white;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .instruction-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .instruction-item:last-child {
+        border-bottom: none;
+    }
+
+    .instruction-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(33, 150, 243, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        flex-shrink: 0;
+        color: #42a5f5;
+        font-size: 1.1rem;
+    }
+
+    .instruction-content {
+        flex: 1;
+    }
+
+    .instruction-title {
+        color: white;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .instruction-description {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+    }
+
+    /* Form Groups */
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .coordinates-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    /* Error Styling */
+    .text-danger {
+        color: #ff6b6b !important;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+
+    /* Loading Animation */
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid transparent;
+        border-top: 2px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 0.5rem;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .location-container {
+            padding: 1.5rem 2rem;
+            margin: 1rem;
+            max-width: 95%;
+        }
+
+        .location-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .coordinates-group {
+            grid-template-columns: 1fr;
+        }
+
+        .map-preview {
+            height: 250px;
+        }
+
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .location-container {
+            padding: 1.25rem 1.5rem;
+            margin: 0.75rem;
+            max-width: 92%;
+        }
+
+        .location-header h2 {
+            font-size: 1.6rem;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .instruction-item {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .instruction-icon {
+            margin-right: 0;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    /* Animation */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .location-container {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    /* Pulse animation for location button */
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.05);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="location-container">
+    <!-- Header Section -->
+    <div class="location-header">
+        <h2><i class="fas fa-map-marker-alt me-2"></i>Set Your Location</h2>
+        <p class="location-subtitle">
+            Setting your location helps us send you personalized alerts about hazards near you
+        </p>
+    </div>
+
+    <!-- Location Form Card -->
+    <div class="location-card">
+        <div class="card-header">
+            <h4><i class="fas fa-crosshairs me-2"></i>Location Coordinates</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" id="locationForm">
+                {{ form.hidden_tag() }}
+
+                <div class="coordinates-group">
+                    <div class="form-group">
+                        <label for="latitudeInput" class="form-label">
+                            <i class="fas fa-globe-americas"></i>Latitude
+                        </label>
+                        {{ form.home_latitude(class="form-control", id="latitudeInput", placeholder="e.g., 13.0827") }}
+                        {% for error in form.home_latitude.errors %}
+                        <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</span>
+                        {% endfor %}
+                        <div class="form-text">North/South coordinate (-90 to 90)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="longitudeInput" class="form-label">
+                            <i class="fas fa-globe-asia"></i>Longitude
+                        </label>
+                        {{ form.home_longitude(class="form-control", id="longitudeInput", placeholder="e.g., 80.2707")
+                        }}
+                        {% for error in form.home_longitude.errors %}
+                        <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</span>
+                        {% endfor %}
+                        <div class="form-text">East/West coordinate (-180 to 180)</div>
+                    </div>
+                </div>
+
+                <!-- Status Messages -->
+                <div id="statusElement"></div>
+
+                <!-- Map Preview -->
+                <div id="mapPreviewContainer"></div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2 mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <button type="button" id="detectLocationBtn" class="btn btn-outline-info pulse">
+                        <i class="fas fa-satellite-dish me-2"></i>Detect My Location Automatically
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Instructions Section -->
+    <div class="instructions-section">
+        <h4><i class="fas fa-info-circle me-2"></i>How to Set Your Location</h4>
+
+        <div class="instruction-item">
+            <div class="instruction-icon">
+                <i class="fas fa-satellite"></i>
+            </div>
+            <div class="instruction-content">
+                <div class="instruction-title">Automatic Detection</div>
+                <div class="instruction-description">
+                    Click the "Detect My Location" button above. Your browser will ask for location permission.
+                    Allow access for automatic coordinate detection.
+                </div>
+            </div>
+        </div>
+
+        <div class="instruction-item">
+            <div class="instruction-icon">
+                <i class="fas fa-map-marked-alt"></i>
+            </div>
+            <div class="instruction-content">
+                <div class="instruction-title">Google Maps Method</div>
+                <div class="instruction-description">
+                    Open Google Maps → Find your location → Right-click on the exact spot → Select "What's here?" →
+                    Copy the coordinates from the information panel.
+                </div>
+            </div>
+        </div>
+
+        <div class="instruction-item">
+            <div class="instruction-icon">
+                <i class="fas fa-mobile-alt"></i>
+            </div>
+            <div class="instruction-content">
+                <div class="instruction-title">Mobile Apps</div>
+                <div class="instruction-description">
+                    Use GPS apps like "GPS Coordinates" or "My Location" on your smartphone to get precise coordinates
+                    of your current position.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Benefits Section -->
+    <div class="location-card">
+        <div class="card-header">
+            <h4><i class="fas fa-shield-alt me-2"></i>Why Set Your Location?</h4>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-4 mb-3">
+                    <div class="instruction-icon mx-auto mb-2">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <h6>Personalized Alerts</h6>
+                    <p class="text-muted small">Get notified only about hazards relevant to your area</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="instruction-icon mx-auto mb-2">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h6>Faster Response</h6>
+                    <p class="text-muted small">Quick access to local emergency information</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="instruction-icon mx-auto mb-2">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h6>Community Safety</h6>
+                    <p class="text-muted small">Help protect your community</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const detectBtn = document.getElementById('detectLocationBtn');
+        const latitudeInput = document.getElementById('latitudeInput');
+        const longitudeInput = document.getElementById('longitudeInput');
+        const locationForm = document.getElementById('locationForm');
+        const statusElement = document.getElementById('statusElement');
+        const mapPreviewContainer = document.getElementById('mapPreviewContainer');
+
+        // Function to show status message
+        function showStatus(message, type = 'info') {
+            statusElement.innerHTML = `
+            <div class="alert alert-${type} mt-3">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                ${message}
+            </div>
+        `;
+        }
+
+        // Function to update map preview
+        function updateMapPreview() {
+            const lat = latitudeInput.value;
+            const lng = longitudeInput.value;
+
+            if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+                const mapPreview = document.createElement('div');
+                mapPreview.className = 'map-preview';
+                mapPreview.innerHTML = `
+                <iframe 
+                    width="100%" 
+                    height="100%" 
+                    frameborder="0" 
+                    scrolling="no" 
+                    marginheight="0" 
+                    marginwidth="0" 
+                    src="https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(lng) - 0.01}%2C${parseFloat(lat) - 0.01}%2C${parseFloat(lng) + 0.01}%2C${parseFloat(lat) + 0.01}&amp;layer=mapnik&amp;marker=${lat}%2C${lng}"
+                    style="border-radius: 14px;">
+                </iframe>
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        <a href="https://www.openstreetmap.org/?mlat=${lat}&amp;mlon=${lng}#map=15/${lat}/${lng}" 
+                           target="_blank" class="text-info">
+                            <i class="fas fa-external-link-alt me-1"></i>View Larger Map
+                        </a>
+                    </small>
+                </div>
+            `;
+
+                mapPreviewContainer.innerHTML = '';
+                mapPreviewContainer.appendChild(mapPreview);
+            }
+        }
+
+        // Location detection
+        detectBtn.addEventListener('click', function () {
+            detectBtn.disabled = true;
+            detectBtn.innerHTML = '<span class="loading-spinner"></span> Detecting Your Location...';
+            showStatus('Requesting location access... Please allow location permissions in your browser.', 'info');
+
+            if (!navigator.geolocation) {
+                showStatus('Geolocation is not supported by your browser. Please update your browser or use manual entry.', 'danger');
+                detectBtn.disabled = false;
+                detectBtn.innerHTML = '<i class="fas fa-satellite-dish me-2"></i>Detect My Location Automatically';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    // Success callback
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+
+                    // Fill the form fields
+                    latitudeInput.value = latitude.toFixed(6);
+                    longitudeInput.value = longitude.toFixed(6);
+
+                    // Show success message
+                    showStatus(`
+                    <strong>Location detected successfully!</strong><br>
+                    <small>Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}</small>
+                    <div class="text-center mt-3">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Save Detected Location
+                        </button>
+                    </div>
+                `, 'success');
+
+                    // Update map preview
+                    updateMapPreview();
+
+                    detectBtn.disabled = false;
+                    detectBtn.innerHTML = '<i class="fas fa-satellite-dish me-2"></i>Detect My Location Automatically';
+
+                    // Auto-scroll to show the map
+                    mapPreviewContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                },
+                function (error) {
+                    // Error callback
+                    let errorMessage = 'Unable to retrieve your location.';
+
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = 'Location access denied. Please allow location access in your browser settings and try again.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = 'Location information is unavailable. Please check your GPS signal or internet connection.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = 'Location request timed out. Please try again in a better network area.';
+                            break;
+                    }
+
+                    showStatus(errorMessage, 'danger');
+                    detectBtn.disabled = false;
+                    detectBtn.innerHTML = '<i class="fas fa-satellite-dish me-2"></i>Detect My Location Automatically';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 60000
+                }
+            );
+        });
+
+        // Add event listeners to update map when coordinates change
+        latitudeInput.addEventListener('input', updateMapPreview);
+        longitudeInput.addEventListener('input', updateMapPreview);
+
+        // Initialize map if coordinates are already filled
+        if (latitudeInput.value && longitudeInput.value) {
+            setTimeout(updateMapPreview, 500);
+        }
+
+        // Form validation
+        locationForm.addEventListener('submit', function (e) {
+            const lat = parseFloat(latitudeInput.value);
+            const lng = parseFloat(longitudeInput.value);
+
+            if (isNaN(lat) || lat < -90 || lat > 90) {
+                e.preventDefault();
+                showStatus('Please enter a valid latitude between -90 and 90.', 'danger');
+                latitudeInput.focus();
+                return false;
+            }
+
+            if (isNaN(lng) || lng < -180 || lng > 180) {
+                e.preventDefault();
+                showStatus('Please enter a valid longitude between -180 and 180.', 'danger');
+                longitudeInput.focus();
+                return false;
+            }
+
+            // Show loading state
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.innerHTML = '<span class="loading-spinner"></span> Saving Location...';
+            submitButton.disabled = true;
+
+            return true;
+        });
+
+        // Add coordinate validation styling
+        function validateCoordinate(input, min, max) {
+            const value = parseFloat(input.value);
+            if (input.value && !isNaN(value) && value >= min && value <= max) {
+                input.classList.add('is-valid');
+                input.classList.remove('is-invalid');
+            } else if (input.value) {
+                input.classList.add('is-invalid');
+                input.classList.remove('is-valid');
+            } else {
+                input.classList.remove('is-valid', 'is-invalid');
+            }
+        }
+
+        latitudeInput.addEventListener('input', () => validateCoordinate(latitudeInput, -90, 90));
+        longitudeInput.addEventListener('input', () => validateCoordinate(longitudeInput, -180, 180));
+    });
+</script>
+{% endblock %}

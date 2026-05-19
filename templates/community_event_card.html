@@ -1,0 +1,71 @@
+<div class="col">
+    <div class="card h-100 shadow-sm border-0 position-relative animate__animated animate__fadeInUp hover-lift">
+        {% if event.event_type == 'disaster_prep' %}
+        <div class="badge bg-warning text-dark position-absolute top-0 end-0 m-3 shadow-sm rounded-pill px-3 py-2">
+            <i class="fas fa-hard-hat me-1"></i>Preperation
+        </div>
+        {% elif event.event_type == 'environment' %}
+        <div class="badge bg-success position-absolute top-0 end-0 m-3 shadow-sm rounded-pill px-3 py-2">
+            <i class="fas fa-leaf me-1"></i>Eco-Connect
+        </div>
+        {% else %}
+        <div class="badge bg-info position-absolute top-0 end-0 m-3 shadow-sm rounded-pill px-3 py-2">
+            <i class="fas fa-hand-holding-heart me-1"></i>Impact
+        </div>
+        {% endif %}
+
+        {% if event.image_file %}
+        <img src="{{ url_for('uploaded_file', filename=event.image_file) }}" class="card-img-top"
+            alt="{{ event.title }}" style="height: 200px; object-fit: cover;">
+        {% else %}
+        <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
+            {% if event.event_type == 'disaster_prep' %}
+            <i class="fas fa-hard-hat fa-4x text-warning opacity-25"></i>
+            {% elif event.event_type == 'environment' %}
+            <i class="fas fa-leaf fa-4x text-success opacity-25"></i>
+            {% else %}
+            <i class="fas fa-hand-holding-heart fa-4x text-info opacity-25"></i>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="card-body d-flex flex-column">
+            <h5 class="card-title fw-bold mb-3">{{ event.title }}</h5>
+
+            <p class="card-text text-muted small mb-2">
+                <i class="far fa-calendar-alt me-2 text-primary fa-fw"></i>{{ event.date_time.strftime('%b %d, %Y at
+                %I:%M %p') }}
+            </p>
+            <p class="card-text text-muted small mb-3">
+                <i class="fas fa-map-marker-alt me-2 text-danger fa-fw"></i>{{ event.location }}
+            </p>
+
+            <p class="card-text mb-4 text-secondary small">{{ event.description|truncate(100) }}</p>
+
+            <div class="mt-auto pt-3 border-top">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('uploaded_file', filename=event.organizer.profile_image) if event.organizer.profile_image else url_for('static', filename='images/default-profile.png') }}"
+                            class="rounded-circle border shadow-sm me-2" width="32" height="32"
+                            alt="{{ event.organizer.username }}">
+                        <small class="text-muted">By {{ event.organizer.username }}</small>
+                    </div>
+                    <small class="text-muted"><i class="fas fa-user-friends me-1"></i>{{ event.participants.count()
+                        }}</small>
+                </div>
+
+                {% if event.id in my_events_ids %}
+                <a href="{{ url_for('leave_community_event', event_id=event.id) }}"
+                    class="btn btn-outline-danger btn-sm w-100 rounded-pill">
+                    <i class="fas fa-sign-out-alt me-1"></i>Leave Event
+                </a>
+                {% else %}
+                <a href="{{ url_for('join_community_event', event_id=event.id) }}"
+                    class="btn btn-primary btn-sm w-100 rounded-pill shadow-sm">
+                    <i class="fas fa-plus me-1"></i>Join Now (+5 Pts)
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

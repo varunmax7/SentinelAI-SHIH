@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow border-0 overflow-hidden">
+                <div class="card-header bg-primary text-white py-4 text-center">
+                    <h2 class="mb-0 fw-bold"><i class="fas fa-hand-holding-heart me-3"></i>Post to LifeLine</h2>
+                    <p class="mb-0 opacity-75">Tell the community what you can spare or what you critically need.</p>
+                </div>
+                <div class="card-body p-5">
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Type of Listing</label>
+                                {{ form.listing_type(class="form-select form-select-lg border-2 border-primary
+                                bg-light") }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Resource Category</label>
+                                {{ form.category(class="form-select form-select-lg border-2") }}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Title</label>
+                            {{ form.title(class="form-control form-control-lg", placeholder="e.g., 50 Woolen Blankets")
+                            }}
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Detailed Description</label>
+                            {{ form.description(class="form-control", rows="4", placeholder="Explain the quantity,
+                            condition, or specifics of the need.") }}
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Quantity/Units</label>
+                                {{ form.quantity(class="form-control", placeholder="e.g., 100 Liters, 5 Boxes") }}
+                            </div>
+                            <div class="col-md-6 d-flex align-items-center mt-4">
+                                <div class="form-check form-switch card p-3 w-100 bg-light border-0">
+                                    {{ form.urgent(class="form-check-input ms-0 me-3") }}
+                                    <label class="form-check-label fw-bold text-danger">Is this URGENT?</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Pick-up/Drop-off Location</label>
+                            <div class="input-group">
+                                {{ form.location(class="form-control", id="location_input") }}
+                                <button class="btn btn-outline-secondary" type="button" onclick="getCurrentLocation()">
+                                    <i class="fas fa-location-arrow"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row mb-5">
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Latitude</label>
+                                {{ form.latitude(class="form-control form-control-sm", id="lat_input") }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Longitude</label>
+                                {{ form.longitude(class="form-control form-control-sm", id="lng_input") }}
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            {{ form.submit(class="btn btn-primary btn-lg rounded-pill py-3 fw-bold shadow") }}
+                            <a href="{{ url_for('lifeline') }}" class="btn btn-link text-muted">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getCurrentLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                document.getElementById('lat_input').value = position.coords.latitude;
+                document.getElementById('lng_input').value = position.coords.longitude;
+
+                // Reverse geocode to get address (simplified for this demo)
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('location_input').value = data.display_name;
+                    });
+            }, function (error) {
+                alert("Error getting location: " + error.message);
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+</script>
+{% endblock %}
