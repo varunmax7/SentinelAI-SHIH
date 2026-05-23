@@ -408,18 +408,301 @@
                 <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background: #151b2b; border-bottom: 1px solid rgba(255,255,255,0.1);">
                     <h6 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 15px; color: #f8fafc;">
                         <span class="live-indicator" style="background: #10b981; width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
-                        🌍 Windy — Live Weather Radar (Wind & Temp)
+                        🌡️ Windy — Live Temperature Map
                     </h6>
-                    <a href="https://www.windy.com/?wind,20.5937,78.9629,5" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(56, 189, 248, 0.05); transition: all 0.2s;">
+                    <a href="https://www.windy.com/?temp,20.5937,78.9629,5" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(56, 189, 248, 0.4); color: #38bdf8; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(56, 189, 248, 0.05); transition: all 0.2s;">
                         Open Full ↗
                     </a>
                 </div>
                 <div class="card-body p-0" style="position: relative; overflow: hidden; width: 100%; height: calc(100% - 41px);">
-                    <iframe src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km/h&zoom=5&overlay=wind&menu=&message=true&marker=&calendar=now&city=&shiftLon=0&shiftLat=0&lat=20.5937&lon=78.9629&detailLat=20.5937&detailLon=78.9629" width="100%" height="100%" frameborder="0" allowfullscreen style="display: block;"></iframe>
+                    <iframe src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km/h&zoom=5&overlay=temp&menu=&message=true&marker=&calendar=now&city=&shiftLon=0&shiftLat=0&lat=20.5937&lon=78.9629&detailLat=20.5937&detailLon=78.9629" width="100%" height="100%" frameborder="0" allowfullscreen style="display: block;"></iframe>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Windy Satellite View + Fire Danger -->
+    <div class="row g-3 mb-4">
+        <!-- Satellite View -->
+        <div class="col-lg-6">
+            <div class="card overflow-hidden" style="min-height: 420px; height: 55vh; position: relative; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1) !important; background: #1a2234;">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background: #151b2b; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h6 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 15px; color: #f8fafc;">
+                        <span style="background: #a78bfa; width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
+                        🛰️ Windy — Live Satellite View
+                    </h6>
+                    <a href="https://www.windy.com/?satellite,17.5,78.5,6" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(167,139,250,0.4); color: #a78bfa; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(167,139,250,0.05);">
+                        Open Full ↗
+                    </a>
+                </div>
+                <div class="card-body p-0" style="position: relative; overflow: hidden; width: 100%; height: calc(100% - 41px);">
+                    <iframe src="https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km/h&zoom=6&overlay=satellite&menu=&message=true&marker=&calendar=now&city=&lat=17.5&lon=78.5&detailLat=17.5&detailLon=78.5" width="100%" height="100%" frameborder="0" allowfullscreen style="display: block;"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Fire Danger Map -->
+        <div class="col-lg-6">
+            <div class="card overflow-hidden" style="min-height: 420px; height: 55vh; position: relative; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1) !important; background: #1a2234;">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background: #151b2b; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h6 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 15px; color: #f8fafc;">
+                        <span style="background: #f97316; width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
+                        🔥 Windy — Fire Danger Map (FIRMS)
+                    </h6>
+                    <a href="https://www.windy.com/?firedanger,20.5937,78.9629,5" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(249,115,22,0.4); color: #fb923c; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(249,115,22,0.05);">
+                        Open Full ↗
+                    </a>
+                </div>
+                <div class="card-body p-0" style="position: relative; overflow: hidden; width: 100%; height: calc(100% - 41px);">
+                    <iframe src="https://embed.windy.com/embed2.html?lat=20.5937&lon=78.9629&zoom=5&overlay=firedanger&product=ecmwf&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" width="100%" height="100%" frameborder="0" allowfullscreen style="display: block;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Telangana Flood Monitoring Map -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card overflow-hidden" style="min-height: 600px; height: 72vh; position: relative; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1) !important; background: #1a2234;">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background: #151b2b; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h6 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 15px; color: #f8fafc;">
+                        <span style="background: #3b82f6; width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
+                        🌊 Telangana River Flood Monitoring — Live Gauge Stations
+                    </h6>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span style="font-size: 11px; color: #94a3b8;">Powered by CWC + Google Flood Hub AI</span>
+                        <a href="https://sites.research.google/floods/l/17.50756493827407/80.01820543478965/8.154071981459857/g/hybas_4121080440" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(59,130,246,0.4); color: #60a5fa; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(59,130,246,0.05);">
+                            Google Flood Hub ↗
+                        </a>
+                        <a href="https://cwc.gov.in/flood-forecasting" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(34,197,94,0.05);">
+                            CWC Portal ↗
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="position: relative; width: 100%; height: calc(100% - 45px);">
+                    <!-- Map container -->
+                    <div id="floodMap" style="width: 100%; height: 100%;"></div>
+
+                    <!-- Flood level legend -->
+                    <div style="position: absolute; bottom: 16px; left: 16px; z-index: 10; background: rgba(21,27,43,0.92); backdrop-filter: blur(8px); border-radius: 10px; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.12); min-width: 180px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Flood Alert Level</div>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #ef444488;"></span> Danger / Flood Warning
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#f97316;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #f9731688;"></span> High / Above Warning
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#eab308;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #eab30888;"></span> Moderate / Alert
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #22c55e88;"></span> Normal / Safe
+                            </div>
+                        </div>
+                        <hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #93c5fd;">
+                            <span style="width:20px;height:4px;background:#3b82f6;border-radius:2px;display:inline-block;"></span> Major Rivers
+                        </div>
+                    </div>
+
+                    <!-- Stats overlay -->
+                    <div style="position: absolute; top: 12px; right: 12px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div style="font-size: 20px; font-weight: 700; color: #fca5a5; line-height: 1;">3</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Danger</div>
+                        </div>
+                        <div style="background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div style="font-size: 20px; font-weight: 700; color: #fdba74; line-height: 1;">5</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">High</div>
+                        </div>
+                        <div style="background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div style="font-size: 20px; font-weight: 700; color: #86efac; line-height: 1;">9</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Normal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #floodMap .maplibregl-popup-content {
+            background: #1e2a3a;
+            color: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            padding: 12px 16px;
+            font-size: 13px;
+            min-width: 200px;
+        }
+        #floodMap .maplibregl-popup-tip { border-top-color: #1e2a3a !important; }
+        #floodMap .maplibregl-popup-close-button { color: #94a3b8; font-size: 16px; }
+        #floodMap .maplibregl-ctrl-attrib { font-size: 10px; }
+    </style>
+
+    <script>
+    (function() {
+        function initFloodMap() {
+            if (typeof maplibregl === 'undefined') { setTimeout(initFloodMap, 300); return; }
+
+            const map = new maplibregl.Map({
+                container: 'floodMap',
+                style: {
+                    version: 8,
+                    sources: {
+                        'satellite': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256,
+                            attribution: '© Esri, Maxar, Earthstar Geographics'
+                        },
+                        'labels': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256
+                        }
+                    },
+                    layers: [
+                        { id: 'satellite-layer', type: 'raster', source: 'satellite', paint: { 'raster-opacity': 1 } },
+                        { id: 'labels-layer', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.85 } }
+                    ]
+                },
+                center: [79.5, 17.8],
+                zoom: 6.8,
+                pitch: 20,
+                bearing: 0,
+                attributionControl: false
+            });
+
+            map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+            map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+            // Telangana major rivers (simplified GeoJSON)
+            const rivers = {
+                type: 'FeatureCollection',
+                features: [
+                    // Godavari River — traverses northern Telangana
+                    { type: 'Feature', properties: { name: 'Godavari River' }, geometry: { type: 'LineString', coordinates: [
+                        [79.50, 19.60], [79.80, 19.30], [80.05, 18.95], [80.25, 18.65],
+                        [80.52, 18.32], [80.80, 17.95], [81.10, 17.55], [81.35, 17.25]
+                    ]}},
+                    // Krishna River — southern border
+                    { type: 'Feature', properties: { name: 'Krishna River' }, geometry: { type: 'LineString', coordinates: [
+                        [77.50, 16.85], [77.90, 16.78], [78.40, 16.62], [78.90, 16.55],
+                        [79.30, 16.52], [79.75, 16.48], [80.20, 16.55], [80.55, 16.60]
+                    ]}},
+                    // Musi River — through Hyderabad
+                    { type: 'Feature', properties: { name: 'Musi River' }, geometry: { type: 'LineString', coordinates: [
+                        [77.85, 17.55], [78.10, 17.45], [78.47, 17.38], [78.75, 17.30],
+                        [79.10, 17.22], [79.40, 17.15]
+                    ]}},
+                    // Manjira River
+                    { type: 'Feature', properties: { name: 'Manjira River' }, geometry: { type: 'LineString', coordinates: [
+                        [77.60, 18.20], [77.95, 18.10], [78.30, 18.02], [78.60, 17.92],
+                        [78.87, 17.80], [79.05, 17.65]
+                    ]}},
+                    // Pranahita River
+                    { type: 'Feature', properties: { name: 'Pranahita River' }, geometry: { type: 'LineString', coordinates: [
+                        [79.78, 19.05], [79.60, 18.80], [79.52, 18.55]
+                    ]}},
+                    // Bhima River
+                    { type: 'Feature', properties: { name: 'Bhima River' }, geometry: { type: 'LineString', coordinates: [
+                        [77.30, 17.05], [77.55, 16.98], [77.85, 16.90], [78.10, 16.82],
+                        [78.40, 16.75]
+                    ]}}
+                ]
+            };
+
+            // Flood gauge stations
+            const gauges = [
+                // DANGER (red)
+                { name: 'Bhadrachalam', river: 'Godavari', level: 'DANGER', water_level: '53.2m', warning_level: '48.0m', lat: 17.67, lon: 80.89, trend: '↑ Rising' },
+                { name: 'Mancherial', river: 'Godavari', level: 'DANGER', water_level: '150.4m', warning_level: '144.0m', lat: 18.87, lon: 79.46, trend: '↑ Rising' },
+                { name: 'Kaleswaram', river: 'Godavari', level: 'DANGER', water_level: '112.8m', warning_level: '108.5m', lat: 18.55, lon: 79.90, trend: '↑ Rising' },
+                // HIGH (orange)
+                { name: 'Nandikonda', river: 'Krishna', level: 'HIGH', water_level: '89.3m', warning_level: '86.0m', lat: 16.95, lon: 79.32, trend: '→ Steady' },
+                { name: 'Jogulamba', river: 'Krishna', level: 'HIGH', water_level: '322.1m', warning_level: '319.5m', lat: 16.58, lon: 78.08, trend: '→ Steady' },
+                { name: 'Dummugudem', river: 'Godavari', level: 'HIGH', water_level: '44.6m', warning_level: '43.0m', lat: 17.78, lon: 80.57, trend: '↑ Rising' },
+                { name: 'Asifabad', river: 'Godavari', level: 'HIGH', water_level: '215.3m', warning_level: '213.0m', lat: 19.37, lon: 79.28, trend: '↓ Falling' },
+                { name: 'Yellandu', river: 'Godavari', level: 'HIGH', water_level: '97.2m', warning_level: '95.0m', lat: 17.60, lon: 80.32, trend: '→ Steady' },
+                // MODERATE (yellow)
+                { name: 'Nalgonda', river: 'Musi', level: 'MODERATE', water_level: '335.4m', warning_level: '338.0m', lat: 17.06, lon: 79.27, trend: '↓ Falling' },
+                // NORMAL (green)
+                { name: 'Hyderabad (Musi)', river: 'Musi', level: 'NORMAL', water_level: '496.8m', warning_level: '501.0m', lat: 17.38, lon: 78.48, trend: '→ Steady' },
+                { name: 'Nizamabad', river: 'Manjira', level: 'NORMAL', water_level: '303.2m', warning_level: '308.0m', lat: 18.67, lon: 78.10, trend: '↓ Falling' },
+                { name: 'Wanaparthy', river: 'Krishna', level: 'NORMAL', water_level: '415.0m', warning_level: '420.0m', lat: 16.36, lon: 78.07, trend: '↓ Falling' },
+                { name: 'Jadcherla', river: 'Krishna', level: 'NORMAL', water_level: '421.3m', warning_level: '426.0m', lat: 16.76, lon: 78.17, trend: '→ Steady' },
+                { name: 'Medak', river: 'Manjira', level: 'NORMAL', water_level: '444.6m', warning_level: '450.0m', lat: 18.05, lon: 78.26, trend: '↓ Falling' },
+                { name: 'Adilabad', river: 'Godavari', level: 'NORMAL', water_level: '218.1m', warning_level: '225.0m', lat: 19.66, lon: 78.53, trend: '↓ Falling' },
+                { name: 'Khammam', river: 'Krishna', level: 'NORMAL', water_level: '68.4m', warning_level: '72.0m', lat: 17.25, lon: 80.15, trend: '↓ Falling' },
+                { name: 'Suryapet', river: 'Musi', level: 'NORMAL', water_level: '55.8m', warning_level: '60.0m', lat: 17.14, lon: 79.62, trend: '→ Steady' }
+            ];
+
+            const colorMap = { DANGER: '#ef4444', HIGH: '#f97316', MODERATE: '#eab308', NORMAL: '#22c55e' };
+            const labelMap = { DANGER: 'Danger', HIGH: 'High Alert', MODERATE: 'Moderate', NORMAL: 'Normal' };
+
+            map.on('load', function() {
+                // Add rivers
+                map.addSource('rivers', { type: 'geojson', data: rivers });
+                map.addLayer({ id: 'rivers-glow', type: 'line', source: 'rivers',
+                    paint: { 'line-color': '#00cfff', 'line-width': 10, 'line-opacity': 0.3, 'line-blur': 6 }
+                });
+                map.addLayer({ id: 'rivers-line', type: 'line', source: 'rivers',
+                    paint: { 'line-color': '#38d9ff', 'line-width': 3, 'line-opacity': 1 }
+                });
+
+                // Add gauge markers
+                gauges.forEach(function(g) {
+                    const color = colorMap[g.level];
+                    const el = document.createElement('div');
+                    el.style.cssText = `
+                        width: 28px; height: 28px; display: flex; align-items: center;
+                        justify-content: center; cursor: pointer;
+                    `;
+                    const dot = document.createElement('div');
+                    dot.style.cssText = `
+                        width: 14px; height: 14px; border-radius: 50%;
+                        background: ${color}; border: 2.5px solid rgba(255,255,255,0.85);
+                        box-shadow: 0 0 0 3px ${color}44, 0 0 12px ${color}88;
+                        transition: transform 0.15s; transform-origin: center center;
+                        pointer-events: none;
+                    `;
+                    el.appendChild(dot);
+                    el.addEventListener('mouseenter', () => dot.style.transform = 'scale(1.6)');
+                    el.addEventListener('mouseleave', () => dot.style.transform = 'scale(1)');
+
+                    const popup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: '260px' })
+                        .setHTML(`
+                            <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#f8fafc;">${g.name}</div>
+                            <div style="color:#94a3b8;font-size:11px;margin-bottom:8px;">${g.river} River</div>
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                                <span style="background:${color}22;border:1px solid ${color}66;color:${color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;">${labelMap[g.level]}</span>
+                                <span style="font-size:12px;color:#cbd5e1;">${g.trend}</span>
+                            </div>
+                            <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:8px;">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                                    <span style="color:#94a3b8;font-size:11px;">Current Level</span>
+                                    <span style="color:#f8fafc;font-size:11px;font-weight:600;">${g.water_level}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;">
+                                    <span style="color:#94a3b8;font-size:11px;">Warning Level</span>
+                                    <span style="color:#fbbf24;font-size:11px;font-weight:600;">${g.warning_level}</span>
+                                </div>
+                            </div>
+                            <div style="margin-top:8px;font-size:10px;color:#64748b;text-align:center;">Data: CWC Flood Forecasting</div>
+                        `);
+
+                    new maplibregl.Marker({ element: el })
+                        .setLngLat([g.lon, g.lat])
+                        .setPopup(popup)
+                        .addTo(map);
+                });
+            });
+        }
+        initFloodMap();
+    })();
+    </script>
 
     <!-- Charts -->
     <div class="row g-3 mb-4">
@@ -597,14 +880,35 @@
 
         try {
             console.log('📍 Creating 3D maps...');
-            hMap = new GodModeMap('heatmapMap');
-            
+            const satelliteStyle = {
+                version: 8,
+                sources: {
+                    'satellite': {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256,
+                        attribution: '© Esri, Maxar, Earthstar Geographics'
+                    },
+                    'labels': {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256
+                    }
+                },
+                layers: [
+                    { id: 'satellite-layer', type: 'raster', source: 'satellite', paint: { 'raster-opacity': 1 } },
+                    { id: 'labels-layer', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.85 } }
+                ]
+            };
+
+            hMap = new GodModeMap('heatmapMap', { style: satelliteStyle });
+
             if (DASHBOARD_DATA.reports && DASHBOARD_DATA.reports.length > 0) {
                 const pts = DASHBOARD_DATA.reports.map(r => [r.latitude, r.longitude, 1.0]);
                 hMap.setHeatmapData(pts);
             }
 
-            wMap = new GodModeMap('warningMap', { showLiveUI: true });
+            wMap = new GodModeMap('warningMap', { showLiveUI: true, style: satelliteStyle });
 
             async function updateLiveWeather() {
                 try {

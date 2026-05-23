@@ -27,7 +27,7 @@ class GodModeMap {
 
         this.map = new maplibregl.Map({
             container: containerId,
-            style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+            style: options.style || 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
             center: options.center || [78.9, 20.5],
             zoom: options.zoom || 4,
             pitch: 55, // God mode default

@@ -355,7 +355,28 @@
     });
 
     function initMap() {
-        sMap = new GodModeMap('simulationMap');
+        sMap = new GodModeMap('simulationMap', {
+            style: {
+                version: 8,
+                sources: {
+                    satellite: {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256,
+                        attribution: '© Esri, Maxar, Earthstar Geographics'
+                    },
+                    labels: {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256
+                    }
+                },
+                layers: [
+                    { id: 'satellite-layer', type: 'raster', source: 'satellite', paint: { 'raster-opacity': 1 } },
+                    { id: 'labels-layer', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.85 } }
+                ]
+            }
+        });
     }
 
     function setHorizon(h, btn) {

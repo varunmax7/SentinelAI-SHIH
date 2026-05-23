@@ -605,108 +605,176 @@
 
     .search-autocomplete {
         position: absolute;
-        top: calc(100% + 8px);
+        top: calc(100% + 10px);
         left: 0;
         right: 0;
         z-index: 9999;
-        background: rgba(8, 18, 38, 0.97);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(14, 165, 233, 0.35);
-        border-radius: 16px;
+        background: linear-gradient(160deg, rgba(6,14,32,0.98) 0%, rgba(8,20,46,0.98) 100%);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border: 1px solid rgba(14, 165, 233, 0.4);
+        border-radius: 18px;
         overflow: hidden;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.05);
+        box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.07);
         display: none;
-        max-height: 380px;
+        max-height: 400px;
         overflow-y: auto;
     }
 
     .search-autocomplete.visible {
         display: block;
-        animation: acFadeIn 0.15s ease;
+        animation: acFadeIn 0.18s cubic-bezier(0.22,1,0.36,1);
     }
 
     @keyframes acFadeIn {
-        from { opacity: 0; transform: translateY(-6px); }
-        to   { opacity: 1; transform: translateY(0); }
+        from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .search-ac-header {
-        padding: 7px 16px 5px;
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.09em;
-        color: rgba(14, 165, 233, 0.7);
+        padding: 8px 16px 6px;
+        font-size: 0.67rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        color: rgba(14, 165, 233, 0.8);
         text-transform: uppercase;
-        background: rgba(14, 165, 233, 0.06);
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        background: rgba(14, 165, 233, 0.07);
+        border-bottom: 1px solid rgba(14, 165, 233, 0.12);
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .search-ac-item {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 10px 16px;
-        color: rgba(255, 255, 255, 0.9);
+        gap: 12px;
+        padding: 11px 16px;
+        color: rgba(255, 255, 255, 0.88);
         cursor: pointer;
-        transition: background 0.12s;
+        transition: background 0.15s ease, transform 0.1s ease;
         text-decoration: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        position: relative;
     }
 
     .search-ac-item:last-child {
         border-bottom: none;
     }
 
+    .search-ac-item::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 3px;
+        background: linear-gradient(180deg, #0ea5e9, #38bdf8);
+        border-radius: 0 3px 3px 0;
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+
     .search-ac-item:hover,
     .search-ac-item.ac-active {
-        background: rgba(14, 165, 233, 0.18);
+        background: rgba(14, 165, 233, 0.13);
         color: white;
+        padding-left: 20px;
+    }
+
+    .search-ac-item:hover::before,
+    .search-ac-item.ac-active::before {
+        opacity: 1;
+    }
+
+    .search-ac-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 0.85rem;
+        color: white;
+        font-weight: 700;
+        box-shadow: 0 4px 12px rgba(14,165,233,0.3);
     }
 
     .search-ac-icon {
-        font-size: 1.05rem;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
         flex-shrink: 0;
-        width: 24px;
-        text-align: center;
+        font-size: 1.1rem;
     }
 
     .search-ac-label {
         flex-grow: 1;
-        font-size: 0.9rem;
+        font-size: 0.92rem;
+        font-weight: 600;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        line-height: 1.3;
+        line-height: 1.25;
     }
 
     .search-ac-sub {
-        font-size: 0.72rem;
-        color: rgba(255, 255, 255, 0.45);
+        font-size: 0.73rem;
+        color: rgba(255, 255, 255, 0.42);
         display: block;
-        margin-top: 1px;
+        margin-top: 2px;
+        font-weight: 400;
     }
 
     .search-ac-badge {
-        font-size: 0.68rem;
-        padding: 2px 7px;
+        font-size: 0.67rem;
+        padding: 3px 9px;
         border-radius: 20px;
-        background: rgba(14, 165, 233, 0.2);
-        color: rgba(14, 165, 233, 0.9);
+        font-weight: 700;
         flex-shrink: 0;
         white-space: nowrap;
+        letter-spacing: 0.02em;
+    }
+
+    .search-ac-badge-user {
+        background: linear-gradient(135deg, rgba(14,165,233,0.25), rgba(99,102,241,0.25));
+        color: #7dd3fc;
+        border: 1px solid rgba(14,165,233,0.25);
+    }
+
+    .search-ac-badge-report {
+        background: rgba(251,146,60,0.18);
+        color: #fdba74;
+        border: 1px solid rgba(251,146,60,0.25);
+    }
+
+    .search-ac-badge-hazard {
+        background: rgba(167,139,250,0.18);
+        color: #c4b5fd;
+        border: 1px solid rgba(167,139,250,0.25);
     }
 
     .search-ac-empty {
-        padding: 18px 16px;
+        padding: 24px 16px;
         text-align: center;
-        color: rgba(255, 255, 255, 0.4);
+        color: rgba(255, 255, 255, 0.35);
         font-size: 0.88rem;
+    }
+
+    .search-ac-empty i {
+        display: block;
+        font-size: 1.6rem;
+        margin-bottom: 8px;
+        opacity: 0.4;
     }
 
     .search-autocomplete::-webkit-scrollbar { width: 4px; }
     .search-autocomplete::-webkit-scrollbar-track { background: transparent; }
-    .search-autocomplete::-webkit-scrollbar-thumb { background: rgba(14,165,233,0.3); border-radius: 4px; }
+    .search-autocomplete::-webkit-scrollbar-thumb { background: rgba(14,165,233,0.35); border-radius: 4px; }
 
     /* Feature Cards Enhancement */
     .feature-card {
@@ -1736,13 +1804,14 @@
                         if (users.length) {
                             html += `<div class="search-ac-header">👥 Users</div>`;
                             users.forEach(u => {
+                                const initials = u.username.slice(0,2).toUpperCase();
                                 html += `<a class="search-ac-item" href="/profile/${u.username}" role="option">
-                                    <span class="search-ac-icon">👤</span>
+                                    <div class="search-ac-avatar">${initials}</div>
                                     <span class="search-ac-label">
                                         ${u.username}
                                         <span class="search-ac-sub">${u.email}</span>
                                     </span>
-                                    <span class="search-ac-badge">Lv ${u.level}</span>
+                                    <span class="search-ac-badge search-ac-badge-user">Lv ${u.level}</span>
                                 </a>`;
                             });
                         }
@@ -1751,12 +1820,12 @@
                             html += `<div class="search-ac-header">📋 Reports</div>`;
                             reports.forEach(r => {
                                 html += `<div class="search-ac-item" role="option" data-query="${r.title}">
-                                    <span class="search-ac-icon">⚠️</span>
+                                    <div class="search-ac-icon">⚠️</div>
                                     <span class="search-ac-label">
                                         ${r.title}
                                         <span class="search-ac-sub">${r.hazard_type} · ${r.location}</span>
                                     </span>
-                                    <span class="search-ac-badge">Report</span>
+                                    <span class="search-ac-badge search-ac-badge-report">Report</span>
                                 </div>`;
                             });
                         }
@@ -1765,15 +1834,15 @@
                             html += `<div class="search-ac-header">⚡ Hazard Types</div>`;
                             localMatches.forEach(h => {
                                 html += `<div class="search-ac-item" role="option" data-query="${h.label}">
-                                    <span class="search-ac-icon">${h.icon}</span>
+                                    <div class="search-ac-icon">${h.icon}</div>
                                     <span class="search-ac-label">${h.label}</span>
-                                    <span class="search-ac-badge">${h.type}</span>
+                                    <span class="search-ac-badge search-ac-badge-hazard">Hazard</span>
                                 </div>`;
                             });
                         }
 
                         if (!html) {
-                            html = `<div class="search-ac-empty">No suggestions for "${q}"</div>`;
+                            html = `<div class="search-ac-empty"><i class="fas fa-search-minus"></i>No suggestions for "${q}"</div>`;
                         }
 
                         openAc(html);
