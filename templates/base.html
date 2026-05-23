@@ -1262,39 +1262,31 @@
 
     <!-- Main Content - Proper spacing for fixed navbar -->
     <main class="flex-grow-1 position-relative" style="z-index: 1;">
-        <!-- Flash Messages - Centered Container -->
-        <div class="container-fluid">
-            <div class="row justify-content-center">
-                <div class="col-12 col-lg-10 col-xl-8">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
-                        <div class="d-flex align-items-center">
-                            <i class="fas 
-                                            {% if category == 'success' %}fa-check-circle text-success{% endif %}
-                                            {% if category == 'danger' %}fa-exclamation-triangle text-danger{% endif %}
-                                            {% if category == 'warning' %}fa-exclamation-circle text-warning{% endif %}
-                                            {% if category == 'info' %}fa-info-circle text-info{% endif %}
-                                            me-3 fs-5"></i>
-                            <div class="flex-grow-1">{{ message }}</div>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-                    {% endwith %}
+        <!-- Flash Messages -->
+        <div class="container-fluid px-3 px-lg-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show mb-3 mt-2" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas
+                                    {% if category == 'success' %}fa-check-circle text-success{% endif %}
+                                    {% if category == 'danger' %}fa-exclamation-triangle text-danger{% endif %}
+                                    {% if category == 'warning' %}fa-exclamation-circle text-warning{% endif %}
+                                    {% if category == 'info' %}fa-info-circle text-info{% endif %}
+                                    me-3 fs-5"></i>
+                    <div class="flex-grow-1">{{ message }}</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
         </div>
 
-        <!-- Page Content - Centered Container -->
-        <div class="container-fluid">
-            <div class="row justify-content-center">
-                <div class="col-12 col-lg-10 col-xl-8">
-                    {% block content %}{% endblock %}
-                </div>
-            </div>
+        <!-- Page Content -->
+        <div class="container-fluid px-0">
+            {% block content %}{% endblock %}
         </div>
     </main>
 
@@ -2094,6 +2086,7 @@
     
     <!-- Offline Sync Manager -->
     <script src="{{ url_for('static', filename='js/offline-sync.js') }}"></script>
+
 
 </body>
 </html>
