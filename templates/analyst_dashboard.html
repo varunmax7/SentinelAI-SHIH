@@ -401,6 +401,154 @@
                 </div>
             </div>
         </div>
+    <!-- City Flood Monitoring Maps: Hyderabad + Bengaluru -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card overflow-hidden" style="min-height: 560px; height: 65vh; position: relative; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1) !important; background: #1a2234;">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: #151b2b; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h6 class="m-0 fw-bold d-flex align-items-center gap-2 flex-wrap" style="font-size: 15px; color: #f8fafc;">
+                        <span style="background: #3b82f6; width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
+                        🌊 Telangana River Flood Monitoring — Live Gauge Stations
+                        <span id="tg-live-badge" style="font-size: 10px; font-weight: 700; color: #4ade80; border: 1px solid rgba(74,222,128,0.4); background: rgba(74,222,128,0.08); border-radius: 5px; padding: 1px 6px; letter-spacing: 0.04em;">● LIVE</span>
+                        <span id="tg-last-updated" style="font-size: 10px; font-weight: 400; color: #64748b;"></span>
+                    </h6>
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        <button type="button" onclick="window.zoomToHyderabad && window.zoomToHyderabad()" class="btn btn-sm" style="border: 1px solid rgba(56,217,255,0.4); color: #38d9ff; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(56,217,255,0.05); cursor: pointer;">
+                            🏙️ Hyderabad
+                        </button>
+                        <button type="button" onclick="window.zoomToTelangana && window.zoomToTelangana()" class="btn btn-sm" style="border: 1px solid rgba(148,163,184,0.4); color: #cbd5e1; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(148,163,184,0.05); cursor: pointer;">
+                            Full State
+                        </button>
+                        <a href="https://cwc.gov.in/flood-forecasting" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(34,197,94,0.05);">
+                            CWC Portal ↗
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="position: relative; width: 100%; height: calc(100% - 45px);">
+                    <!-- Map container -->
+                    <div id="floodMap" class="flood-map-widget" style="width: 100%; height: 100%;"></div>
+
+                    <!-- Stations currently at a warning level, each one click away
+                         from alerting the residents around it -->
+                    <div id="tg-warning-strip" class="flood-warning-strip" style="display: none;"></div>
+
+                    <!-- Flood level legend -->
+                    <div style="position: absolute; bottom: 16px; left: 16px; z-index: 10; background: rgba(21,27,43,0.92); backdrop-filter: blur(8px); border-radius: 10px; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.12); min-width: 170px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Flood Alert Level</div>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #ef444488;"></span> Danger / Flood Warning
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#f97316;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #f9731688;"></span> High / Above Warning
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#eab308;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #eab30888;"></span> Moderate / Alert
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #22c55e88;"></span> Normal / Safe
+                            </div>
+                        </div>
+                        <hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #93c5fd; margin-bottom: 5px;">
+                            <span style="width:20px;height:4px;background:#3b82f6;border-radius:2px;display:inline-block;"></span> Major Rivers
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                            📍 User-Reported Incidents
+                        </div>
+                    </div>
+
+                    <!-- Stats overlay -->
+                    <div style="position: absolute; top: 12px; right: 12px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div id="tg-stat-danger" style="font-size: 20px; font-weight: 700; color: #fca5a5; line-height: 1;">–</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Danger</div>
+                        </div>
+                        <div style="background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div id="tg-stat-high" style="font-size: 20px; font-weight: 700; color: #fdba74; line-height: 1;">–</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">High</div>
+                        </div>
+                        <div style="background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div id="tg-stat-normal" style="font-size: 20px; font-weight: 700; color: #86efac; line-height: 1;">–</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Normal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card overflow-hidden" style="min-height: 560px; height: 65vh; position: relative; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1) !important; background: #1a2234;">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: #151b2b; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h6 class="m-0 fw-bold d-flex align-items-center gap-2 flex-wrap" style="font-size: 15px; color: #f8fafc;">
+                        <span style="background: #a855f7; width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
+                        🌊 Bengaluru City Flood Monitoring — Live Lake &amp; Drain Levels
+                        <span id="blr-live-badge" style="font-size: 10px; font-weight: 700; color: #4ade80; border: 1px solid rgba(74,222,128,0.4); background: rgba(74,222,128,0.08); border-radius: 5px; padding: 1px 6px; letter-spacing: 0.04em;">● LIVE</span>
+                        <span id="blr-last-updated" style="font-size: 10px; font-weight: 400; color: #64748b;"></span>
+                    </h6>
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        <button type="button" onclick="window.zoomToBengaluru && window.zoomToBengaluru()" class="btn btn-sm" style="border: 1px solid rgba(192,132,252,0.4); color: #c084fc; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(192,132,252,0.05); cursor: pointer;">
+                            🏙️ Bengaluru
+                        </button>
+                        <a href="https://ksndmc.org" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(34,197,94,0.05);">
+                            KSNDMC ↗
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="position: relative; width: 100%; height: calc(100% - 45px);">
+                    <!-- Map container -->
+                    <div id="floodMapBengaluru" class="flood-map-widget" style="width: 100%; height: 100%;"></div>
+
+                    <!-- Stations currently at a warning level, each one click away
+                         from alerting the residents around it -->
+                    <div id="blr-warning-strip" class="flood-warning-strip" style="display: none;"></div>
+
+                    <!-- Flood level legend -->
+                    <div style="position: absolute; bottom: 16px; left: 16px; z-index: 10; background: rgba(21,27,43,0.92); backdrop-filter: blur(8px); border-radius: 10px; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.12); min-width: 170px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Flood Alert Level</div>
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #ef444488;"></span> Danger / Overflow Risk
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#f97316;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #f9731688;"></span> High / Above Warning
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#eab308;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #eab30888;"></span> Moderate / Alert
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                                <span style="width:12px;height:12px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #22c55e88;"></span> Normal / Safe
+                            </div>
+                        </div>
+                        <hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #d8b4fe; margin-bottom: 5px;">
+                            <span style="width:20px;height:4px;background:#a855f7;border-radius:2px;display:inline-block;"></span> Rivers &amp; Valleys
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
+                            📍 User-Reported Incidents
+                        </div>
+                    </div>
+
+                    <!-- Stats overlay -->
+                    <div style="position: absolute; top: 12px; right: 12px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div id="blr-stat-danger" style="font-size: 20px; font-weight: 700; color: #fca5a5; line-height: 1;">–</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Danger</div>
+                        </div>
+                        <div style="background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div id="blr-stat-high" style="font-size: 20px; font-weight: 700; color: #fdba74; line-height: 1;">–</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">High</div>
+                        </div>
+                        <div style="background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
+                            <div id="blr-stat-normal" style="font-size: 20px; font-weight: 700; color: #86efac; line-height: 1;">–</div>
+                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Normal</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Global Live Weather Radar (Windy) -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -459,74 +607,8 @@
         </div>
     </div>
 
-    <!-- Telangana Flood Monitoring Map -->
-    <div class="row g-3 mb-4">
-        <div class="col-12">
-            <div class="card overflow-hidden" style="min-height: 600px; height: 72vh; position: relative; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1) !important; background: #1a2234;">
-                <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background: #151b2b; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <h6 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 15px; color: #f8fafc;">
-                        <span style="background: #3b82f6; width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
-                        🌊 Telangana River Flood Monitoring — Live Gauge Stations
-                    </h6>
-                    <div class="d-flex gap-2 align-items-center">
-                        <span style="font-size: 11px; color: #94a3b8;">Powered by CWC + Google Flood Hub AI</span>
-                        <a href="https://sites.research.google/floods/l/17.50756493827407/80.01820543478965/8.154071981459857/g/hybas_4121080440" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(59,130,246,0.4); color: #60a5fa; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(59,130,246,0.05);">
-                            Google Flood Hub ↗
-                        </a>
-                        <a href="https://cwc.gov.in/flood-forecasting" target="_blank" class="btn btn-sm" style="border: 1px solid rgba(34,197,94,0.4); color: #4ade80; border-radius: 6px; padding: 2px 10px; font-size: 12px; font-weight: 500; background: rgba(34,197,94,0.05);">
-                            CWC Portal ↗
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body p-0" style="position: relative; width: 100%; height: calc(100% - 45px);">
-                    <!-- Map container -->
-                    <div id="floodMap" style="width: 100%; height: 100%;"></div>
-
-                    <!-- Flood level legend -->
-                    <div style="position: absolute; bottom: 16px; left: 16px; z-index: 10; background: rgba(21,27,43,0.92); backdrop-filter: blur(8px); border-radius: 10px; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.12); min-width: 180px;">
-                        <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Flood Alert Level</div>
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
-                                <span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #ef444488;"></span> Danger / Flood Warning
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
-                                <span style="width:12px;height:12px;border-radius:50%;background:#f97316;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #f9731688;"></span> High / Above Warning
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
-                                <span style="width:12px;height:12px;border-radius:50%;background:#eab308;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #eab30888;"></span> Moderate / Alert
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f8fafc;">
-                                <span style="width:12px;height:12px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;box-shadow:0 0 6px #22c55e88;"></span> Normal / Safe
-                            </div>
-                        </div>
-                        <hr style="border-color: rgba(255,255,255,0.1); margin: 8px 0;">
-                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #93c5fd;">
-                            <span style="width:20px;height:4px;background:#3b82f6;border-radius:2px;display:inline-block;"></span> Major Rivers
-                        </div>
-                    </div>
-
-                    <!-- Stats overlay -->
-                    <div style="position: absolute; top: 12px; right: 12px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
-                        <div style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
-                            <div style="font-size: 20px; font-weight: 700; color: #fca5a5; line-height: 1;">3</div>
-                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Danger</div>
-                        </div>
-                        <div style="background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
-                            <div style="font-size: 20px; font-weight: 700; color: #fdba74; line-height: 1;">5</div>
-                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">High</div>
-                        </div>
-                        <div style="background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 8px 14px; text-align: center; backdrop-filter: blur(8px);">
-                            <div style="font-size: 20px; font-weight: 700; color: #86efac; line-height: 1;">9</div>
-                            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em;">Normal</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <style>
-        #floodMap .maplibregl-popup-content {
+        .flood-map-widget .maplibregl-popup-content {
             background: #1e2a3a;
             color: #f8fafc;
             border-radius: 10px;
@@ -536,12 +618,560 @@
             font-size: 13px;
             min-width: 200px;
         }
-        #floodMap .maplibregl-popup-tip { border-top-color: #1e2a3a !important; }
-        #floodMap .maplibregl-popup-close-button { color: #94a3b8; font-size: 16px; }
-        #floodMap .maplibregl-ctrl-attrib { font-size: 10px; }
+        .flood-map-widget .maplibregl-popup-tip { border-top-color: #1e2a3a !important; }
+        .flood-map-widget .maplibregl-popup-close-button { color: #94a3b8; font-size: 16px; }
+        .flood-map-widget .maplibregl-ctrl-attrib { font-size: 10px; }
+
+        /* "Alert people near this station" button inside a gauge popup */
+        .flood-alert-popup-btn {
+            width: 100%; margin-top: 10px; padding: 7px 10px;
+            border-radius: 7px; border: 1px solid rgba(239,68,68,0.55);
+            background: rgba(239,68,68,0.16); color: #fca5a5;
+            font-size: 12px; font-weight: 700; cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .flood-alert-popup-btn:hover { background: rgba(239,68,68,0.3); color: #fff; }
+
+        /* Warning strip: stations currently above their warning level */
+        .flood-warning-strip {
+            position: absolute; top: 12px; left: 12px; z-index: 11;
+            background: rgba(21,27,43,0.94); backdrop-filter: blur(8px);
+            border: 1px solid rgba(239,68,68,0.45); border-radius: 10px;
+            padding: 10px 12px; max-width: 265px;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+            /* Several stations can sit above warning at once — scroll the list
+               rather than letting it grow down into the legend */
+            max-height: 46%; overflow-y: auto;
+        }
+        .flood-warning-strip .fws-title {
+            font-size: 11px; font-weight: 700; color: #fca5a5;
+            text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+            position: sticky; top: -10px; background: #151b2b;
+            padding: 2px 0; margin-top: -2px;
+        }
+        .flood-warning-strip .fws-row {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; padding: 5px 0; border-top: 1px solid rgba(255,255,255,0.07);
+        }
+        .flood-warning-strip .fws-row:first-of-type { border-top: none; }
+        .flood-warning-strip .fws-name {
+            font-size: 12px; color: #f8fafc; font-weight: 600;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .flood-warning-strip .fws-sub { font-size: 10px; color: #94a3b8; }
+        .flood-warning-strip .fws-btn {
+            flex-shrink: 0; border: 1px solid rgba(239,68,68,0.5);
+            background: rgba(239,68,68,0.15); color: #fca5a5;
+            border-radius: 6px; padding: 3px 9px; font-size: 11px;
+            font-weight: 700; cursor: pointer; transition: background 0.15s, color 0.15s;
+        }
+        .flood-warning-strip .fws-btn:hover { background: rgba(239,68,68,0.32); color: #fff; }
+
+        /* Station alert dispatch modal */
+        .station-alert-modal {
+            display: none; position: fixed; inset: 0; z-index: 3000;
+            background: rgba(3,7,18,0.78); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .station-alert-modal.open { display: flex; }
+        .station-alert-card {
+            background: #151b2b; border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px; width: 100%; max-width: 460px;
+            max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.6); color: #f8fafc;
+        }
+        .station-alert-card .sa-head {
+            padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+        }
+        .station-alert-card .sa-body { padding: 16px 18px; }
+        .station-alert-card .sa-label {
+            font-size: 11px; font-weight: 700; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 7px;
+        }
+        .station-alert-card .sa-close {
+            background: none; border: none; color: #94a3b8;
+            font-size: 24px; line-height: 1; cursor: pointer; padding: 0;
+        }
+        .sa-radius-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+        .sa-radius-chip {
+            border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04);
+            color: #cbd5e1; border-radius: 7px; padding: 5px 12px;
+            font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+        }
+        .sa-radius-chip:hover { border-color: rgba(56,189,248,0.5); color: #f8fafc; }
+        .sa-radius-chip.active {
+            border-color: #38bdf8; background: rgba(56,189,248,0.16); color: #7dd3fc;
+        }
+        .sa-reach {
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 9px; padding: 12px 14px; margin-bottom: 16px;
+        }
+        .sa-reach-count { font-size: 26px; font-weight: 700; color: #f8fafc; line-height: 1.1; }
+        .sa-note {
+            width: 100%; background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+            color: #f8fafc; font-size: 13px; padding: 9px 11px; resize: vertical;
+            min-height: 68px; font-family: inherit;
+        }
+        .sa-note:focus { outline: none; border-color: rgba(56,189,248,0.55); }
+        .sa-actions {
+            display: flex; gap: 10px; justify-content: flex-end;
+            padding: 14px 18px; border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .sa-btn-cancel {
+            border: 1px solid rgba(255,255,255,0.18); background: transparent;
+            color: #cbd5e1; border-radius: 8px; padding: 8px 18px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        .sa-btn-send {
+            border: none; background: #dc2626; color: #fff;
+            border-radius: 8px; padding: 8px 20px;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        .sa-btn-send:hover:not(:disabled) { background: #ef4444; }
+        .sa-btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 
     <script>
+    // Shared by both flood maps: plots user-submitted reports (DASHBOARD_DATA.reports,
+    // defined further down the page) that fall inside a map's region, so each panel
+    // only lights up with the incidents that are actually present there. Adds both a
+    // small-radius density heatmap and individual clickable pins for the same reports.
+    function addReportMarkersToFloodMap(map, bounds, idPrefix) {
+        const reports = (window.DASHBOARD_DATA && window.DASHBOARD_DATA.reports) || [];
+        const statusColor = { approved: '#22c55e', pending: '#eab308', rejected: '#ef4444' };
+
+        const inBounds = reports.filter(function(r) {
+            return r.latitude != null && r.longitude != null &&
+                r.latitude >= bounds.minLat && r.latitude <= bounds.maxLat &&
+                r.longitude >= bounds.minLon && r.longitude <= bounds.maxLon;
+        });
+
+        if (inBounds.length > 0) {
+            const heatSourceId = idPrefix + '-reports-heat-src';
+            const heatLayerId = idPrefix + '-reports-heat-layer';
+            map.addSource(heatSourceId, {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: inBounds.map(function(r) {
+                        return {
+                            type: 'Feature',
+                            geometry: { type: 'Point', coordinates: [r.longitude, r.latitude] },
+                            properties: { weight: r.confidence_score != null ? r.confidence_score : 0.5 }
+                        };
+                    })
+                }
+            });
+            map.addLayer({
+                id: heatLayerId,
+                type: 'heatmap',
+                source: heatSourceId,
+                paint: {
+                    'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 0, 0.4, 1, 1],
+                    'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1.5, 15, 4],
+                    'heatmap-color': [
+                        'interpolate', ['linear'], ['heatmap-density'],
+                        0, 'rgba(0,0,0,0)',
+                        0.1, 'rgba(239,68,68,0.5)',
+                        0.4, 'rgba(239,68,68,0.75)',
+                        0.7, 'rgba(255,80,80,0.9)',
+                        1, 'rgba(255,120,120,1)'
+                    ],
+                    // Visible spots at any zoom, but still a tight glow around each
+                    // report rather than a broad blur spanning the whole map
+                    'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 10, 9, 26, 15, 42],
+                    'heatmap-opacity': 0.85
+                }
+            });
+        }
+
+        inBounds.forEach(function(r) {
+            const color = statusColor[r.verification_status] || '#3b82f6';
+            const popup = new maplibregl.Popup({ offset: 20, closeButton: true, maxWidth: '260px' })
+                .setHTML(`
+                    <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#f8fafc;">📍 ${r.title || 'Untitled report'}</div>
+                    <div style="color:#94a3b8;font-size:11px;margin-bottom:8px;">${r.location || ''}</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                        <span style="background:${color}22;border:1px solid ${color}66;color:${color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;text-transform:uppercase;">${r.verification_status || 'pending'}</span>
+                        <span style="font-size:12px;color:#cbd5e1;">${r.hazard_type || ''}</span>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:8px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                            <span style="color:#94a3b8;font-size:11px;">Confidence</span>
+                            <span style="color:#f8fafc;font-size:11px;font-weight:600;">${Math.round((r.confidence_score || 0) * 100)}%</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:#94a3b8;font-size:11px;">Reported by</span>
+                            <span style="color:#f8fafc;font-size:11px;font-weight:600;">${r.author || 'Unknown'}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:8px;font-size:10px;color:#64748b;text-align:center;">${r.timestamp || ''}</div>
+                `);
+
+            new maplibregl.Marker({ color: color })
+                .setLngLat([r.longitude, r.latitude])
+                .setPopup(popup)
+                .addTo(map);
+        });
+
+        return inBounds.length;
+    }
+
+    // Shared by both flood maps: fetches live gauge/lake discharge data from
+    // our backend (which calls Open-Meteo's Flood API), renders it as round
+    // gauge markers + a live stats overlay + a "last updated" timestamp, and
+    // re-fetches on an interval so the panel keeps itself current without a
+    // page reload. See utils.py::fetch_live_flood_gauges for why the level
+    // classification is a relative discharge anomaly rather than an absolute
+    // water-level reading.
+    window.__floodGaugeMarkers = window.__floodGaugeMarkers || {};
+
+    // Every station currently drawn on either map, keyed so a popup or warning-strip
+    // button can hand one straight to the alert dispatcher without re-fetching.
+    window.__floodStationRegistry = window.__floodStationRegistry || {};
+
+    const FLOOD_LEVEL_COLORS = { DANGER: '#ef4444', HIGH: '#f97316', MODERATE: '#eab308', NORMAL: '#22c55e', UNKNOWN: '#94a3b8' };
+    const FLOOD_LEVEL_LABELS = { DANGER: 'Danger', HIGH: 'High Alert', MODERATE: 'Moderate', NORMAL: 'Normal', UNKNOWN: 'No Data' };
+    // Levels that warrant pushing an alert out to the people living around the gauge
+    const FLOOD_ALERT_LEVELS = ['DANGER', 'HIGH'];
+
+    function loadLiveFloodGauges(map, opts) {
+        const colorMap = FLOOD_LEVEL_COLORS;
+        const labelMap = FLOOD_LEVEL_LABELS;
+        window.__floodGaugeMarkers[opts.idPrefix] = window.__floodGaugeMarkers[opts.idPrefix] || [];
+
+        function refresh() {
+            fetch(opts.apiUrl)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    const stations = data.stations || [];
+
+                    // Clear last cycle's markers before drawing the fresh set
+                    window.__floodGaugeMarkers[opts.idPrefix].forEach(function(m) { m.remove(); });
+                    window.__floodGaugeMarkers[opts.idPrefix] = [];
+
+                    const counts = { DANGER: 0, HIGH: 0, NORMAL: 0 };
+                    const warningStations = [];
+
+                    stations.forEach(function(g, idx) {
+                        const color = colorMap[g.level] || colorMap.UNKNOWN;
+                        if (counts.hasOwnProperty(g.level)) counts[g.level]++;
+
+                        // Register the reading so the alert modal can pick it up by key
+                        const stationKey = opts.idPrefix + '-' + idx;
+                        window.__floodStationRegistry[stationKey] = Object.assign({}, g, {
+                            region: opts.region,
+                            key: stationKey
+                        });
+                        const canAlert = FLOOD_ALERT_LEVELS.indexOf(g.level) !== -1;
+                        if (canAlert) warningStations.push(window.__floodStationRegistry[stationKey]);
+
+                        const el = document.createElement('div');
+                        el.style.cssText = `
+                            width: 28px; height: 28px; display: flex; align-items: center;
+                            justify-content: center; cursor: pointer;
+                        `;
+                        const dot = document.createElement('div');
+                        dot.style.cssText = `
+                            width: 14px; height: 14px; border-radius: 50%;
+                            background: ${color}; border: 2.5px solid rgba(255,255,255,0.85);
+                            box-shadow: 0 0 0 3px ${color}44, 0 0 12px ${color}88;
+                            transition: transform 0.15s; transform-origin: center center;
+                            pointer-events: none;
+                        `;
+                        el.appendChild(dot);
+                        el.addEventListener('mouseenter', () => dot.style.transform = 'scale(1.6)');
+                        el.addEventListener('mouseleave', () => dot.style.transform = 'scale(1)');
+
+                        const riverLabel = opts.appendRiverWord ? `${g.river} River` : g.river;
+                        const dischargeText = g.discharge != null ? `${g.discharge} m³/s` : 'N/A';
+                        const pctText = g.pct_of_normal != null ? `${g.pct_of_normal}% of typical` : 'N/A';
+
+                        const popup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: '270px' })
+                            .setHTML(`
+                                <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#f8fafc;">${g.name}</div>
+                                <div style="color:#94a3b8;font-size:11px;margin-bottom:8px;">${riverLabel}</div>
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                                    <span style="background:${color}22;border:1px solid ${color}66;color:${color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;">${labelMap[g.level] || 'No Data'}</span>
+                                    <span style="font-size:12px;color:#cbd5e1;">${g.trend || ''}</span>
+                                </div>
+                                <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:8px;">
+                                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                                        <span style="color:#94a3b8;font-size:11px;">Live Discharge</span>
+                                        <span style="color:#f8fafc;font-size:11px;font-weight:600;">${dischargeText}</span>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;">
+                                        <span style="color:#94a3b8;font-size:11px;">vs Typical for This Spot</span>
+                                        <span style="color:#fbbf24;font-size:11px;font-weight:600;">${pctText}</span>
+                                    </div>
+                                </div>
+                                ${canAlert ? `<button type="button" class="flood-alert-popup-btn" onclick="window.openFloodStationAlert('${stationKey}')">
+                                    🚨 Alert people near this station
+                                </button>` : ''}
+                                <div style="margin-top:8px;font-size:10px;color:#64748b;text-align:center;">${opts.dataFooter}</div>
+                            `);
+
+                        const marker = new maplibregl.Marker({ element: el })
+                            .setLngLat([g.lon, g.lat])
+                            .setPopup(popup)
+                            .addTo(map);
+                        window.__floodGaugeMarkers[opts.idPrefix].push(marker);
+                    });
+
+                    const dangerEl = document.getElementById(opts.idPrefix + '-stat-danger');
+                    const highEl = document.getElementById(opts.idPrefix + '-stat-high');
+                    const normalEl = document.getElementById(opts.idPrefix + '-stat-normal');
+                    if (dangerEl) dangerEl.textContent = counts.DANGER;
+                    if (highEl) highEl.textContent = counts.HIGH;
+                    if (normalEl) normalEl.textContent = counts.NORMAL;
+
+                    const updatedEl = document.getElementById(opts.idPrefix + '-last-updated');
+                    if (updatedEl) {
+                        const now = new Date();
+                        updatedEl.textContent = 'Updated ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    }
+
+                    const badgeEl = document.getElementById(opts.idPrefix + '-live-badge');
+                    if (badgeEl) { badgeEl.style.color = '#4ade80'; badgeEl.textContent = '● LIVE'; }
+
+                    renderFloodWarningStrip(opts.idPrefix, warningStations);
+                })
+                .catch(function(err) {
+                    console.error('Live flood gauge fetch failed for', opts.idPrefix, err);
+                    const badgeEl = document.getElementById(opts.idPrefix + '-live-badge');
+                    if (badgeEl) { badgeEl.style.color = '#f87171'; badgeEl.textContent = '● RETRYING'; }
+                })
+                .finally(function() {
+                    setTimeout(refresh, opts.refreshMs || 600000);
+                });
+        }
+
+        refresh();
+    }
+
+    // Surfaces the stations that are currently above their warning level as a
+    // compact list on the map itself, so an operator does not have to hunt for
+    // the red dot before they can warn the people living around it.
+    function renderFloodWarningStrip(idPrefix, warningStations) {
+        const strip = document.getElementById(idPrefix + '-warning-strip');
+        if (!strip) return;
+
+        if (!warningStations.length) {
+            strip.style.display = 'none';
+            strip.innerHTML = '';
+            return;
+        }
+
+        const rows = warningStations.map(function(s) {
+            const color = FLOOD_LEVEL_COLORS[s.level];
+            const pct = s.pct_of_normal != null ? s.pct_of_normal + '% of typical' : (s.trend || '');
+            return `
+                <div class="fws-row">
+                    <div style="min-width:0;">
+                        <div class="fws-name" title="${s.name}">
+                            <span style="color:${color};">●</span> ${s.name}
+                        </div>
+                        <div class="fws-sub">${FLOOD_LEVEL_LABELS[s.level]}${pct ? ' · ' + pct : ''}</div>
+                    </div>
+                    <button type="button" class="fws-btn" onclick="window.openFloodStationAlert('${s.key}')">Alert</button>
+                </div>`;
+        }).join('');
+
+        // Colour the panel by the worst level present, so a single DANGER gauge
+        // still reads as red even among a list of HIGH ones
+        const worst = warningStations.some(function(s) { return s.level === 'DANGER'; }) ? 'DANGER' : 'HIGH';
+        const worstColor = FLOOD_LEVEL_COLORS[worst];
+
+        strip.style.borderColor = worstColor + '73';
+        strip.innerHTML = `
+            <div class="fws-title" style="color:${worstColor};">⚠️ ${warningStations.length} station${warningStations.length > 1 ? 's' : ''} at warning</div>
+            ${rows}`;
+        strip.style.display = 'block';
+    }
+
+    // ---- Station alert dispatch -------------------------------------------
+    // Opens on a warning-level gauge, shows how many people are inside the
+    // chosen radius before anything is sent, then posts to the backend, which
+    // creates an in-app notification for each of them and WhatsApps the ones
+    // who have linked a number.
+    (function() {
+        const DEFAULT_ADVICE = {
+            DANGER: 'Move to higher ground now. Avoid the riverbank, underpasses and low-lying roads.',
+            HIGH: 'Be ready to move. Keep documents, medicines and a torch packed, and stay off low-lying roads.',
+            MODERATE: "Stay alert and avoid the water's edge. Do not park vehicles in low-lying spots.",
+            NORMAL: 'No action needed right now — this is an advisory.'
+        };
+        const RADIUS_OPTIONS = [5, 10, 15, 25, 50];
+
+        let activeStation = null;
+        let activeRadius = 15;
+        let previewToken = 0;
+
+        function el(id) { return document.getElementById(id); }
+
+        window.openFloodStationAlert = function(stationKey) {
+            const station = window.__floodStationRegistry[stationKey];
+            if (!station) return;
+
+            activeStation = station;
+            activeRadius = 15;
+
+            const color = FLOOD_LEVEL_COLORS[station.level] || FLOOD_LEVEL_COLORS.UNKNOWN;
+            const readings = [];
+            if (station.discharge != null) readings.push(station.discharge + ' m³/s');
+            if (station.pct_of_normal != null) readings.push(station.pct_of_normal + '% of typical');
+            if (station.trend) readings.push(station.trend);
+
+            el('saStationName').textContent = station.name;
+            el('saStationRiver').textContent = station.river || '';
+            el('saStationReading').textContent = readings.join(' · ');
+
+            const badge = el('saLevelBadge');
+            badge.textContent = FLOOD_LEVEL_LABELS[station.level] || station.level;
+            badge.style.color = color;
+            badge.style.background = color + '22';
+            badge.style.borderColor = color + '66';
+
+            el('saNote').value = '';
+            el('saNote').placeholder = DEFAULT_ADVICE[station.level] || DEFAULT_ADVICE.HIGH;
+            el('saResult').style.display = 'none';
+            el('saResult').innerHTML = '';
+            el('saSendBtn').disabled = false;
+            el('saSendBtn').textContent = '🚨 Send Alert';
+
+            renderRadiusChips();
+            refreshPreview();
+            el('stationAlertModal').classList.add('open');
+        };
+
+        window.closeFloodStationAlert = function() {
+            el('stationAlertModal').classList.remove('open');
+            activeStation = null;
+        };
+
+        function renderRadiusChips() {
+            el('saRadiusRow').innerHTML = RADIUS_OPTIONS.map(function(r) {
+                return `<button type="button" class="sa-radius-chip${r === activeRadius ? ' active' : ''}"
+                    onclick="window.setFloodAlertRadius(${r})">${r} km</button>`;
+            }).join('');
+        }
+
+        window.setFloodAlertRadius = function(radius) {
+            activeRadius = radius;
+            renderRadiusChips();
+            refreshPreview();
+        };
+
+        // Counts who is in range before anything goes out. Each call carries a
+        // token so a slow response for an old radius can't overwrite a newer one.
+        function refreshPreview() {
+            if (!activeStation) return;
+            const token = ++previewToken;
+
+            el('saReachCount').textContent = '…';
+            el('saReachDetail').textContent = 'Checking who is in range…';
+            el('saCooldown').style.display = 'none';
+
+            const params = new URLSearchParams({
+                lat: activeStation.lat,
+                lon: activeStation.lon,
+                radius: activeRadius,
+                station: activeStation.name
+            });
+
+            fetch('/api/flood_station_alert/preview?' + params.toString())
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (token !== previewToken) return;
+                    if (data.error) throw new Error(data.error);
+
+                    el('saReachCount').textContent = data.recipients;
+                    el('saReachDetail').textContent =
+                        `people within ${activeRadius} km · ${data.whatsapp_reachable} reachable on WhatsApp · ${data.volunteers} volunteer${data.volunteers === 1 ? '' : 's'}`;
+
+                    const nearest = (data.nearest || [])
+                        .map(function(n) { return `${n.username} (${n.distance_km} km)`; })
+                        .join(', ');
+                    el('saNearest').textContent = nearest ? 'Nearest: ' + nearest : '';
+
+                    if (data.cooldown_active) {
+                        el('saCooldown').style.display = 'block';
+                        el('saCooldown').textContent =
+                            `⏳ This station was already alerted recently. Sending again will re-notify the same people (cooldown clears in ${data.cooldown_remaining_minutes} min).`;
+                    }
+                    el('saSendBtn').disabled = data.recipients === 0;
+                })
+                .catch(function(err) {
+                    if (token !== previewToken) return;
+                    el('saReachCount').textContent = '—';
+                    el('saReachDetail').textContent = 'Could not check range: ' + err.message;
+                });
+        }
+
+        window.sendFloodStationAlert = function() {
+            if (!activeStation) return;
+
+            const sendBtn = el('saSendBtn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending…';
+
+            fetch('/api/flood_station_alert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    station: activeStation.name,
+                    river: activeStation.river,
+                    level: activeStation.level,
+                    trend: activeStation.trend,
+                    discharge: activeStation.discharge,
+                    pct_of_normal: activeStation.pct_of_normal,
+                    region: activeStation.region,
+                    lat: activeStation.lat,
+                    lon: activeStation.lon,
+                    radius: activeRadius,
+                    note: el('saNote').value.trim(),
+                    // The operator has already seen the cooldown warning in the
+                    // modal, so an explicit click here is a deliberate resend.
+                    force: true
+                })
+            })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    const result = el('saResult');
+                    result.style.display = 'block';
+
+                    if (data.success) {
+                        result.style.color = '#86efac';
+                        result.innerHTML =
+                            `✅ Alerted <b>${data.notified}</b> people within ${data.radius_km} km of ${data.station}` +
+                            ` — ${data.whatsapp_sent} WhatsApp message${data.whatsapp_sent === 1 ? '' : 's'} sent` +
+                            (data.whatsapp_failed ? `, ${data.whatsapp_failed} failed` : '') + '.';
+                        sendBtn.textContent = 'Sent';
+                        setTimeout(window.closeFloodStationAlert, 2600);
+                    } else {
+                        result.style.color = '#fca5a5';
+                        result.textContent = '❌ ' + (data.error || 'Alert could not be sent.');
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = '🚨 Send Alert';
+                    }
+                })
+                .catch(function(err) {
+                    const result = el('saResult');
+                    result.style.display = 'block';
+                    result.style.color = '#fca5a5';
+                    result.textContent = '❌ ' + err.message;
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '🚨 Send Alert';
+                });
+        };
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && activeStation) window.closeFloodStationAlert();
+        });
+    })();
+
     (function() {
         function initFloodMap() {
             if (typeof maplibregl === 'undefined') { setTimeout(initFloodMap, 300); return; }
@@ -568,15 +1198,23 @@
                         { id: 'labels-layer', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.85 } }
                     ]
                 },
-                center: [79.5, 17.8],
-                zoom: 6.8,
-                pitch: 20,
+                center: [78.4867, 17.3850],
+                zoom: 11,
+                pitch: 30,
                 bearing: 0,
                 attributionControl: false
             });
 
             map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
             map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+            // Quick-jump camera presets, wired to the header buttons
+            window.zoomToHyderabad = function() {
+                map.flyTo({ center: [78.4867, 17.3850], zoom: 11, pitch: 30, bearing: 0, duration: 1800 });
+            };
+            window.zoomToTelangana = function() {
+                map.flyTo({ center: [79.5, 17.8], zoom: 6.8, pitch: 20, bearing: 0, duration: 1800 });
+            };
 
             // Telangana major rivers (simplified GeoJSON)
             const rivers = {
@@ -614,34 +1252,6 @@
                 ]
             };
 
-            // Flood gauge stations
-            const gauges = [
-                // DANGER (red)
-                { name: 'Bhadrachalam', river: 'Godavari', level: 'DANGER', water_level: '53.2m', warning_level: '48.0m', lat: 17.67, lon: 80.89, trend: '↑ Rising' },
-                { name: 'Mancherial', river: 'Godavari', level: 'DANGER', water_level: '150.4m', warning_level: '144.0m', lat: 18.87, lon: 79.46, trend: '↑ Rising' },
-                { name: 'Kaleswaram', river: 'Godavari', level: 'DANGER', water_level: '112.8m', warning_level: '108.5m', lat: 18.55, lon: 79.90, trend: '↑ Rising' },
-                // HIGH (orange)
-                { name: 'Nandikonda', river: 'Krishna', level: 'HIGH', water_level: '89.3m', warning_level: '86.0m', lat: 16.95, lon: 79.32, trend: '→ Steady' },
-                { name: 'Jogulamba', river: 'Krishna', level: 'HIGH', water_level: '322.1m', warning_level: '319.5m', lat: 16.58, lon: 78.08, trend: '→ Steady' },
-                { name: 'Dummugudem', river: 'Godavari', level: 'HIGH', water_level: '44.6m', warning_level: '43.0m', lat: 17.78, lon: 80.57, trend: '↑ Rising' },
-                { name: 'Asifabad', river: 'Godavari', level: 'HIGH', water_level: '215.3m', warning_level: '213.0m', lat: 19.37, lon: 79.28, trend: '↓ Falling' },
-                { name: 'Yellandu', river: 'Godavari', level: 'HIGH', water_level: '97.2m', warning_level: '95.0m', lat: 17.60, lon: 80.32, trend: '→ Steady' },
-                // MODERATE (yellow)
-                { name: 'Nalgonda', river: 'Musi', level: 'MODERATE', water_level: '335.4m', warning_level: '338.0m', lat: 17.06, lon: 79.27, trend: '↓ Falling' },
-                // NORMAL (green)
-                { name: 'Hyderabad (Musi)', river: 'Musi', level: 'NORMAL', water_level: '496.8m', warning_level: '501.0m', lat: 17.38, lon: 78.48, trend: '→ Steady' },
-                { name: 'Nizamabad', river: 'Manjira', level: 'NORMAL', water_level: '303.2m', warning_level: '308.0m', lat: 18.67, lon: 78.10, trend: '↓ Falling' },
-                { name: 'Wanaparthy', river: 'Krishna', level: 'NORMAL', water_level: '415.0m', warning_level: '420.0m', lat: 16.36, lon: 78.07, trend: '↓ Falling' },
-                { name: 'Jadcherla', river: 'Krishna', level: 'NORMAL', water_level: '421.3m', warning_level: '426.0m', lat: 16.76, lon: 78.17, trend: '→ Steady' },
-                { name: 'Medak', river: 'Manjira', level: 'NORMAL', water_level: '444.6m', warning_level: '450.0m', lat: 18.05, lon: 78.26, trend: '↓ Falling' },
-                { name: 'Adilabad', river: 'Godavari', level: 'NORMAL', water_level: '218.1m', warning_level: '225.0m', lat: 19.66, lon: 78.53, trend: '↓ Falling' },
-                { name: 'Khammam', river: 'Krishna', level: 'NORMAL', water_level: '68.4m', warning_level: '72.0m', lat: 17.25, lon: 80.15, trend: '↓ Falling' },
-                { name: 'Suryapet', river: 'Musi', level: 'NORMAL', water_level: '55.8m', warning_level: '60.0m', lat: 17.14, lon: 79.62, trend: '→ Steady' }
-            ];
-
-            const colorMap = { DANGER: '#ef4444', HIGH: '#f97316', MODERATE: '#eab308', NORMAL: '#22c55e' };
-            const labelMap = { DANGER: 'Danger', HIGH: 'High Alert', MODERATE: 'Moderate', NORMAL: 'Normal' };
-
             map.on('load', function() {
                 // Add rivers
                 map.addSource('rivers', { type: 'geojson', data: rivers });
@@ -652,55 +1262,111 @@
                     paint: { 'line-color': '#38d9ff', 'line-width': 3, 'line-opacity': 1 }
                 });
 
-                // Add gauge markers
-                gauges.forEach(function(g) {
-                    const color = colorMap[g.level];
-                    const el = document.createElement('div');
-                    el.style.cssText = `
-                        width: 28px; height: 28px; display: flex; align-items: center;
-                        justify-content: center; cursor: pointer;
-                    `;
-                    const dot = document.createElement('div');
-                    dot.style.cssText = `
-                        width: 14px; height: 14px; border-radius: 50%;
-                        background: ${color}; border: 2.5px solid rgba(255,255,255,0.85);
-                        box-shadow: 0 0 0 3px ${color}44, 0 0 12px ${color}88;
-                        transition: transform 0.15s; transform-origin: center center;
-                        pointer-events: none;
-                    `;
-                    el.appendChild(dot);
-                    el.addEventListener('mouseenter', () => dot.style.transform = 'scale(1.6)');
-                    el.addEventListener('mouseleave', () => dot.style.transform = 'scale(1)');
-
-                    const popup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: '260px' })
-                        .setHTML(`
-                            <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#f8fafc;">${g.name}</div>
-                            <div style="color:#94a3b8;font-size:11px;margin-bottom:8px;">${g.river} River</div>
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                                <span style="background:${color}22;border:1px solid ${color}66;color:${color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;">${labelMap[g.level]}</span>
-                                <span style="font-size:12px;color:#cbd5e1;">${g.trend}</span>
-                            </div>
-                            <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:8px;">
-                                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                                    <span style="color:#94a3b8;font-size:11px;">Current Level</span>
-                                    <span style="color:#f8fafc;font-size:11px;font-weight:600;">${g.water_level}</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;">
-                                    <span style="color:#94a3b8;font-size:11px;">Warning Level</span>
-                                    <span style="color:#fbbf24;font-size:11px;font-weight:600;">${g.warning_level}</span>
-                                </div>
-                            </div>
-                            <div style="margin-top:8px;font-size:10px;color:#64748b;text-align:center;">Data: CWC Flood Forecasting</div>
-                        `);
-
-                    new maplibregl.Marker({ element: el })
-                        .setLngLat([g.lon, g.lat])
-                        .setPopup(popup)
-                        .addTo(map);
+                // Live gauge stations - fetched from our backend, which calls
+                // Open-Meteo's Flood API, and re-fetched every 10 minutes
+                loadLiveFloodGauges(map, {
+                    apiUrl: '/api/live_flood_gauges/telangana',
+                    idPrefix: 'tg',
+                    region: 'Telangana',
+                    appendRiverWord: true,
+                    dataFooter: 'Live: Open-Meteo Flood API (GloFAS model) — discharge anomaly, not an official CWC reading',
+                    refreshMs: 600000
                 });
+
+                // Overlay user-submitted reports that fall within Telangana
+                addReportMarkersToFloodMap(map, { minLat: 15.8, maxLat: 19.9, minLon: 77.0, maxLon: 81.5 }, 'tg');
             });
         }
         initFloodMap();
+    })();
+
+    (function() {
+        function initFloodMapBengaluru() {
+            if (typeof maplibregl === 'undefined') { setTimeout(initFloodMapBengaluru, 300); return; }
+
+            const map = new maplibregl.Map({
+                container: 'floodMapBengaluru',
+                style: {
+                    version: 8,
+                    sources: {
+                        'satellite': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256,
+                            attribution: '© Esri, Maxar, Earthstar Geographics'
+                        },
+                        'labels': {
+                            type: 'raster',
+                            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+                            tileSize: 256
+                        }
+                    },
+                    layers: [
+                        { id: 'satellite-layer', type: 'raster', source: 'satellite', paint: { 'raster-opacity': 1 } },
+                        { id: 'labels-layer', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.85 } }
+                    ]
+                },
+                center: [77.5946, 12.9716],
+                zoom: 11,
+                pitch: 30,
+                bearing: 0,
+                attributionControl: false
+            });
+
+            map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+            map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+            // Quick-jump camera preset, wired to the header button
+            window.zoomToBengaluru = function() {
+                map.flyTo({ center: [77.5946, 12.9716], zoom: 11, pitch: 30, bearing: 0, duration: 1800 });
+            };
+
+            // Bengaluru's main waterways (simplified GeoJSON) - the city floods
+            // via its lake chain and stormwater valleys more than open rivers
+            const rivers = {
+                type: 'FeatureCollection',
+                features: [
+                    // Vrishabhavathi River — drains south-west Bengaluru
+                    { type: 'Feature', properties: { name: 'Vrishabhavathi River' }, geometry: { type: 'LineString', coordinates: [
+                        [77.573, 12.942], [77.540, 12.910], [77.500, 12.880], [77.460, 12.850], [77.420, 12.830]
+                    ]}},
+                    // Arkavathy River — west of the city, joins the Vrishabhavathi downstream
+                    { type: 'Feature', properties: { name: 'Arkavathy River' }, geometry: { type: 'LineString', coordinates: [
+                        [77.480, 13.130], [77.470, 13.000], [77.460, 12.870], [77.430, 12.750], [77.400, 12.600]
+                    ]}},
+                    // Koramangala-Challaghatta Valley — the major stormwater drain feeding Bellandur/Varthur
+                    { type: 'Feature', properties: { name: 'Koramangala-Challaghatta Valley' }, geometry: { type: 'LineString', coordinates: [
+                        [77.613, 12.935], [77.630, 12.933], [77.652, 12.935], [77.680, 12.938], [77.740, 12.940]
+                    ]}}
+                ]
+            };
+
+            map.on('load', function() {
+                // Add rivers/valleys
+                map.addSource('bengaluru-rivers', { type: 'geojson', data: rivers });
+                map.addLayer({ id: 'bengaluru-rivers-glow', type: 'line', source: 'bengaluru-rivers',
+                    paint: { 'line-color': '#c084fc', 'line-width': 10, 'line-opacity': 0.3, 'line-blur': 6 }
+                });
+                map.addLayer({ id: 'bengaluru-rivers-line', type: 'line', source: 'bengaluru-rivers',
+                    paint: { 'line-color': '#a855f7', 'line-width': 3, 'line-opacity': 1 }
+                });
+
+                // Live lake/drain readings - fetched from our backend, which
+                // calls Open-Meteo's Flood API, and re-fetched every 10 minutes
+                loadLiveFloodGauges(map, {
+                    apiUrl: '/api/live_flood_gauges/bengaluru',
+                    idPrefix: 'blr',
+                    region: 'Bengaluru',
+                    appendRiverWord: false,
+                    dataFooter: 'Live: Open-Meteo Flood API (GloFAS model) — discharge anomaly, not an official KSNDMC reading',
+                    refreshMs: 600000
+                });
+
+                // Overlay user-submitted reports that fall within Bengaluru
+                addReportMarkersToFloodMap(map, { minLat: 12.7, maxLat: 13.2, minLon: 77.3, maxLon: 77.9 }, 'blr');
+            });
+        }
+        initFloodMapBengaluru();
     })();
     </script>
 
@@ -819,6 +1485,54 @@
         </div>
     </div>
 
+    <!-- Flood gauge station alert: warn everyone living around a station that
+         has crossed into a warning level -->
+    <div id="stationAlertModal" class="station-alert-modal" onclick="if (event.target === this) window.closeFloodStationAlert()">
+        <div class="station-alert-card">
+            <div class="sa-head">
+                <div style="min-width: 0;">
+                    <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px;">
+                        Flood warning dispatch
+                    </div>
+                    <div id="saStationName" style="font-size: 18px; font-weight: 700;"></div>
+                    <div id="saStationRiver" style="font-size: 12px; color: #94a3b8; margin-top: 2px;"></div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                        <span id="saLevelBadge" style="border: 1px solid; border-radius: 5px; padding: 2px 9px; font-size: 11px; font-weight: 700;"></span>
+                        <span id="saStationReading" style="font-size: 12px; color: #cbd5e1;"></span>
+                    </div>
+                </div>
+                <button type="button" class="sa-close" onclick="window.closeFloodStationAlert()">&times;</button>
+            </div>
+
+            <div class="sa-body">
+                <div class="sa-label">Alert everyone within</div>
+                <div id="saRadiusRow" class="sa-radius-row"></div>
+
+                <div class="sa-reach">
+                    <div id="saReachCount" class="sa-reach-count">…</div>
+                    <div id="saReachDetail" style="font-size: 12px; color: #94a3b8; margin-top: 3px;"></div>
+                    <div id="saNearest" style="font-size: 11px; color: #64748b; margin-top: 6px;"></div>
+                </div>
+
+                <div id="saCooldown" style="display: none; background: rgba(234,179,8,0.12); border: 1px solid rgba(234,179,8,0.35); color: #fde68a; border-radius: 8px; padding: 9px 12px; font-size: 12px; margin-bottom: 16px;"></div>
+
+                <div class="sa-label">Message (optional)</div>
+                <textarea id="saNote" class="sa-note"></textarea>
+                <div style="font-size: 11px; color: #64748b; margin-top: 6px;">
+                    Leave blank to send the standard safety advice for this alert level.
+                    Recipients get an in-app notification, plus WhatsApp if they've linked a number.
+                </div>
+
+                <div id="saResult" style="display: none; font-size: 13px; margin-top: 14px; line-height: 1.5;"></div>
+            </div>
+
+            <div class="sa-actions">
+                <button type="button" class="sa-btn-cancel" onclick="window.closeFloodStationAlert()">Cancel</button>
+                <button type="button" class="sa-btn-send" id="saSendBtn" onclick="window.sendFloodStationAlert()">🚨 Send Alert</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 
@@ -905,11 +1619,19 @@
                 ]
             };
 
-            hMap = new GodModeMap('heatmapMap', { style: satelliteStyle });
+            // Framed on Bengaluru city rather than the national view: incidents
+            // cluster inside the city, and setHeatmapData's auto-fit caps at
+            // zoom 8, which is too far out to read a city hotspot. Passing
+            // autoZoom=false keeps this framing instead of refitting to bounds.
+            hMap = new GodModeMap('heatmapMap', {
+                style: satelliteStyle,
+                center: [77.5946, 12.9716],
+                zoom: 11
+            });
 
             if (DASHBOARD_DATA.reports && DASHBOARD_DATA.reports.length > 0) {
                 const pts = DASHBOARD_DATA.reports.map(r => [r.latitude, r.longitude, 1.0]);
-                hMap.setHeatmapData(pts);
+                hMap.setHeatmapData(pts, false);
             }
 
             wMap = new GodModeMap('warningMap', { showLiveUI: true, style: satelliteStyle });

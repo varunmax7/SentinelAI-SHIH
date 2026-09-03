@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sentinelAI-v1';
+const CACHE_NAME = 'sentinelAI-v2';
 const urlsToCache = [
     '/',
     '/static/css/style.css',
@@ -43,8 +43,39 @@ self.addEventListener('activate', (event) => {
     return self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event
+// - HTML pages (navigations) and API calls: network-first. These change on
+//   every request (dashboards, live gauge data, reports) - serving a stale
+//   cached copy first would silently hide server-side updates indefinitely,
+//   which is exactly what the old cache-first-for-everything strategy did.
+// - Everything else (the precached app-shell assets - CSS/JS/icons): cache-first,
+//   since those are static and this is what makes the app usable offline.
 self.addEventListener('fetch', (event) => {
+    const isNavigation = event.request.mode === 'navigate';
+    const isApiCall = event.request.url.includes('/api/');
+
+    if (isNavigation || isApiCall) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (response && response.status === 200 && response.type === 'basic') {
+                        const responseToCache = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    // Offline fallback: last-known-good cached copy, then the offline page
+                    return caches.match(event.request).then((cached) => {
+                        return cached || caches.match('/offline.html');
+                    });
+                })
+        );
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then((response) => {

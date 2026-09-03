@@ -16,8 +16,9 @@ from forms import (
 from utils import (
     save_file, calculate_distance, analyze_plastic_image, 
     calculate_carbon_savings, calculate_points_for_activity, 
-    validate_report_accuracy_3params, send_whatsapp_message,
-    sync_reports_to_csv
+    validate_report_accuracy_4params, send_whatsapp_message,
+    sync_reports_to_csv, fetch_live_flood_gauges,
+    TELANGANA_GAUGE_STATIONS, BENGALURU_GAUGE_STATIONS
 )  # UPDATED
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
@@ -933,72 +934,79 @@ def award_badge(user, badge_name):
 
 def analyze_report_with_ai(report):
     """Analyze a report using AI to generate confidence score and analysis
-    
-    Uses 3-parameter validation system:
-    1. Weather & Early Warnings - Heatmap match (33%)
-    2. Live Climate Data - Weather alignment (33%)
-    3. User Quality - Credibility score (34%)
+
+    Uses 4-parameter validation system:
+    1. Weather & Early Warnings - Heatmap match (25%)
+    2. Live Climate Data - Weather alignment (25%)
+    3. User Quality - Credibility score (25%)
+    4. Image Processing - NVIDIA NIM vision analysis of the uploaded photo (25%)
     """
     try:
-        # NEW: Use 3-parameter validation system
-        accuracy_result = validate_report_accuracy_3params(report)
-        
+        # Use 4-parameter validation system (climate, density/heatmap, user quality, image processing)
+        accuracy_result = validate_report_accuracy_4params(report)
+
         # Initialize analysis components with legacy method
         analysis_parts = []
         confidence_factors = []
-        
-        # 1. Source Reliability Analysis (User Quality from 3-param system)
+
+        # 1. Source Reliability Analysis (User Quality from 4-param system)
         user_quality = accuracy_result['parameter_3_user_quality']
         analysis_parts.append(f"User Quality: {user_quality['analysis']}")
         confidence_factors.append(user_quality['score'])
-        
-        # 2. Corroboration Analysis (Heatmap Match from 3-param system)
+
+        # 2. Corroboration Analysis (Heatmap Match from 4-param system)
         heatmap_match = accuracy_result['parameter_1_heatmap']
         analysis_parts.append(f"Heatmap Match: {heatmap_match['analysis']}")
         confidence_factors.append(heatmap_match['score'])
-        
-        # 3. Climate Data Analysis (Weather Alignment from 3-param system)
+
+        # 3. Climate Data Analysis (Weather Alignment from 4-param system)
         climate_align = accuracy_result['parameter_2_climate']
         analysis_parts.append(f"Climate Alignment: {climate_align['analysis']}")
         confidence_factors.append(climate_align['score'])
-        
-        # 4. Media Analysis (if available)
-        if report.image_file:
-            media_analysis = analyze_media(report)
-            analysis_parts.append(f"Media Analysis: {media_analysis['analysis']}")
-            confidence_factors.append(media_analysis['score'])
-        else:
-            confidence_factors.append(0.3)
-            analysis_parts.append("Media Analysis: No visual evidence provided")
-        
+
+        # 4. Image Processing Analysis (NVIDIA NIM vision model from 4-param system)
+        image_processing = accuracy_result['parameter_4_image_processing']
+        analysis_parts.append(f"Image Processing: {image_processing['analysis']}")
+        confidence_factors.append(image_processing['score'])
+
         # 5. Linguistic Analysis
         linguistic_analysis = analyze_text(report.description, report.title)
         analysis_parts.append(f"Linguistic Analysis: {linguistic_analysis['analysis']}")
         confidence_factors.append(linguistic_analysis['score'])
-        
+
         # Calculate overall confidence score (weighted average)
-        weights = [0.25, 0.25, 0.25, 0.15, 0.10]  # Adjusted weights to include all factors
+        weights = [0.20, 0.20, 0.20, 0.20, 0.20]  # Adjusted weights to include all factors evenly
         weighted_scores = [score * weight for score, weight in zip(confidence_factors, weights)]
         confidence_score = sum(weighted_scores) / sum(weights)
-        
-        # Blend with 3-parameter accuracy for final score
+
+        # Blend with 4-parameter accuracy for final score
         final_confidence_score = (confidence_score * 0.5) + (accuracy_result['overall_accuracy'] * 0.5)
-        
+
         # Generate comprehensive analysis text
-        analysis_text = f"3-PARAM ACCURACY: {accuracy_result['accuracy_percent']}% | {accuracy_result['detailed_analysis']} | " + " | ".join(analysis_parts)
-        
+        analysis_text = (
+            f"4-PARAM ACCURACY: {accuracy_result['accuracy_percent']}% | "
+            f"SEVERITY: {accuracy_result['severity'].upper()} ({accuracy_result['severity_percent']}%) | "
+            f"{accuracy_result['detailed_analysis']} | " + " | ".join(analysis_parts)
+        )
+
         return {
             'confidence_score': final_confidence_score,
             'analysis': analysis_text,
-            'accuracy_3param': accuracy_result  # Include full 3-param breakdown
+            'severity': accuracy_result['severity'],
+            'severity_score': accuracy_result['severity_score'],
+            'severity_percent': accuracy_result['severity_percent'],
+            'accuracy_4param': accuracy_result  # Include full 4-param breakdown
         }
-        
+
     except Exception as e:
         print(f"AI Analysis Error: {e}")
         return {
             'confidence_score': 0.5,
             'analysis': "AI analysis temporarily unavailable. Manual review required.",
-            'accuracy_3param': None
+            'severity': 'unknown',
+            'severity_score': 0.0,
+            'severity_percent': 0,
+            'accuracy_4param': None
         }
 
 def analyze_user_reliability(user):
@@ -1051,33 +1059,6 @@ def analyze_corroboration(report):
         analysis = "No corroborating reports found"
     
     return {'score': score, 'analysis': analysis}
-
-def analyze_media(report):
-    """Analyze uploaded media using AI"""
-    try:
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], report.image_file)
-        
-        # Basic check if file exists and is valid
-        if not os.path.exists(image_path):
-            return {'score': 0.3, 'analysis': 'Media file not available for analysis'}
-        
-        # For demo purposes - simulate AI analysis
-        # In production, integrate with Google Vision AI, AWS Rekognition, etc.
-        
-        # Simulate different analysis based on hazard type
-        hazard_analysis = {
-            'tsunami': {'score': 0.7, 'analysis': 'Image shows large wave patterns consistent with tsunami warnings'},
-            'storm_surge': {'score': 0.8, 'analysis': 'Weather patterns and water levels indicate potential storm surge'},
-            'high_waves': {'score': 0.6, 'analysis': 'Wave height appears elevated compared to normal conditions'},
-            'oil_spill': {'score': 0.9, 'analysis': 'Visual patterns consistent with oil slick formation'},
-        }
-        
-        result = hazard_analysis.get(report.hazard_type, {'score': 0.5, 'analysis': 'Media appears relevant to reported hazard type'})
-        return result
-        
-    except Exception as e:
-        print(f"Media analysis error: {e}")
-        return {'score': 0.3, 'analysis': 'Media analysis failed'}
 
 def analyze_text(description, title):
     """Analyze text content for urgency and credibility"""
@@ -1596,13 +1577,20 @@ def report():
             # Auto-assign volunteers within 10km (Pulse of the coordination engine)
             send_hazard_alerts(report, auto_assign_volunteers=True)
         
-        # Show AI confidence in flash message with 3-parameter breakdown
+        # Show AI confidence + severity in flash message with 4-parameter breakdown
         confidence_percent = report.confidence_score * 100
+        severity_suffix = f" | Severity: {ai_result.get('severity', 'unknown').upper()} ({ai_result.get('severity_percent', 0)}%)" if ai_result.get('accuracy_4param') else ""
         if is_auto_approved:
-            flash(f"🛡️ AUTO-VERIFIED: {translate('report_submitted', confidence=int(confidence_percent))} (Status: APPROVED)", "success")
-        elif ai_result.get('accuracy_3param'):
-            param_breakdown = f" [Heatmap: {int(ai_result['accuracy_3param']['parameter_1_heatmap']['score']*100)}% | Climate: {int(ai_result['accuracy_3param']['parameter_2_climate']['score']*100)}% | User: {int(ai_result['accuracy_3param']['parameter_3_user_quality']['score']*100)}%]"
-            flash(f"{translate('report_submitted', confidence=int(confidence_percent))}{param_breakdown}", 'success')
+            flash(f"🛡️ AUTO-VERIFIED: {translate('report_submitted', confidence=int(confidence_percent))} (Status: APPROVED){severity_suffix}", "success")
+        elif ai_result.get('accuracy_4param'):
+            accuracy_4param = ai_result['accuracy_4param']
+            param_breakdown = (
+                f" [Heatmap: {int(accuracy_4param['parameter_1_heatmap']['score']*100)}% | "
+                f"Climate: {int(accuracy_4param['parameter_2_climate']['score']*100)}% | "
+                f"User: {int(accuracy_4param['parameter_3_user_quality']['score']*100)}% | "
+                f"Image: {int(accuracy_4param['parameter_4_image_processing']['score']*100)}%]"
+            )
+            flash(f"{translate('report_submitted', confidence=int(confidence_percent))}{severity_suffix}{param_breakdown}", 'success')
         else:
             flash(translate('report_submitted', confidence=int(confidence_percent)), 'success')
         return redirect(url_for('home'))
@@ -3354,6 +3342,253 @@ def api_live_govt_hazards():
         print(f"Error in live govt hazards endpoint: {e}")
         return jsonify({'hazards': [], 'count': 0, 'error': str(e)}), 500
 
+@app.route("/api/live_flood_gauges/telangana")
+def api_live_flood_gauges_telangana():
+    """Live Telangana river-discharge gauge readings from Open-Meteo's Flood API (GloFAS model)"""
+    try:
+        stations = fetch_live_flood_gauges(TELANGANA_GAUGE_STATIONS)
+        return jsonify({
+            'stations': stations,
+            'source': 'Open-Meteo Flood API (GloFAS model) - relative discharge anomaly, not an official CWC reading',
+            'updated_at': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        print(f"Error in live flood gauges (Telangana) endpoint: {e}")
+        return jsonify({'stations': [], 'error': str(e)}), 500
+
+@app.route("/api/live_flood_gauges/bengaluru")
+def api_live_flood_gauges_bengaluru():
+    """Live Bengaluru drainage-discharge gauge readings from Open-Meteo's Flood API (GloFAS model)"""
+    try:
+        stations = fetch_live_flood_gauges(BENGALURU_GAUGE_STATIONS)
+        return jsonify({
+            'stations': stations,
+            'source': 'Open-Meteo Flood API (GloFAS model) - relative discharge anomaly, not an official KSNDMC reading',
+            'updated_at': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        print(f"Error in live flood gauges (Bengaluru) endpoint: {e}")
+        return jsonify({'stations': [], 'error': str(e)}), 500
+
+# ---------------------------------------------------------------------------
+# Station-level flood warning dispatch
+# ---------------------------------------------------------------------------
+# When a live gauge on the analyst dashboard's flood maps crosses into HIGH or
+# DANGER, the operator gets a one-click "alert everyone near this station"
+# action on that station's popup. These endpoints back it: /preview counts who
+# would be reached at a given radius (so the operator sees the blast radius
+# before committing), /api/flood_station_alert actually dispatches.
+
+FLOOD_STATION_ALERT_COOLDOWN_MINUTES = 30
+
+# station key -> datetime of the last dispatch, so a rising gauge that keeps
+# reporting DANGER on every 10-minute refresh can't be used to spam the same
+# residents over and over. In-process only; a restart clears it.
+_flood_station_last_alert = {}
+
+FLOOD_LEVEL_COPY = {
+    'DANGER':   ('🚨', 'DANGER — flood warning',      'Move to higher ground now. Avoid the riverbank, underpasses and low-lying roads.'),
+    'HIGH':     ('⚠️', 'HIGH — above warning level',  'Be ready to move. Keep documents, medicines and a torch packed, and stay off low-lying roads.'),
+    'MODERATE': ('🟡', 'MODERATE — alert level',      'Stay alert and avoid the water\'s edge. Do not park vehicles in low-lying spots.'),
+    'NORMAL':   ('🟢', 'NORMAL',                      'No action needed right now — this is an advisory.'),
+}
+
+
+def _resolve_user_location(user, volunteer=None):
+    """A user's home coordinates, falling back to their volunteer registration."""
+    if user.home_latitude is not None and user.home_longitude is not None:
+        return user.home_latitude, user.home_longitude
+    if volunteer and volunteer.latitude is not None and volunteer.longitude is not None:
+        return volunteer.latitude, volunteer.longitude
+    return None, None
+
+
+def _users_near_point(lat, lon, radius_km):
+    """
+    Everyone whose known location sits within radius_km of (lat, lon), nearest
+    first, as (user, distance_km, volunteer_or_None) tuples. Volunteer records
+    are prefetched in one query rather than per user.
+    """
+    volunteers_by_user = {v.user_id: v for v in Volunteer.query.all()}
+
+    nearby = []
+    for user in User.query.all():
+        volunteer = volunteers_by_user.get(user.id)
+        u_lat, u_lon = _resolve_user_location(user, volunteer)
+        if u_lat is None or u_lon is None:
+            continue
+        distance = calculate_distance(lat, lon, u_lat, u_lon)
+        if distance <= radius_km:
+            nearby.append((user, distance, volunteer))
+
+    nearby.sort(key=lambda row: row[1])
+    return nearby
+
+
+def _flood_station_cooldown(station_key):
+    """(is_active, minutes_remaining) for this station's anti-spam cooldown."""
+    last_sent = _flood_station_last_alert.get(station_key)
+    if not last_sent:
+        return False, 0
+    elapsed = (datetime.utcnow() - last_sent).total_seconds() / 60
+    remaining = FLOOD_STATION_ALERT_COOLDOWN_MINUTES - elapsed
+    return (remaining > 0), max(0, round(remaining))
+
+
+def _parse_station_alert_args(source, radius_default=15.0):
+    """Shared lat/lon/radius parsing for the preview and dispatch endpoints."""
+    try:
+        lat = float(source.get('lat'))
+        lon = float(source.get('lon'))
+    except (TypeError, ValueError):
+        raise ValueError('lat and lon are required and must be numbers')
+
+    try:
+        radius = float(source.get('radius') or radius_default)
+    except (TypeError, ValueError):
+        raise ValueError('radius must be a number')
+
+    return lat, lon, max(1.0, min(radius, 100.0))
+
+
+@app.route("/api/flood_station_alert/preview")
+@login_required
+def api_flood_station_alert_preview():
+    """How many people a station alert would reach at the requested radius."""
+    if current_user.role not in ['official', 'analyst']:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    try:
+        lat, lon, radius = _parse_station_alert_args(request.args)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    nearby = _users_near_point(lat, lon, radius)
+    station_key = (request.args.get('station') or '').strip().lower()
+    cooldown_active, cooldown_remaining = _flood_station_cooldown(station_key)
+
+    return jsonify({
+        'radius_km': radius,
+        'recipients': len(nearby),
+        'whatsapp_reachable': sum(1 for user, _, _ in nearby if user.whatsapp_number),
+        'volunteers': sum(1 for _, _, volunteer in nearby if volunteer),
+        'nearest': [
+            {'username': user.username, 'distance_km': round(distance, 1)}
+            for user, distance, _ in nearby[:5]
+        ],
+        'cooldown_active': cooldown_active,
+        'cooldown_remaining_minutes': cooldown_remaining,
+    })
+
+
+@app.route("/api/flood_station_alert", methods=['POST'])
+@login_required
+def api_flood_station_alert():
+    """
+    Alert every user near a gauge station that has crossed into a warning
+    level. Creates an in-app notification for each person in range and a
+    WhatsApp message for those who have linked a number.
+    """
+    if current_user.role not in ['official', 'analyst']:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    data = request.get_json(silent=True) or {}
+
+    try:
+        lat, lon, radius = _parse_station_alert_args(data)
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+    station = (data.get('station') or 'Unnamed gauge station').strip()
+    river = (data.get('river') or '').strip()
+    level = (data.get('level') or 'HIGH').strip().upper()
+    trend = (data.get('trend') or '').strip()
+    discharge = data.get('discharge')
+    pct_of_normal = data.get('pct_of_normal')
+    extra_note = (data.get('note') or '').strip()
+    region = (data.get('region') or '').strip()
+
+    station_key = station.lower()
+    cooldown_active, cooldown_remaining = _flood_station_cooldown(station_key)
+    if cooldown_active and not data.get('force'):
+        return jsonify({
+            'success': False,
+            'cooldown_active': True,
+            'cooldown_remaining_minutes': cooldown_remaining,
+            'error': f'{station} was already alerted in the last '
+                     f'{FLOOD_STATION_ALERT_COOLDOWN_MINUTES} minutes. '
+                     f'Retry in {cooldown_remaining} min, or resend with force.'
+        }), 429
+
+    icon, headline, advice = FLOOD_LEVEL_COPY.get(level, FLOOD_LEVEL_COPY['HIGH'])
+    where = f"{station} ({river})" if river else station
+
+    try:
+        nearby = _users_near_point(lat, lon, radius)
+
+        readings = []
+        if discharge is not None:
+            readings.append(f"Discharge: {discharge} m³/s")
+        if pct_of_normal is not None:
+            readings.append(f"{pct_of_normal}% of typical for this spot")
+        if trend:
+            readings.append(f"Trend: {trend}")
+        readings_line = ' · '.join(readings)
+
+        notified = 0
+        whatsapp_sent = 0
+        whatsapp_failed = 0
+
+        for user, distance, _volunteer in nearby:
+            notification = Notification(
+                user_id=user.id,
+                message=(f"{icon} FLOOD WARNING — {where} is at {headline}. "
+                         f"You are {distance:.1f} km away. {extra_note or advice}"),
+                is_alert=True,
+                is_read=False,
+                expires_at=datetime.utcnow() + timedelta(hours=12)
+            )
+            db.session.add(notification)
+            notified += 1
+
+            if user.whatsapp_number:
+                whatsapp_body = f"""{icon} *FLOOD WARNING — {headline}*
+
+*Station:* {where}
+*Distance from you:* {distance:.1f} km
+{f"*Live reading:* {readings_line}" if readings_line else ""}
+
+{extra_note or advice}
+
+_Issued by {current_user.username} via Sentinel AI{f' · {region}' if region else ''}._
+_Source: Open-Meteo Flood API (GloFAS) discharge anomaly — treat as an early warning, not an official gauge reading._"""
+                try:
+                    send_whatsapp_message(user.whatsapp_number, whatsapp_body)
+                    whatsapp_sent += 1
+                except Exception as wa_error:
+                    whatsapp_failed += 1
+                    print(f"WhatsApp station alert failed for {user.username}: {wa_error}")
+
+        db.session.commit()
+        _flood_station_last_alert[station_key] = datetime.utcnow()
+
+        print(f"🌊 Station alert '{station}' ({level}) → {notified} users within {radius}km")
+
+        return jsonify({
+            'success': True,
+            'station': station,
+            'level': level,
+            'radius_km': radius,
+            'notified': notified,
+            'whatsapp_sent': whatsapp_sent,
+            'whatsapp_failed': whatsapp_failed,
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in flood station alert endpoint: {e}")
+        return jsonify({'success': False, 'error': str(e), 'notified': 0}), 500
+
 @app.route("/api/weather_warnings")
 @login_required
 def api_weather_warnings():
@@ -3364,40 +3599,53 @@ def api_weather_warnings():
     warnings = get_weather_warnings()
     return jsonify(warnings)
 
-@app.route("/api/report/<int:report_id>/accuracy_3param", methods=['GET'])
+@app.route("/api/report/<int:report_id>/accuracy_4param", methods=['GET'])
 @login_required
-def get_report_3param_accuracy(report_id):
-    """Get 3-parameter accuracy breakdown for a report"""
+def get_report_4param_accuracy(report_id):
+    """Get 4-parameter accuracy breakdown for a report"""
     report = Report.query.get_or_404(report_id)
-    
-    # Calculate 3-parameter accuracy
-    accuracy_result = validate_report_accuracy_3params(report)
-    
+
+    # Calculate 4-parameter accuracy
+    accuracy_result = validate_report_accuracy_4params(report)
+
     return jsonify({
         'report_id': report.id,
         'title': report.title,
         'hazard_type': report.hazard_type,
         'overall_accuracy_percent': accuracy_result['accuracy_percent'],
+        'severity': accuracy_result['severity'],
+        'severity_percent': accuracy_result['severity_percent'],
         'parameter_1_heatmap': {
             'name': 'Weather & Early Warnings - Heatmap Match',
             'score_percent': int(accuracy_result['parameter_1_heatmap']['score'] * 100),
             'analysis': accuracy_result['parameter_1_heatmap']['analysis'],
-            'weight': '33%'
+            'weight': '25%'
         },
         'parameter_2_climate': {
             'name': 'Live Climate Data - Weather Alignment',
             'score_percent': int(accuracy_result['parameter_2_climate']['score'] * 100),
             'analysis': accuracy_result['parameter_2_climate']['analysis'],
-            'weight': '33%'
+            'weight': '25%'
         },
         'parameter_3_user_quality': {
             'name': 'User Quality - Credibility Score',
             'score_percent': int(accuracy_result['parameter_3_user_quality']['score'] * 100),
             'analysis': accuracy_result['parameter_3_user_quality']['analysis'],
-            'weight': '34%',
+            'weight': '25%',
             'user_role': accuracy_result['parameter_3_user_quality'].get('role'),
             'user_level': accuracy_result['parameter_3_user_quality'].get('level'),
             'user_total_reports': accuracy_result['parameter_3_user_quality'].get('total_reports')
+        },
+        'parameter_4_image_processing': {
+            'name': 'Image Processing - NVIDIA Nemotron Vision Analysis',
+            'score_percent': int(accuracy_result['parameter_4_image_processing']['score'] * 100),
+            'analysis': accuracy_result['parameter_4_image_processing']['analysis'],
+            'weight': '25%',
+            'caption': accuracy_result['parameter_4_image_processing'].get('caption'),
+            'detected_hazard': accuracy_result['parameter_4_image_processing'].get('detected_hazard'),
+            'matches_hazard': accuracy_result['parameter_4_image_processing'].get('matches_hazard'),
+            'severity': accuracy_result['parameter_4_image_processing'].get('severity'),
+            'model': accuracy_result['parameter_4_image_processing'].get('model')
         },
         'detailed_breakdown': accuracy_result['detailed_analysis']
     })

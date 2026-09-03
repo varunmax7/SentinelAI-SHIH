@@ -63,7 +63,7 @@ Sentinel AI is a **single unified command platform** that replaces the tangle of
 It does five things no existing system does together:
 
 1. **Detects incidents from four independent channels simultaneously** — a Progressive Web App form, a one-tap Voice SOS with NLP keyword extraction, an offline AI calling agent, and a full WhatsApp bot — so a citizen with no smartphone, no data plan, or no literacy in English can still raise an alarm.
-2. **Validates every incident autonomously in under a second** using a 3-Parameter Accuracy System™ that cross-checks spatial corroboration, live meteorological data, and the reporter's historical credibility — auto-approving anything above 85% confidence without a human in the loop.
+2. **Validates every incident autonomously in under a second** using a 4-Parameter Accuracy System™ that cross-checks spatial corroboration, live meteorological data, the reporter's historical credibility, and NVIDIA NIM vision analysis of the reporter's photo — auto-approving anything above 85% confidence without a human in the loop.
 3. **Runs a live city digital twin** — a 3D "God Mode" MapLibre GL globe layered with government TGDPS rainfall telemetry, RainViewer precipitation radar, Open-Meteo climate data, and every live incident in the database.
 4. **Dispatches responders like a ride-hailing app** — geo-queries available volunteers, ranks them by distance and skill, fires a WhatsApp mission card with photo and coordinates, and tracks accept → en route → completed with GPS-verified photo proof.
 5. **Simulates the future** — the Sentinel Resilience Engine takes projected rainfall and sea-level parameters and produces a full government-grade resilience report with sectoral damage forecasts across Power, Water, Telecom, and Housing, including cascade-failure analysis and time-bound action plans.
@@ -82,7 +82,7 @@ Everything is wrapped in a gamified civic layer — points, levels, badges, lead
 | **AI agents** | 6 — Detection, Prioritization, Dispatch, Alert, Analytics, Coordination |
 | **Reporting channels** | 4 — PWA, Voice SOS, WhatsApp, AI calling agent |
 | **External data sources** | Open-Meteo, Open-Meteo AQ, TGDPS, RainViewer, Nominatim, Esri, IMD/NDMA/USGS/GSI feeds |
-| **AI verification latency** | Sub-second (3-parameter weighted scoring) |
+| **AI verification latency** | Sub-second (4-parameter weighted scoring) |
 | **Auto-approval threshold** | ≥ 85% confidence |
 | **Volunteer dispatch radius** | 10 km (configurable; demo mode broadcasts wider) |
 | **Completion proof radius** | Volunteer must be within 10 km of hazard with GPS + photo |
@@ -109,7 +109,7 @@ The PS contains **six distinct engineering requirements**. Sentinel AI addresses
 | 4 | *"increased operational costs"* | Eliminate duplicate effort and reactive over-deployment | Deduplication via heatmap corroboration, precision geo-fencing (no mass blasts), volunteer-first response before paid crews |
 | 5 | *"multi-agent AI system"* | Multiple specialised autonomous agents, not one monolithic model | **6 agents** — Detection, Prioritization, Dispatch, Alert, Analytics, Coordination |
 | 6 | *"integrated with a city digital twin"* | A live, queryable, spatial model of the city | **God Mode 3D map** (MapLibre GL) + TGDPS telemetry + RainViewer radar + Urban Resilience Index zones + Resilience Engine simulation |
-| 7 | *"autonomously prioritize incidents"* | Rank by severity without waiting for a human | 3-Parameter scoring → priority escalation (low → medium → high → critical), SOS auto-escalated to **critical** |
+| 7 | *"autonomously prioritize incidents"* | Rank by severity without waiting for a human | 4-Parameter scoring → priority escalation (low → medium → high → critical), SOS auto-escalated to **critical** |
 | 8 | *"coordinate actions"* | Cross-department task assignment and tracking | Emergency Events → Resource Allocations → Volunteer Assignments → SITREPs, all linked |
 | 9 | *"timely, compliant resolution"* | Auditable, time-stamped, evidence-backed closure | GPS + photo proof of completion, immutable timestamps, CSV audit export, rejection reasons recorded |
 
@@ -140,7 +140,7 @@ Every requirement in SH-SVA-03 maps to specific, runnable code in this repositor
 | PS Requirement | Implementation | Code Location |
 |:---|:---|:---|
 | Autonomous incident detection | 4-channel ingestion pipeline | `app.py::report()`, `app.py::submit_sos()`, `app.py::whatsapp_webhook()` |
-| Autonomous prioritization | 3-Parameter Accuracy System™ | `utils.py::validate_report_accuracy_3params()` |
+| Autonomous prioritization | 4-Parameter Accuracy System™ | `utils.py::validate_report_accuracy_4params()` |
 | Spatial corroboration | Heatmap density check, 5.5 km / 24 h window | `utils.py::_validate_heatmap_match()` |
 | Meteorological validation | Live Open-Meteo cross-check | `utils.py::_validate_climate_alignment()` |
 | Reporter credibility | Role × history × level scoring | `utils.py::_calculate_user_quality_score()` |
@@ -166,7 +166,7 @@ The platform deploys six specialized AI agents that work in concert. Each agent 
 
 | Agent | Role | Inputs | Outputs | Autonomy Level |
 |:---|:---|:---|:---|:---|
-| **🔍 Detection Agent** | Ingests citizen reports (PWA, Voice SOS, WhatsApp, AI calling agent), satellite data, TGDPS rainfall feeds, and weather APIs. Cross-validates using 3-parameter AI scoring. | Text, photo, video, GPS, audio transcript | Structured `Report` with hazard type, coordinates, confidence score | Fully autonomous |
+| **🔍 Detection Agent** | Ingests citizen reports (PWA, Voice SOS, WhatsApp, AI calling agent), satellite data, TGDPS rainfall feeds, and weather APIs. Cross-validates using 4-parameter AI scoring. | Text, photo, video, GPS, audio transcript | Structured `Report` with hazard type, coordinates, confidence score | Fully autonomous |
 | **📋 Prioritization Agent** | Ranks incidents by severity, proximity to critical infrastructure, corroboration density, and weather alignment. Auto-approves high-confidence reports (≥85%). | Confidence score, hazard type, corroboration count | `priority` (low/medium/high/critical), `verification_status` | Fully autonomous |
 | **🚁 Dispatch Agent** | "Uber-style" volunteer matching — queries available responders within radius, ranks by distance, fires WhatsApp assignment cards, tracks acceptance and completion. | Verified hazard, volunteer registry, GPS | `VolunteerAssignment` records, WhatsApp mission cards | Semi-autonomous (official can override) |
 | **📡 Alert Agent** | Geo-fenced push notifications — alerts only users within the hazard impact radius, not mass blasts. Attaches disaster photo and safe rescue coordinates. | Hazard location, per-hazard radius table, user home locations | In-app notifications, WhatsApp messages, push tokens | Fully autonomous |
@@ -226,7 +226,7 @@ The digital twin is not a marketing phrase here — it is a concrete set of live
 
 | Feature Area | Traditional Platforms | 🛡️ Sentinel AI |
 |:---|:---|:---|
-| **Response Speed** | Manual verification (takes hours) | **Sub-second AI Validation** (3-parameter checking algorithm) |
+| **Response Speed** | Manual verification (takes hours) | **Sub-second AI Validation** (4-parameter checking algorithm) |
 | **Reporting Channels** | Single-channel (app or phone) | **Omni-channel**: PWA reports, offline AI calling agent, one-tap Voice SOS with lat/long, full WhatsApp bot |
 | **Accessibility** | Requires app downloads, English-first | **No-install PWA + WhatsApp + Voice SOS.** Auto-translates to 6 regional languages via GPS |
 | **Volunteer Logistics** | Manual phone trees, chaotic groups | **"Uber-style" Auto-Dispatch.** Radius-bounded, skill-matched, WhatsApp-native |
@@ -265,14 +265,16 @@ The following is the end-to-end operational flow of Sentinel AI, from incident d
 │                            │                                                │
 │                   ┌────────▼────────────────────────────────┐               │
 │                   │  🤖 AI Verification Engine              │               │
-│                   │  3-Parameter Accuracy System™           │               │
+│                   │  4-Parameter Accuracy System™           │               │
 │                   │                                         │               │
-│                   │  P1: Heatmap Match (33%)                │               │
+│                   │  P1: Heatmap Match (25%)                │               │
 │                   │      → Similar reports in 5.5km / 24hr  │               │
-│                   │  P2: Climate Alignment (33%)            │               │
+│                   │  P2: Climate Alignment (25%)            │               │
 │                   │      → Open-Meteo live weather check    │               │
-│                   │  P3: User Quality Score (34%)           │               │
+│                   │  P3: User Quality Score (25%)           │               │
 │                   │      → Historical credibility of author │               │
+│                   │  P4: Image Processing (25%)             │               │
+│                   │      → NVIDIA NIM vision hazard match   │               │
 │                   │                                         │               │
 │                   │  Score ≥ 85% → AUTO-APPROVED            │               │
 │                   │  Score < 85% → Queued for Official      │               │
@@ -305,7 +307,7 @@ The following is the end-to-end operational flow of Sentinel AI, from incident d
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────┐        │
 │  │  🏛️ Official Review Panel                                       │        │
-│  │  • View AI accuracy breakdown (all 3 parameters)                 │        │
+│  │  • View AI accuracy breakdown (all 4 parameters)                 │        │
 │  │  • Approve / Reject with recorded reasons                        │        │
 │  │  • Escalate priority (Low → Medium → High → Critical)            │        │
 │  │  • Rejected reports enter a scheduled-deletion grace window      │        │
@@ -443,7 +445,7 @@ Keyword map scans transcript:
 Report created:  priority = "critical",  description = "[VOICE REPORT] …"
    │
    ▼
-3-Parameter AI scoring runs immediately → confidence_score + ai_analysis
+4-Parameter AI scoring runs immediately → confidence_score + ai_analysis
    │
    ▼
 CSV audit sync → report_id returned to the caller
@@ -455,15 +457,16 @@ CSV audit sync → report_id returned to the caller
 
 ---
 
-### 🤖 3. AI Verification Engine — 3-Parameter Accuracy System™
+### 🤖 3. AI Verification Engine — 4-Parameter Accuracy System™
 
 Every report is scored the instant it lands, with no human in the loop.
 
 | Parameter | Weight | How It Works |
 |:---|:---|:---|
-| **Heatmap Match** | 33% | Cross-references spatial density of similar reports within ~5.5 km (0.05° box) over a ±24-hour window, counting only `approved` or `pending` reports of the same hazard type |
-| **Climate Alignment** | 33% | Queries Open-Meteo — validates that live weather conditions (wind speed, humidity, WMO weather codes) actually support the claimed hazard |
-| **User Quality Score** | 34% | Historical credibility — approval rate, total report count, user level, and role-based trust multiplier |
+| **Heatmap Match** | 25% | Cross-references spatial density of similar reports within ~5.5 km (0.05° box) over a ±24-hour window, counting only `approved` or `pending` reports of the same hazard type |
+| **Climate Alignment** | 25% | Queries Open-Meteo — validates that live weather conditions (wind speed, humidity, WMO weather codes) actually support the claimed hazard |
+| **User Quality Score** | 25% | Historical credibility — approval rate, total report count, user level, and role-based trust multiplier |
+| **Image Processing** | 25% | Sends the reporter's photo to an NVIDIA NIM vision-language model (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` by default, served via OpenRouter, with an automatic fallback to `minimax/minimax-m3:free` if the primary model is saturated), which checks whether the image visually matches the claimed hazard type |
 
 #### Parameter 1 — Heatmap Corroboration Scoring
 
@@ -487,6 +490,17 @@ quality_score = base_role_score × history_multiplier × level_factor   (capped 
 | **History multiplier** | ≥80% approval → 1.00 · ≥60% → 0.85 · ≥40% → 0.70 · <40% → 0.50 · brand-new user → 0.60 |
 | **Level factor** | `min(1.0, (level / 10) × 0.3 + 0.7)` — scales 0.70 → 1.00 |
 
+#### Parameter 4 — Image Processing (NVIDIA NIM)
+
+The uploaded photo is base64-encoded and sent to NVIDIA's hosted NIM vision-language model with a prompt asking it to compare the image against the claimed `hazard_type` and return structured JSON (`matches_hazard`, `confidence`, `detected_hazard`, `reasoning`).
+
+| Condition | Score | Interpretation |
+|:---|:---|:---|
+| Model confirms match | **model confidence (0–1)** | Photo visually supports the claimed hazard |
+| Model detects a different hazard | **confidence × 0.3** | Photo doesn't match the claim — heavily discounted |
+| No photo attached | **0.30** | Missing evidence, mildly penalised |
+| No `NVIDIA_API_KEY` configured, file missing, timeout, or API error | **0.50** | Neutral fallback — never blocks report submission |
+
 #### Final Classification
 
 | Score | Classification | System Action |
@@ -496,7 +510,7 @@ quality_score = base_role_score × history_multiplier × level_factor   (capped 
 | **40–59%** | 🟠 Questionable | Held for investigation |
 | **0–39%** | 🔴 Low Confidence | Flagged as potential misinformation |
 
-The full parameter-by-parameter breakdown is exposed to officials through `GET /api/report/<id>/accuracy_3param`, so no approval decision is a black box.
+The full parameter-by-parameter breakdown is exposed to officials through `GET /api/report/<id>/accuracy_4param`, so no approval decision is a black box.
 
 ---
 
@@ -1305,7 +1319,7 @@ sentinel-ai/
 ├── forms.py                # WTForms — 25 validated, multilingual form classes
 │
 ├── utils.py                # Core utility library (~815 lines):
-│                           #  - 3-Parameter AI validation engine
+│                           #  - 4-Parameter AI validation engine
 │                           #  - Haversine distance calculator
 │                           #  - WhatsApp / Twilio message sender
 │                           #  - SMS alert sender
@@ -1641,6 +1655,10 @@ TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886   # Twilio Sandbox number
 # --- Twilio SMS (optional) ---
 TWILIO_PHONE_NUMBER=+1XXXXXXXXXX
 
+# --- NVIDIA NIM (image processing, Parameter 4) ---
+NVIDIA_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   # OpenRouter key
+NVIDIA_VISION_MODEL=nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free   # optional, this is the default
+
 # --- Optional ---
 BASE_URL=https://your-ngrok-subdomain.ngrok-free.app
 FIREBASE_SERVER_KEY=your_firebase_key    # For push notifications
@@ -1744,7 +1762,7 @@ All JSON endpoints require authentication via session cookie unless marked other
 | `GET` | `/api/reports` | Public | List of reports for map rendering |
 | `GET` | `/view_report/<id>` | ✅ | Full report detail |
 | `GET` | `/api/hazards/active` | ✅ | Active hazards for map overlay |
-| `GET` | `/api/report/<id>/accuracy_3param` | ✅ | Full 3-parameter AI accuracy breakdown |
+| `GET` | `/api/report/<id>/accuracy_4param` | ✅ | Full 4-parameter AI accuracy breakdown |
 | `POST` | `/api/submit_sos` | ✅ | Voice SOS with transcript + GPS |
 | `POST` | `/verify_report/<id>` | 🔐 Official | Approve a pending report |
 | `GET/POST` | `/reject_report/<id>` | 🔐 Official | Reject with a recorded reason |
@@ -2202,7 +2220,7 @@ A practical validation script for demo day or a staging sign-off.
 
 | Phase | Item | Status |
 |:---|:---|:---|
-| **Now** | 4-channel ingestion, 3-parameter AI, dispatch, coordination, simulation | ✅ Shipped |
+| **Now** | 4-channel ingestion, 4-parameter AI, dispatch, coordination, simulation | ✅ Shipped |
 | **Now** | PWA, offline queue, WhatsApp bot, 6 languages, gamification | ✅ Shipped |
 | **Next** | WebSockets replacing 5-second notification polling | 🔨 Planned |
 | **Next** | PostGIS spatial indexing for sub-100 ms radius queries at city scale | 🔨 Planned |

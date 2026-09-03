@@ -533,41 +533,94 @@ def format_environmental_metric(value, metric_type):
         return f"{value:.1f}"
 
 # =============================================================================
-# AI ACCURACY VALIDATION - 3 PARAMETER SYSTEM
+# AI ACCURACY VALIDATION - 4 PARAMETER SYSTEM
 # =============================================================================
 
-def validate_report_accuracy_3params(report, weather_data=None, heatmap_data=None):
+_HAZARD_BASELINE_SEVERITY = {
+    'tsunami': 0.95,
+    'storm_surge': 0.80,
+    'coastal_flooding': 0.75,
+    'high_waves': 0.55,
+    'swell_surge': 0.50,
+    'abnormal_tide': 0.35,
+}
+
+
+def _severity_label(score):
+    if score >= 0.85:
+        return 'critical'
+    elif score >= 0.60:
+        return 'high'
+    elif score >= 0.35:
+        return 'medium'
+    return 'low'
+
+
+def validate_report_accuracy_4params(report, weather_data=None, heatmap_data=None):
     """
-    Validate report accuracy using 3 key parameters:
+    Validate report accuracy using 4 key parameters:
     1. Weather & Early Warnings - Check if report hazard is confirmed in heatmap/active hazards
     2. Live Climate Data - Check if report aligns with current weather conditions
     3. User Quality Score - Check user's historical credibility and track record
-    
-    Returns accuracy score (0-1) and detailed breakdown
+    4. Image Processing (NVIDIA NIM) - Check if the uploaded photo visually matches the claimed hazard
+
+    Returns accuracy score (0-1), a severity assessment, and detailed breakdown
     """
-    
-    # Parameter 1: Weather & Early Warnings Heatmap Match (33% weight)
+
+    # Parameter 1: Weather & Early Warnings Heatmap Match (25% weight)
     heatmap_accuracy = _validate_heatmap_match(report, heatmap_data)
-    
-    # Parameter 2: Live Climate Data Alignment (33% weight)
+
+    # Parameter 2: Live Climate Data Alignment (25% weight)
     climate_accuracy = _validate_climate_alignment(report, weather_data)
-    
-    # Parameter 3: User Quality/Credibility Score (34% weight)
+
+    # Parameter 3: User Quality/Credibility Score (25% weight)
     user_quality = _calculate_user_quality_score(report.author)
-    
+
+    # Parameter 4: Image Processing via NVIDIA NIM vision model (25% weight)
+    image_processing = _validate_image_processing(report)
+
     # Calculate weighted average accuracy
-    weights = [0.33, 0.33, 0.34]
-    accuracy_scores = [heatmap_accuracy['score'], climate_accuracy['score'], user_quality['score']]
+    weights = [0.25, 0.25, 0.25, 0.25]
+    accuracy_scores = [
+        heatmap_accuracy['score'],
+        climate_accuracy['score'],
+        user_quality['score'],
+        image_processing['score'],
+    ]
     overall_accuracy = sum(s * w for s, w in zip(accuracy_scores, weights))
-    
+
+    # Severity: prefer what the photo actually shows (image parameter), since
+    # that reflects this specific incident rather than just the hazard label;
+    # fall back to a per-hazard-type baseline when there's no usable image.
+    baseline_severity = _HAZARD_BASELINE_SEVERITY.get(report.hazard_type, 0.5)
+    if image_processing.get('severity') != 'unknown' and image_processing.get('severity_score', 0) > 0:
+        severity_score = (image_processing['severity_score'] * 0.7) + (baseline_severity * 0.3)
+    else:
+        severity_score = baseline_severity
+    severity_score = max(0.0, min(1.0, severity_score))
+    severity = _severity_label(severity_score)
+
     return {
         'overall_accuracy': overall_accuracy,
         'accuracy_percent': int(overall_accuracy * 100),
+        'severity': severity,
+        'severity_score': severity_score,
+        'severity_percent': int(severity_score * 100),
         'parameter_1_heatmap': heatmap_accuracy,
         'parameter_2_climate': climate_accuracy,
         'parameter_3_user_quality': user_quality,
-        'detailed_analysis': f"Heatmap Match: {int(heatmap_accuracy['score']*100)}% | Climate Alignment: {int(climate_accuracy['score']*100)}% | User Quality: {int(user_quality['score']*100)}%"
+        'parameter_4_image_processing': image_processing,
+        'detailed_analysis': (
+            f"Heatmap Match: {int(heatmap_accuracy['score']*100)}% | "
+            f"Climate Alignment: {int(climate_accuracy['score']*100)}% | "
+            f"User Quality: {int(user_quality['score']*100)}% | "
+            f"Image Processing: {int(image_processing['score']*100)}%"
+        )
     }
+
+
+# Backwards-compatible alias for the old 3-parameter name
+validate_report_accuracy_3params = validate_report_accuracy_4params
 
 def _validate_heatmap_match(report, heatmap_data=None):
     """
@@ -765,6 +818,369 @@ def _calculate_user_quality_score(user):
     except Exception as e:
         print(f"User quality score error: {e}")
         return {'score': 0.50, 'analysis': 'User quality assessment unavailable'}
+
+# Hard wall-clock cap (seconds) on a single image-processing API call. Kept
+# short since this call blocks report submission - see _post_with_deadline.
+HARD_DEADLINE_SECONDS = 9
+
+
+def _post_with_deadline(request_kwargs, deadline_seconds):
+    """
+    requests.post() with a real total-time cap. Plain `timeout=` on requests
+    only bounds the gap between chunks of a response, not its overall
+    duration - a reply that trickles in slowly can sail past it while still
+    taking 30-40s wall-clock. Running the call in a worker thread and giving
+    up on `future.result()` after `deadline_seconds` enforces an actual cap;
+    the abandoned thread is left to finish or error out on its own (daemon
+    executor, not joined) rather than blocking the caller.
+    """
+    import concurrent.futures
+    import requests
+
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(requests.post, **request_kwargs)
+    try:
+        return future.result(timeout=deadline_seconds)
+    except concurrent.futures.TimeoutError:
+        raise TimeoutError(f"Request exceeded {deadline_seconds}s hard deadline")
+    finally:
+        executor.shutdown(wait=False)
+
+
+def _downscale_image_for_upload(image_path, max_dimension=768, jpeg_quality=75):
+    """
+    Shrink+re-encode the image before sending it to the vision API. Uploaded
+    photos can be several MB straight off a phone camera; the model doesn't
+    need that resolution to judge a hazard, and a smaller payload is the
+    single biggest lever on request latency (upload time + tokens the model
+    has to chew through). Falls back to the raw file bytes if Pillow can't
+    open it for any reason.
+    """
+    import io
+    from PIL import Image
+
+    try:
+        with Image.open(image_path) as img:
+            img = img.convert('RGB')
+            img.thumbnail((max_dimension, max_dimension), Image.LANCZOS)
+            buf = io.BytesIO()
+            img.save(buf, format='JPEG', quality=jpeg_quality, optimize=True)
+            return buf.getvalue(), 'image/jpeg'
+    except Exception as e:
+        print(f"Image downscale failed, sending original file: {e}")
+        with open(image_path, 'rb') as f:
+            return f.read(), None
+
+
+def _validate_image_processing(report):
+    """
+    Parameter 4: Run the report's uploaded photo through the NVIDIA Nemotron
+    vision-reasoning model (served via OpenRouter) and check whether the
+    image visually matches the reporter's claimed hazard_type.
+
+    Returns score 0-1 based on the model's confidence that the photo shows
+    the claimed hazard, plus a 'caption' of what the model actually saw in
+    the image (kept so it can be surfaced/stored alongside the report) and
+    a 'severity'/'severity_score' assessment of how bad the hazard looks.
+    Falls back to a neutral 0.5 whenever no image, no API key, or the API
+    call fails - this is a scoring signal, not a gate.
+    """
+    import base64
+    import json
+    import mimetypes
+    import re
+    import requests
+
+    if not report.image_file:
+        return {'score': 0.30, 'analysis': 'Image processing skipped: No photo attached to report', 'severity': 'unknown', 'severity_score': 0.0}
+
+    api_key = os.environ.get('NVIDIA_API_KEY') or os.environ.get('OPENROUTER_API_KEY')
+    if not api_key:
+        return {'score': 0.50, 'analysis': 'Image processing unavailable: NVIDIA_API_KEY not configured', 'severity': 'unknown', 'severity_score': 0.0}
+
+    try:
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
+        image_path = os.path.join(upload_folder, report.image_file)
+
+        if not os.path.exists(image_path):
+            return {'score': 0.30, 'analysis': 'Image processing skipped: Photo file not found on disk', 'severity': 'unknown', 'severity_score': 0.0}
+
+        image_bytes, mime_type = _downscale_image_for_upload(image_path)
+        if mime_type is None:
+            mime_type, _ = mimetypes.guess_type(image_path)
+            mime_type = mime_type or 'image/jpeg'
+        image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+
+        hazard_type = report.hazard_type
+        primary_model = os.environ.get('NVIDIA_VISION_MODEL', 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free')
+        # Free-tier OpenRouter models each sit behind their own small worker
+        # pool, so "model X is saturated" says nothing about model Y - trying
+        # a second, independent model is what actually raises the odds of
+        # getting a real answer instead of a neutral fallback. FALLBACK_MODEL
+        # is a plain (non-reasoning) VLM, which also tends to answer faster.
+        fallback_model = 'minimax/minimax-m3:free'
+        model_candidates = [primary_model] if primary_model == fallback_model else [primary_model, fallback_model]
+
+        prompt = (
+            "Coastal disaster verification. Claimed hazard: "
+            f"'{hazard_type}' (one of: tsunami, storm_surge, high_waves, swell_surge, coastal_flooding, abnormal_tide). "
+            "Reply with ONLY this compact JSON object, no prose, no markdown fencing: "
+            '{"caption": "one short sentence on exactly what the image shows", '
+            '"matches_hazard": true or false, "confidence": 0-1, '
+            '"detected_hazard": "short label of what the image actually shows", '
+            '"severity": "low", "medium", "high" or "critical" - how dangerous the scene looks, '
+            '"severity_score": 0-1, '
+            '"reasoning": "one short sentence"}'
+        )
+
+        def call_model(model_id):
+            """Try one model, retrying once on a fast rate-limit failure only. Returns (payload_json, error_message)."""
+            request_kwargs = dict(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Accept": "application/json",
+                    "HTTP-Referer": "https://sentinel-ai.local",
+                    "X-Title": "Sentinel AI Disaster Reports",
+                },
+                json={
+                    "model": model_id,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:{mime_type};base64,{image_b64}"},
+                                },
+                            ],
+                        }
+                    ],
+                    "max_tokens": 400,
+                    "temperature": 0.1,
+                    "reasoning": {"effort": "low"},
+                },
+                # requests' own `timeout=` only bounds the gap between chunks
+                # of a streamed/slow-trickling response, not total wall-clock
+                # time - a response dribbling in one byte every few seconds
+                # never trips it while still taking 30-40s overall. The
+                # ThreadPoolExecutor deadline in _post_with_deadline enforces
+                # an actual hard cap on total request time instead.
+                timeout=HARD_DEADLINE_SECONDS,
+            )
+
+            last_err = None
+            for attempt in range(2):
+                try:
+                    response = _post_with_deadline(request_kwargs, HARD_DEADLINE_SECONDS)
+                except TimeoutError:
+                    return None, f'{model_id} did not respond within {HARD_DEADLINE_SECONDS}s'
+
+                if response.status_code != 200:
+                    return None, f'{model_id} returned HTTP {response.status_code} - {response.text[:200]}'
+
+                body = response.json()
+                if 'choices' not in body:
+                    last_err = f"{model_id} upstream error: {body.get('error', {}).get('message', 'unknown error')}"
+                    continue  # this failure mode returns in ~1-2s, cheap to retry once
+
+                return body, None
+
+            return None, last_err
+
+        payload_json = None
+        last_error = None
+        model_used = None
+        for candidate in model_candidates:
+            payload_json, err = call_model(candidate)
+            if payload_json is not None:
+                model_used = candidate
+                break
+            last_error = err
+
+        if payload_json is None:
+            return {'score': 0.50, 'analysis': f'Image processing unavailable: {last_error}', 'severity': 'unknown', 'severity_score': 0.0}
+
+        model = model_used
+        message = payload_json['choices'][0]['message']
+        # Reasoning models may put chain-of-thought in a separate field and/or
+        # wrap it in <think> tags inside content - strip both before parsing.
+        content = (message.get('content') or '').strip()
+        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+
+        # Pull out the last {...} JSON object in the response, in case the
+        # model added reasoning text before or after it despite instructions.
+        json_matches = re.findall(r'\{.*?\}', content, flags=re.DOTALL)
+        if not json_matches:
+            return {'score': 0.50, 'analysis': 'Image processing unavailable: model response contained no parseable result', 'severity': 'unknown', 'severity_score': 0.0}
+
+        parsed = json.loads(json_matches[-1])
+        caption = parsed.get('caption', '').strip()
+        matches_hazard = bool(parsed.get('matches_hazard', False))
+        model_confidence = float(parsed.get('confidence', 0.5))
+        model_confidence = max(0.0, min(1.0, model_confidence))
+        detected_hazard = parsed.get('detected_hazard', 'unknown')
+        reasoning = parsed.get('reasoning', '')
+        severity = str(parsed.get('severity', 'unknown')).lower()
+        if severity not in ('low', 'medium', 'high', 'critical'):
+            severity = 'unknown'
+        severity_score = max(0.0, min(1.0, float(parsed.get('severity_score', 0.0))))
+        # A hazard that doesn't even match the photo can't be scored as severe off that photo
+        if not matches_hazard:
+            severity_score *= 0.3
+
+        # If the model thinks it's a different hazard, discount the confidence
+        score = model_confidence if matches_hazard else model_confidence * 0.3
+        score = max(0.0, min(1.0, score))
+
+        analysis = (
+            f"NVIDIA Nemotron vision analysis - what it saw: \"{caption}\" | "
+            f"detected '{detected_hazard}' ({'matches' if matches_hazard else 'does not match'} claimed '{hazard_type}'), "
+            f"severity: {severity}. {reasoning}"
+        )
+
+        return {
+            'score': score,
+            'analysis': analysis,
+            'caption': caption,
+            'matches_hazard': matches_hazard,
+            'detected_hazard': detected_hazard,
+            'severity': severity,
+            'severity_score': severity_score,
+            'model': model,
+        }
+
+    except requests.exceptions.Timeout:
+        return {'score': 0.50, 'analysis': 'Image processing timed out: model did not respond in time', 'severity': 'unknown', 'severity_score': 0.0}
+    except Exception as e:
+        print(f"Image processing error: {e}")
+        return {'score': 0.50, 'analysis': 'Image processing unavailable: analysis failed', 'severity': 'unknown', 'severity_score': 0.0}
+
+# =============================================================================
+# LIVE FLOOD GAUGE DATA (Open-Meteo Flood API / GloFAS)
+# =============================================================================
+# Open-Meteo's Flood API is free, keyless, and returns real river-discharge
+# forecasts (GloFAS model, ~5km grid, updated daily). Important caveat found
+# during testing: at India's exact station coordinates the model often snaps
+# to a small tributary pixel rather than the actual main channel, so absolute
+# discharge numbers (e.g. "0.27 m3/s" at Kaleswaram on the Godavari) can look
+# nonsensical if shown as a literal reading. To stay honest while still being
+# genuinely live, classification below is RELATIVE - today's discharge is
+# compared against that same pixel's own historical mean/p75/max - which is a
+# real anomaly signal regardless of whether the pixel is the named river or a
+# nearby tributary in the same watershed.
+
+TELANGANA_GAUGE_STATIONS = [
+    {'name': 'Bhadrachalam', 'river': 'Godavari', 'lat': 17.67, 'lon': 80.89},
+    {'name': 'Mancherial', 'river': 'Godavari', 'lat': 18.87, 'lon': 79.46},
+    {'name': 'Kaleswaram', 'river': 'Godavari', 'lat': 18.55, 'lon': 79.90},
+    {'name': 'Nandikonda', 'river': 'Krishna', 'lat': 16.95, 'lon': 79.32},
+    {'name': 'Jogulamba', 'river': 'Krishna', 'lat': 16.58, 'lon': 78.08},
+    {'name': 'Dummugudem', 'river': 'Godavari', 'lat': 17.78, 'lon': 80.57},
+    {'name': 'Asifabad', 'river': 'Godavari', 'lat': 19.37, 'lon': 79.28},
+    {'name': 'Yellandu', 'river': 'Godavari', 'lat': 17.60, 'lon': 80.32},
+    {'name': 'Nalgonda', 'river': 'Musi', 'lat': 17.06, 'lon': 79.27},
+    {'name': 'Hyderabad (Musi)', 'river': 'Musi', 'lat': 17.38, 'lon': 78.48},
+    {'name': 'Nizamabad', 'river': 'Manjira', 'lat': 18.67, 'lon': 78.10},
+    {'name': 'Wanaparthy', 'river': 'Krishna', 'lat': 16.36, 'lon': 78.07},
+    {'name': 'Jadcherla', 'river': 'Krishna', 'lat': 16.76, 'lon': 78.17},
+    {'name': 'Medak', 'river': 'Manjira', 'lat': 18.05, 'lon': 78.26},
+    {'name': 'Adilabad', 'river': 'Godavari', 'lat': 19.66, 'lon': 78.53},
+    {'name': 'Khammam', 'river': 'Krishna', 'lat': 17.25, 'lon': 80.15},
+    {'name': 'Suryapet', 'river': 'Musi', 'lat': 17.14, 'lon': 79.62},
+]
+
+BENGALURU_GAUGE_STATIONS = [
+    {'name': 'Bellandur Lake', 'river': 'Koramangala-Challaghatta Valley', 'lat': 12.9350, 'lon': 77.6650},
+    {'name': 'Varthur Lake', 'river': 'Koramangala-Challaghatta Valley', 'lat': 12.9400, 'lon': 77.7400},
+    {'name': 'K R Puram Underpass Drain', 'river': 'Koramangala-Challaghatta Valley', 'lat': 12.9930, 'lon': 77.6950},
+    {'name': 'Silk Board Junction Drain', 'river': 'Vrishabhavathi River', 'lat': 12.9170, 'lon': 77.6220},
+    {'name': 'Hebbal Lake', 'river': 'Arkavathy River', 'lat': 13.0450, 'lon': 77.5950},
+    {'name': 'Rachenahalli Lake', 'river': 'Arkavathy River', 'lat': 13.0450, 'lon': 77.6260},
+    {'name': 'Ulsoor Lake', 'river': 'Vrishabhavathi River', 'lat': 12.9810, 'lon': 77.6220},
+    {'name': 'Agara Lake', 'river': 'Koramangala-Challaghatta Valley', 'lat': 12.9210, 'lon': 77.6390},
+    {'name': 'Madiwala Lake', 'river': 'Vrishabhavathi River', 'lat': 12.9190, 'lon': 77.6130},
+    {'name': 'Puttenahalli Lake', 'river': 'Vrishabhavathi River', 'lat': 12.9010, 'lon': 77.5730},
+    {'name': 'Yelahanka Lake', 'river': 'Arkavathy River', 'lat': 13.1005, 'lon': 77.5963},
+    {'name': 'Sankey Tank', 'river': 'Arkavathy River', 'lat': 12.9990, 'lon': 77.5730},
+]
+
+
+def fetch_live_flood_gauges(stations):
+    """
+    Fetch live river-discharge data for a list of {name, river, lat, lon}
+    stations from Open-Meteo's Flood API in a single batched request, and
+    classify each by how far today's discharge sits above its own historical
+    mean/p75 (see module docstring above for why this is relative, not
+    absolute). Returns the same stations enriched with level/discharge/trend,
+    or 'level': 'UNKNOWN' per-station if the API call fails.
+    """
+    import requests
+
+    lats = ','.join(str(s['lat']) for s in stations)
+    lons = ','.join(str(s['lon']) for s in stations)
+    url = (
+        f"https://flood-api.open-meteo.com/v1/flood?latitude={lats}&longitude={lons}"
+        f"&daily=river_discharge,river_discharge_mean,river_discharge_max,river_discharge_p75"
+        f"&past_days=2&forecast_days=1"
+    )
+
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, dict):
+            data = [data]  # API returns a bare object (not a list) for a single station
+    except Exception as e:
+        print(f"Flood gauge fetch error: {e}")
+        data = [None] * len(stations)
+
+    results = []
+    for station, loc in zip(stations, data):
+        daily = (loc or {}).get('daily', {})
+        discharges = daily.get('river_discharge') or []
+
+        if not discharges:
+            results.append({**station, 'level': 'UNKNOWN', 'discharge': None,
+                             'pct_of_normal': None, 'trend': '—',
+                             'analysis': 'Live data unavailable'})
+            continue
+
+        today = discharges[-1]
+        yesterday = discharges[-2] if len(discharges) > 1 else today
+        mean = (daily.get('river_discharge_mean') or [0])[-1]
+        p75 = (daily.get('river_discharge_p75') or [mean])[-1]
+
+        if p75 > 0 and today >= p75 * 1.3:
+            level = 'DANGER'
+        elif p75 > 0 and today >= p75:
+            level = 'HIGH'
+        elif mean > 0 and today >= mean:
+            level = 'MODERATE'
+        else:
+            level = 'NORMAL'
+
+        pct_change = ((today - yesterday) / yesterday * 100) if yesterday else 0
+        if pct_change > 5:
+            trend = '↑ Rising'
+        elif pct_change < -5:
+            trend = '↓ Falling'
+        else:
+            trend = '→ Steady'
+
+        pct_of_normal = round((today / mean) * 100) if mean else 100
+
+        results.append({
+            **station,
+            'level': level,
+            'discharge': round(today, 3),
+            'pct_of_normal': pct_of_normal,
+            'trend': trend,
+        })
+
+    return results
+
 
 def sync_reports_to_csv(Report):
     """Sync all reports from the database to all_reports.csv and all_reports_export.csv"""
