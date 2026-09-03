@@ -777,8 +777,12 @@
     <div id="globalAlertModal" class="global-alert-modal">
         <div class="global-alert-content">
             <div class="global-alert-header">
-                <h2>🚨 {{ translate('send_global_alert') if translate('send_global_alert') != 'Send Global Alert' else
-                    'Send Global Alert' }}</h2>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <h2 class="mb-0">🚨 {{ translate('send_global_alert') if translate('send_global_alert') != 'Send Global Alert' else 'Send Global Alert' }}</h2>
+                    <button class="btn btn-warning fw-bold rounded-pill px-4" style="font-size:14px;" onclick="selectAllAndSend()">
+                        ⚡ Global Alert
+                    </button>
+                </div>
                 <button class="close-btn" onclick="closeAlertModal()">&times;</button>
             </div>
 
@@ -1195,6 +1199,13 @@
 
         selectedLocationsEl.textContent = window.selectedLocationIds.size;
         sendBtn.disabled = window.selectedLocationIds.size === 0;
+    }
+
+    function selectAllAndSend() {
+        // Just select all so user can review before sending
+        const selectAll = document.getElementById('selectAllChk');
+        selectAll.checked = true;
+        toggleSelectAll();
     }
 
     function closeAlertModal() {

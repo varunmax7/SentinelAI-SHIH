@@ -4,6 +4,7 @@
 
 {% block head_extra %}
 <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
     .simulation-container {
         background: rgba(15, 23, 42, 0.95);
@@ -134,12 +135,62 @@
     }
 
     .ai-report-box {
-        background: rgba(16, 185, 129, 0.05);
-        border: 1px solid rgba(16, 185, 129, 0.15);
+        background: rgba(16, 185, 129, 0.04);
+        border: 1px solid rgba(16, 185, 129, 0.18);
         border-radius: 16px;
-        padding: 1.25rem;
-        margin-top: 1rem;
+        padding: 1.5rem;
     }
+
+    /* Full-width AI report grid */
+    #aiReportContent {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+    @media (max-width: 1200px) { #aiReportContent { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px)  { #aiReportContent { grid-template-columns: 1fr; } }
+
+    /* Section cards */
+    .ai-section-card {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid;
+        display: flex;
+        flex-direction: column;
+    }
+    .ai-section-header {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 14px;
+        font-size: 11px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.07em;
+        cursor: pointer; user-select: none;
+        justify-content: space-between;
+        flex-shrink: 0;
+    }
+    .ai-section-header .chevron { transition: transform 0.2s; font-style: normal; flex-shrink:0; }
+    .ai-section-body {
+        padding: 14px 15px;
+        font-size: 12.5px; line-height: 1.8; color: #cbd5e1;
+        flex: 1;
+        overflow-y: auto;
+        max-height: 340px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.15) transparent;
+    }
+    .ai-section-body::-webkit-scrollbar { width: 3px; }
+    .ai-section-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+    /* Markdown inside cards */
+    .ai-section-body p { margin: 0 0 8px; }
+    .ai-section-body p:last-child { margin-bottom: 0; }
+    .ai-section-body strong { color: #f1f5f9; font-weight: 600; }
+    .ai-section-body em { color: #94a3b8; }
+    .ai-section-body ul, .ai-section-body ol { padding-left: 18px; margin: 6px 0 10px; }
+    .ai-section-body li { margin-bottom: 5px; }
+    .ai-section-body table { width:100%; border-collapse:collapse; font-size:11.5px; margin:8px 0; }
+    .ai-section-body th { background:rgba(255,255,255,0.07); color:#94a3b8; font-weight:600; font-size:10.5px; padding:7px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1); }
+    .ai-section-body td { padding:7px 10px; border-bottom:1px solid rgba(255,255,255,0.05); color:#cbd5e1; vertical-align:top; }
+    .ai-section-body tr:last-child td { border-bottom:none; }
+    .ai-section-body tr:hover td { background:rgba(255,255,255,0.03); }
 
     .ai-pulse {
         display: inline-block;
@@ -196,6 +247,16 @@
     .map-tiles {
         filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) !important;
     }
+    /* Global alert location list */
+    .alert-locations-list { max-height: 300px; overflow-y: auto; margin: 8px 0; }
+    .alert-locations-list::-webkit-scrollbar { width: 4px; }
+    .alert-locations-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+    .alert-location-item { display:flex; align-items:flex-start; padding:10px 12px; margin-bottom:6px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; transition:all 0.15s; }
+    .alert-location-item:hover { background:rgba(255,255,255,0.07); border-color:rgba(59,130,246,0.3); }
+    .alert-location-info { flex:1; min-width:0; }
+    .alert-location-name { display:flex; align-items:center; gap:7px; margin-bottom:4px; font-weight:600; color:#e5e7eb; font-size:13px; }
+    .alert-location-details { font-size:11px; color:#6b7280; display:flex; flex-wrap:wrap; gap:8px; }
+    #sendAlertBtn:not([disabled]) { opacity: 1 !important; }
 </style>
 {% endblock %}
 
@@ -213,6 +274,9 @@
         </div>
         <div class="d-flex gap-3">
             <button class="btn btn-outline-light px-4 rounded-pill fw-bold" onclick="resetSimulation()">Reset</button>
+            <button class="btn btn-warning px-4 rounded-pill fw-bold" onclick="openGlobalAlert()">
+                🚨 Global Alert
+            </button>
             <button class="btn btn-primary px-5 rounded-pill fw-bold shadow-lg" onclick="runSimulation()"
                 id="simulateBtn">
                 <i class="fas fa-bolt me-2"></i>GENERATE ASSESSMENT
@@ -303,15 +367,6 @@
                     </div>
                 </div>
 
-                <div class="ai-report-box">
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="ai-pulse"></div>
-                        <span class="fw-bold small" style="color: #10b981;">AI STRATEGIC INSIGHT</span>
-                    </div>
-                    <p class="small mb-0 text-white-50" id="aiSummary" style="line-height: 1.5;">
-                        Initialize scenario parameters to generate predictive cross-sector impact analysis.
-                    </p>
-                </div>
             </div>
         </div>
 
@@ -340,6 +395,48 @@
             </div>
         </div>
     </div>
+
+    <!-- Global Alert Modal -->
+    <div id="globalAlertModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+        <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:2rem; width:min(560px,95vw); max-height:85vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                <h4 style="margin:0; font-weight:700;">🚨 Send Global Alert</h4>
+                <button onclick="closeAlertModal()" style="background:rgba(255,255,255,0.08); border:none; color:#fff; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px;">&times;</button>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:1.25rem;">
+                <div style="background:rgba(255,255,255,0.05); border-radius:10px; padding:14px; text-align:center;">
+                    <div id="totalLocations" style="font-size:1.8rem; font-weight:700; color:#38bdf8;">0</div>
+                    <div style="font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.06em;">Total Affected Areas</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.05); border-radius:10px; padding:14px; text-align:center;">
+                    <div id="selectedLocations" style="font-size:1.8rem; font-weight:700; color:#f97316;">0</div>
+                    <div style="font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:0.06em;">Selected Areas</div>
+                </div>
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
+                <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll()" style="width:16px;height:16px;accent-color:#3b82f6;">
+                Select All Locations
+            </label>
+            <div id="alertLocationsList" class="alert-locations-list"></div>
+            <div style="display:flex; gap:10px; margin-top:1.25rem;">
+                <button onclick="closeAlertModal()" style="flex:1; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#fff; cursor:pointer; font-weight:600;">Cancel</button>
+                <button id="sendAlertBtn" onclick="sendSelectedAlert()" disabled style="flex:2; padding:10px; border-radius:10px; border:none; background:#ef4444; color:#fff; cursor:pointer; font-weight:700; opacity:0.5;">Send Alert</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL-WIDTH AI STRATEGIC REPORT -->
+    <div id="aiReportBox" style="margin-top: 2rem; display: none;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:1.25rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(16,185,129,0.2);">
+            <div class="ai-pulse"></div>
+            <span style="font-size:13px; font-weight:700; color:#10b981; text-transform:uppercase; letter-spacing:0.08em;">AI Strategic Report — Sentinel LLM</span>
+            <span style="font-size:11px; color:#475569; margin-left:auto;">Click any card to collapse</span>
+        </div>
+        <p class="small text-white-50" id="aiSummaryPlaceholder" style="line-height:1.5; display:none;">
+            🧠 Sentinel LLM is generating your strategic assessment...
+        </p>
+        <div id="aiReportContent" style="display:none;"></div>
+    </div>
 </div>
 {% endblock %}
 
@@ -353,6 +450,43 @@
     document.addEventListener('DOMContentLoaded', () => {
         initMap();
     });
+
+    function addCloudLayers() {
+        const map = sMap.map;
+
+        // NASA GIBS MODIS Terra true-colour — yesterday's date (today's pass available ~12h after)
+        const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        map.addSource('gibs-clouds', {
+            type: 'raster',
+            tiles: [`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${yesterday}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`],
+            tileSize: 256,
+            attribution: '© NASA Worldview / GIBS'
+        });
+        map.addLayer({ id: 'gibs-layer', type: 'raster', source: 'gibs-clouds',
+            paint: { 'raster-opacity': 0, 'raster-saturation': 0.1 }
+        });
+
+        // RainViewer live radar — fetch latest timestamp, refresh every 10 min
+        function loadRainViewer() {
+            fetch('https://api.rainviewer.com/public/weather-maps.json')
+                .then(r => r.json())
+                .then(data => {
+                    const past = data.radar && data.radar.past;
+                    if (!past || !past.length) return;
+                    const latest = past[past.length - 1];
+                    const tileUrl = `https://tilecache.rainviewer.com${latest.path}/256/{z}/{x}/{y}/6/1_1.png`;
+                    if (map.getSource('rainviewer')) {
+                        map.getSource('rainviewer').setTiles([tileUrl]);
+                    } else {
+                        map.addSource('rainviewer', { type: 'raster', tiles: [tileUrl], tileSize: 256, attribution: '© RainViewer' });
+                        map.addLayer({ id: 'rv-layer', type: 'raster', source: 'rainviewer', paint: { 'raster-opacity': 0 } });
+                    }
+                })
+                .catch(() => {});
+        }
+        loadRainViewer();
+        setInterval(loadRainViewer, 10 * 60 * 1000);
+    }
 
     function initMap() {
         sMap = new GodModeMap('simulationMap', {
@@ -377,6 +511,7 @@
                 ]
             }
         });
+        sMap.executeWhenLoaded(() => addCloudLayers());
     }
 
     function setHorizon(h, btn) {
@@ -391,10 +526,19 @@
 
     function updateVals() {
         const rain = document.getElementById('rainSlider').value;
-        const sea = document.getElementById('seaSlider').value;
+        const sea  = document.getElementById('seaSlider').value;
         document.getElementById('rainVal').innerText = rain + ' mm/h';
-        document.getElementById('seaVal').innerText = sea + ' m';
-        if (sMap) sMap.setRainEffect(Number(rain));
+        document.getElementById('seaVal').innerText  = sea + ' m';
+        if (sMap) sMap.setRainEffect(Number(rain));  // canvas cloud puffs (instant)
+        updateCloudOpacity(Number(rain));              // real tile layers (data-backed)
+    }
+
+    function updateCloudOpacity(rain) {
+        if (!sMap || !sMap.map) return;
+        const map    = sMap.map;
+        const factor = Math.min(rain / 300, 1);
+        if (map.getLayer('gibs-layer')) map.setPaintProperty('gibs-layer', 'raster-opacity', factor * 0.88);
+        if (map.getLayer('rv-layer'))   map.setPaintProperty('rv-layer',   'raster-opacity', factor * 0.60);
     }
 
     function resetSimulation() {
@@ -415,57 +559,277 @@
         const sea_level = document.getElementById('seaSlider').value;
         const btn = document.getElementById('simulateBtn');
 
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>ANALYZING...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>COMPUTING ZONES...';
         btn.disabled = true;
 
-        try {
-            const response = await fetch('/api/simulate_impact', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': "{{ csrf_token() if csrf_token is defined else '' }}"
-                },
-                body: JSON.stringify({
-                    rainfall,
-                    sea_level,
-                    time_horizon: currentTimeHorizon
-                })
-            });
-            const data = await response.json();
+        // Reset AI report panel to loading state
+        document.getElementById('aiReportBox').style.display = 'block';
+        document.getElementById('aiSummaryPlaceholder').style.display = 'block';
+        document.getElementById('aiSummaryPlaceholder').innerHTML =
+            '<span style="color:#94a3b8;">⏳ Running simulation...</span>';
+        document.getElementById('aiReportContent').style.display = 'none';
+        document.getElementById('aiReportContent').innerHTML = '';
 
-            if (data.success) {
-                renderAdvancedSimulation(data.zones, data.stats, data.ai_summary);
-            }
+        try {
+            // Step 1: Get zones + stats instantly (no LLM, fast)
+            const simResp = await fetch('/api/simulate_impact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json',
+                           'X-CSRFToken': "{{ csrf_token() if csrf_token is defined else '' }}" },
+                body: JSON.stringify({ rainfall, sea_level, time_horizon: currentTimeHorizon })
+            });
+            const simData = await simResp.json();
+
+            if (!simData.success) throw new Error('Simulation failed');
+
+            // Render map and stats immediately
+            renderSimStats(simData.zones, simData.stats);
+            btn.innerHTML = '<i class="fas fa-bolt me-2"></i>GENERATE ASSESSMENT';
+            btn.disabled = false;
+
+            // Step 2: Kick off LLM analysis in the background (non-blocking)
+            document.getElementById('aiSummaryPlaceholder').innerHTML =
+                '<span class="ai-pulse" style="display:inline-block;margin-right:8px;"></span>' +
+                '<span style="color:#94a3b8;">🧠 Sentinel LLM analyzing — this takes ~10s...</span>';
+            document.getElementById('aiReportBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            fetch('/api/simulate_analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json',
+                           'X-CSRFToken': "{{ csrf_token() if csrf_token is defined else '' }}" },
+                body: JSON.stringify(simData.llm_params)
+            })
+            .then(r => r.json())
+            .then(aiData => {
+                if (aiData.success) renderAIReport(aiData.ai_summary);
+            })
+            .catch(err => {
+                document.getElementById('aiSummaryPlaceholder').innerHTML =
+                    '<span style="color:#ef4444;">⚠️ LLM analysis unavailable. Check console.</span>';
+                console.error('LLM error:', err);
+            });
+
         } catch (error) {
             console.error('Simulation Failed:', error);
-        } finally {
             btn.innerHTML = '<i class="fas fa-bolt me-2"></i>GENERATE ASSESSMENT';
             btn.disabled = false;
         }
     }
 
-    function renderAdvancedSimulation(zones, stats, aiSummary) {
-        // Update Text Stats
+    function renderSimStats(zones, stats) {
         document.getElementById('popVal').innerText = stats.people_affected.toLocaleString();
         document.getElementById('econVal').innerText = '$' + stats.financial_risk + 'M';
-        document.getElementById('aiSummary').innerText = aiSummary;
-
-        // Update Progress Bars
         document.getElementById('powerBar').style.width = stats.sector_damage.power_grid + '%';
         document.getElementById('powerDmg').innerText = stats.sector_damage.power_grid;
-
         document.getElementById('waterBar').style.width = stats.sector_damage.water_supply + '%';
         document.getElementById('waterDmg').innerText = stats.sector_damage.water_supply;
-
         document.getElementById('teleBar').style.width = stats.sector_damage.telecom + '%';
         document.getElementById('teleDmg').innerText = stats.sector_damage.telecom;
+        if (zones.length > 0 && sMap) sMap.renderSimulationZones(zones);
+    }
 
-        if (zones.length === 0) return;
+    const SECTION_META = {
+        1: { icon: '⚠️', label: 'Threat Assessment',               color: '#ef4444' },
+        2: { icon: '🚨', label: 'Evacuation Priority',              color: '#f97316' },
+        3: { icon: '🏗️', label: 'Infrastructure Damage Forecast',   color: '#eab308' },
+        4: { icon: '⚡', label: 'Immediate Action Plan (0–6 hrs)',   color: '#3b82f6' },
+        5: { icon: '🔄', label: 'Medium-Term Strategy (6–72 hrs)',   color: '#8b5cf6' },
+        6: { icon: '🛡️', label: 'Long-Term Resilience',             color: '#10b981' },
+        7: { icon: '📦', label: 'Resource Requirements',             color: '#06b6d4' },
+    };
 
-        // Delegate entirely to GodModeMap class
-        if (sMap) {
-            sMap.renderSimulationZones(zones);
+    function renderAIReport(rawText) {
+        document.getElementById('aiSummaryPlaceholder').style.display = 'none';
+        const container = document.getElementById('aiReportContent');
+        container.style.display = 'grid';
+        container.innerHTML = '';
+
+        // Strip bold markdown from headings like **1. THREAT ASSESSMENT**
+        const text = rawText.replace(/\*\*(\d+\.\s[^*]+)\*\*/g, '$1');
+
+        // Split on lines that start with a number+dot (section headings)
+        // Handles "1. TITLE", "**1. TITLE**" etc.
+        const parts = text.split(/(?=^\d\.\s)/m).filter(s => s.trim());
+
+        // If no sections detected, render whole thing as markdown
+        if (parts.length < 2) {
+            const div = document.createElement('div');
+            div.className = 'ai-section-body';
+            div.style.padding = '0';
+            div.innerHTML = typeof marked !== 'undefined' ? marked.parse(rawText) : rawText.replace(/\n/g, '<br>');
+            container.appendChild(div);
+            return;
         }
+
+        // Optional preamble (text before section 1)
+        const preambleMatch = rawText.match(/^([\s\S]*?)(?=\*?\*?1\.)/);
+        if (preambleMatch && preambleMatch[1].trim()) {
+            const pre = document.createElement('div');
+            pre.style.cssText = 'font-size:12px;color:#94a3b8;margin-bottom:10px;padding:0 2px;';
+            pre.textContent = preambleMatch[1].trim().replace(/\*\*/g, '');
+            container.appendChild(pre);
+        }
+
+        parts.forEach(section => {
+            const numMatch = section.match(/^(\d+)\.\s/);
+            const num = numMatch ? parseInt(numMatch[1]) : null;
+            const meta = SECTION_META[num] || { icon: '📋', label: `Section ${num}`, color: '#64748b' };
+
+            // Split heading line from body
+            const nlIdx = section.indexOf('\n');
+            const rawHeading = nlIdx > -1 ? section.slice(0, nlIdx).trim() : section.trim();
+            const rawBody = nlIdx > -1 ? section.slice(nlIdx + 1).trim() : '';
+
+            // Clean heading — remove markdown bold and strip section number prefix if we have meta label
+            const cleanHeading = rawHeading.replace(/\*\*/g, '').replace(/^\d+\.\s*/, '').trim();
+
+            // Card wrapper
+            const card = document.createElement('div');
+            card.className = 'ai-section-card';
+            card.style.borderColor = meta.color + '33';
+            card.style.background = meta.color + '0d';
+
+            // Header (clickable)
+            const header = document.createElement('div');
+            header.className = 'ai-section-header';
+            header.style.cssText = `background:${meta.color}1a; border-bottom:1px solid ${meta.color}22; color:${meta.color};`;
+            header.innerHTML = `
+                <span style="display:flex;align-items:center;gap:7px;">
+                    <span>${meta.icon}</span>
+                    <span>${num ? num + '. ' : ''}${cleanHeading || meta.label}</span>
+                </span>
+                <i class="chevron" style="font-size:10px;opacity:0.7;">▼</i>
+            `;
+
+            // Body
+            const body = document.createElement('div');
+            body.className = 'ai-section-body';
+
+            // Parse markdown body — strip stray emoji lines (section icons pasted in by LLM)
+            const cleanBody = rawBody
+                .replace(/^[⚠️🚨🏗️⚡🔄🛡️📦]\s*$/gm, '')  // bare emoji lines
+                .trim();
+
+            if (typeof marked !== 'undefined' && cleanBody) {
+                body.innerHTML = marked.parse(cleanBody);
+            } else {
+                body.style.whiteSpace = 'pre-wrap';
+                body.textContent = cleanBody;
+            }
+
+            // Toggle collapse
+            header.addEventListener('click', () => {
+                const collapsed = body.style.display === 'none';
+                body.style.display = collapsed ? 'block' : 'none';
+                header.querySelector('.chevron').style.transform = collapsed ? '' : 'rotate(-90deg)';
+            });
+
+            card.appendChild(header);
+            card.appendChild(body);
+            container.appendChild(card);
+        });
+    }
+
+    // ---- Global Alert ----
+    function openGlobalAlert() {
+        Promise.all([
+            fetch('/api/live_hazard_incidents').then(r => r.json()),
+            fetch('/api/live_govt_hazards').then(r => r.json())
+        ]).then(([incidents, hazards]) => {
+            const areas = [];
+            (incidents.incidents || []).forEach(i => areas.push({
+                id: `incident_${i.id}`, name: i.title || i.hazard_type, type: 'Incident',
+                hazard_type: i.hazard_type, latitude: i.latitude, longitude: i.longitude,
+                priority: i.priority, description: i.description || '', icon: '🔴'
+            }));
+            (hazards.hazards || []).forEach(h => areas.push({
+                id: `hazard_${h.id}`, name: h.type, type: 'Govt Alert',
+                severity: h.severity, latitude: h.latitude, longitude: h.longitude,
+                radius: h.radius, source: h.source,
+                icon: h.severity === 'critical' ? '🔴' : h.severity === 'high' ? '🟠' : '🟡'
+            }));
+            populateAlertLocations(areas);
+            document.getElementById('globalAlertModal').style.display = 'flex';
+        }).catch(() => {
+            populateAlertLocations([]);
+            document.getElementById('globalAlertModal').style.display = 'flex';
+        });
+    }
+
+    function populateAlertLocations(locations) {
+        window.availableLocations = locations;
+        window.selectedLocationIds = new Set();
+        document.getElementById('totalLocations').textContent = locations.length;
+        document.getElementById('selectedLocations').textContent = '0';
+        document.getElementById('selectAllChk').checked = false;
+        document.getElementById('sendAlertBtn').disabled = true;
+        const list = document.getElementById('alertLocationsList');
+        list.innerHTML = locations.length === 0
+            ? '<p style="color:#64748b;font-size:13px;text-align:center;padding:20px 0;">No active incidents found.</p>'
+            : '';
+        locations.forEach(loc => {
+            const item = document.createElement('div');
+            item.className = 'alert-location-item';
+            item.innerHTML = `
+                <input type="checkbox" id="loc_${loc.id}" onchange="updateLocationSelection(this,'${loc.id}')"
+                    style="width:16px;height:16px;margin-right:10px;flex-shrink:0;accent-color:#3b82f6;margin-top:2px;">
+                <div class="alert-location-info">
+                    <div class="alert-location-name">
+                        <span>${loc.icon}</span><strong>${loc.name}</strong>
+                        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.1);color:#94a3b8;">${loc.type}</span>
+                    </div>
+                    <div class="alert-location-details">
+                        <span>📍 ${Number(loc.latitude).toFixed(3)}, ${Number(loc.longitude).toFixed(3)}</span>
+                        ${loc.hazard_type ? `<span>🏷️ ${loc.hazard_type.replace(/_/g,' ')}</span>` : ''}
+                        ${loc.severity ? `<span>🎯 ${loc.severity.toUpperCase()}</span>` : ''}
+                        ${loc.radius ? `<span>📏 ${loc.radius}km</span>` : ''}
+                    </div>
+                </div>`;
+            list.appendChild(item);
+        });
+    }
+
+    function updateLocationSelection(chk, id) {
+        chk.checked ? window.selectedLocationIds.add(id) : window.selectedLocationIds.delete(id);
+        document.getElementById('selectedLocations').textContent = window.selectedLocationIds.size;
+        document.getElementById('sendAlertBtn').disabled = window.selectedLocationIds.size === 0;
+    }
+
+    function toggleSelectAll() {
+        const all = document.getElementById('selectAllChk').checked;
+        window.selectedLocationIds.clear();
+        document.querySelectorAll('#alertLocationsList input[type="checkbox"]').forEach(chk => {
+            chk.checked = all;
+            if (all) window.selectedLocationIds.add(chk.id.replace('loc_', ''));
+        });
+        document.getElementById('selectedLocations').textContent = window.selectedLocationIds.size;
+        document.getElementById('sendAlertBtn').disabled = window.selectedLocationIds.size === 0;
+    }
+
+    function closeAlertModal() {
+        document.getElementById('globalAlertModal').style.display = 'none';
+        window.selectedLocationIds && window.selectedLocationIds.clear();
+    }
+
+    function sendSelectedAlert() {
+        if (!window.selectedLocationIds || window.selectedLocationIds.size === 0) return;
+        const locs = Array.from(window.selectedLocationIds)
+            .map(id => window.availableLocations.find(l => l.id === id)).filter(Boolean)
+            .map(l => ({ latitude: l.latitude, longitude: l.longitude, name: l.name,
+                type: l.type, hazard_type: l.hazard_type || l.type,
+                severity: l.severity || l.priority || 'medium', radius: l.radius || 5,
+                description: l.description || '' }));
+        const msg = `URGENT: ${[...new Set(locs.map(l=>l.hazard_type))].join(', ')} alert for ${locs.length} area(s)`;
+        fetch('/send_global_alert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ affected_locations: locs, message: msg })
+        }).then(r => r.json()).then(d => {
+            if (d.success) {
+                alert(`✅ Global Alert Sent!\n• Areas: ${d.locations_count}\n• Users Alerted: ${d.users_alerted}`);
+                closeAlertModal();
+            } else { alert(`❌ Error: ${d.error}`); }
+        }).catch(e => alert(`Error: ${e.message}`));
     }
 </script>
 {% endblock %}

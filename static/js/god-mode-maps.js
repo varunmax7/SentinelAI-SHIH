@@ -393,67 +393,89 @@ class GodModeMap {
     setRainEffect(intensity) {
         if (!this.rainCanvas) {
             this.rainCanvas = document.createElement('canvas');
-            this.rainCanvas.style.position = 'absolute';
-            this.rainCanvas.style.top = '0';
-            this.rainCanvas.style.left = '0';
-            this.rainCanvas.style.width = '100%';
-            this.rainCanvas.style.height = '100%';
-            this.rainCanvas.style.pointerEvents = 'none';
-            this.rainCanvas.style.zIndex = '15';
+            this.rainCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:15;';
             this.container.appendChild(this.rainCanvas);
-            
             this.rainCtx = this.rainCanvas.getContext('2d');
-            this.raindrops = [];
-            
-            const resize = () => {
-                if (this.container) {
-                    this.rainCanvas.width = this.container.clientWidth;
-                    this.rainCanvas.height = this.container.clientHeight;
-                }
+
+            // Initialise cloud puffs
+            this.clouds = [];
+            const initClouds = () => {
+                const w = this.container.clientWidth;
+                const h = this.container.clientHeight;
+                this.rainCanvas.width = w;
+                this.rainCanvas.height = h;
+                this.clouds = Array.from({ length: 28 }, () => this._makeCloud(w, h, true));
             };
-            window.addEventListener('resize', resize);
-            resize();
-            
+            window.addEventListener('resize', () => {
+                if (!this.container) return;
+                this.rainCanvas.width = this.container.clientWidth;
+                this.rainCanvas.height = this.container.clientHeight;
+            });
+            initClouds();
+
             const render = () => {
                 if (!this.rainCanvas) return;
                 requestAnimationFrame(render);
-                
-                this.rainCtx.clearRect(0, 0, this.rainCanvas.width, this.rainCanvas.height);
-                
-                if (this.currentRainIntensity <= 0) return;
-                
-                let dropsToCreate = Math.ceil(this.currentRainIntensity / 10);
-                for(let i=0; i<dropsToCreate; i++) {
-                    this.raindrops.push({
-                        x: Math.random() * this.rainCanvas.width,
-                        y: -30,
-                        speed: 15 + Math.random() * 10,
-                        length: 20 + Math.random() * 20
+                const w = this.rainCanvas.width;
+                const h = this.rainCanvas.height;
+                const t = this.currentRainIntensity || 0;
+                this.rainCtx.clearRect(0, 0, w, h);
+                if (t <= 0) return;
+
+                // Scale: 0–300 intensity → 0–1 coverage factor
+                const factor = Math.min(t / 300, 1);
+                const driftSpeed = 0.15 + factor * 0.5;
+
+                // Dark overcast base layer at high intensity
+                if (factor > 0.1) {
+                    const overcastAlpha = factor * 0.38;
+                    const grey = Math.round(60 - factor * 30);
+                    this.rainCtx.fillStyle = `rgba(${grey},${grey+5},${grey+10},${overcastAlpha})`;
+                    this.rainCtx.fillRect(0, 0, w, h);
+                }
+
+                this.clouds.forEach(c => {
+                    c.x += c.vx * driftSpeed;
+                    c.y += c.vy * 0.1;
+                    if (c.x - c.rx > w + 50) c.x = -c.rx - 50;
+                    if (c.x + c.rx < -50)    c.x = w + c.rx + 50;
+
+                    // Cloud opacity: ramps from 0 at low intensity to full coverage
+                    const cloudOpacity = factor * 0.82;
+
+                    c.puffs.forEach(p => {
+                        const px = c.x + p.dx, py = c.y + p.dy;
+                        const grad = this.rainCtx.createRadialGradient(px, py, 0, px, py, p.r);
+                        // Light grey → dark storm grey based on intensity
+                        const light = Math.round(210 - factor * 130);
+                        const lo    = cloudOpacity * p.alpha;
+                        grad.addColorStop(0,    `rgba(${light},${light},${light+8},${lo})`);
+                        grad.addColorStop(0.45, `rgba(${light},${light},${light+5},${lo * 0.7})`);
+                        grad.addColorStop(1,    `rgba(${light},${light},${light},0)`);
+                        this.rainCtx.beginPath();
+                        this.rainCtx.ellipse(px, py, p.r * 1.8, p.r, 0, 0, Math.PI * 2);
+                        this.rainCtx.fillStyle = grad;
+                        this.rainCtx.fill();
                     });
-                }
-                
-                this.rainCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                this.rainCtx.lineWidth = 1.5;
-                this.rainCtx.lineCap = 'round';
-                this.rainCtx.beginPath();
-                
-                for(let i=this.raindrops.length-1; i>=0; i--) {
-                    const drop = this.raindrops[i];
-                    this.rainCtx.moveTo(drop.x, drop.y);
-                    this.rainCtx.lineTo(drop.x - drop.speed * 0.15, drop.y + drop.length);
-                    
-                    drop.y += drop.speed;
-                    drop.x -= drop.speed * 0.15;
-                    
-                    if(drop.y > this.rainCanvas.height) {
-                        this.raindrops.splice(i, 1);
-                    }
-                }
-                this.rainCtx.stroke();
+                });
             };
             requestAnimationFrame(render);
         }
         this.currentRainIntensity = intensity;
+    }
+
+    _makeCloud(w, h, randomY = false) {
+        const x = Math.random() * (w + 200) - 100;
+        const y = randomY ? Math.random() * h * 0.75 : -150;
+        const puffCount = 5 + Math.floor(Math.random() * 6);
+        const rx = 100 + Math.random() * 180;
+        const puffs = Array.from({ length: puffCount }, (_, i) => ({
+            dx: (i / puffCount - 0.5) * rx * 2.0,
+            dy: (Math.random() - 0.5) * 45,
+            r:  55 + Math.random() * 80,
+            alpha: 0.6 + Math.random() * 0.4
+        }));
+        return { x, y, rx, vx: 0.25 + Math.random() * 0.55, vy: (Math.random() - 0.5) * 0.12, puffs };
     }
 }
 window.GodModeMap = GodModeMap;

@@ -64,6 +64,40 @@ def send_whatsapp_message(to_number, message_body, media_url=None):
         print(f"❌ WhatsApp message failed to {to_number}: {e}")
         return None
 
+def send_sms_alert(to_number, hazard_type, risk_level, lat, lng):
+    """Send an SMS alert using Twilio"""
+    if not to_number:
+        return None
+        
+    try:
+        client = Client(
+            current_app.config['TWILIO_ACCOUNT_SID'],
+            current_app.config['TWILIO_AUTH_TOKEN']
+        )
+        
+        message_body = (
+            f"ALERT: {hazard_type} near {lat},{lng}. "
+            f"Risk: {risk_level}. Evacuate!"
+        )
+        
+        message_args = {
+            'from_': current_app.config.get('TWILIO_PHONE_NUMBER'),
+            'body': message_body,
+            'to': to_number
+        }
+        
+        if not message_args['from_']:
+            print("❌ Twilio Phone Number not configured in config.py")
+            return None
+            
+        print(f"📤 Attempting to send SMS to {to_number}...")
+        message = client.messages.create(**message_args)
+        print(f"✅ SMS sent to {to_number}: SID {message.sid}, Status: {message.status}")
+        return message.sid
+    except Exception as e:
+        print(f"❌ SMS failed to {to_number}: {e}")
+        return None
+
 def calculate_distance(lat1, lon1, lat2, lon2):
     """
     Calculate the great-circle distance between two points 
