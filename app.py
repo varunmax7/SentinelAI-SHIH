@@ -67,6 +67,19 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
+# --- Urban Digital Twin ----------------------------------------------------
+# Additive: registers two blueprints, its own twin_* tables and jobs on the
+# scheduler above. Set TWIN_ENABLED=0 to switch the whole feature off.
+from twin import create_twin_blueprint, notify_report  # noqa: E402  (must follow db/scheduler)
+
+twin_registration = create_twin_blueprint(
+    app, db, Report, login_required=login_required, scheduler=scheduler)
+
+with app.app_context():
+    # Re-run now that the twin has declared its models; create_all() only
+    # builds tables that are on the metadata when it is called.
+    db.create_all()
+
 # Sample data for dashboard (would be replaced with real data)
 sample_reports = [
     {
@@ -1567,6 +1580,12 @@ def report():
         db.session.add(report)
         check_and_award_badges(current_user)
         db.session.commit()
+        
+        # Push the new report to any open digital twin console. The twin's own
+        # compute pass runs every 5 minutes and a pending report moves no risk
+        # score, so without this a submission would not appear on an operator's
+        # map until the next poll.
+        notify_report(report)
         
         # Sync to CSV for real-time persistence
         sync_reports_to_csv(Report)
@@ -5839,6 +5858,8 @@ def submit_sos():
         
         db.session.add(report)
         db.session.commit()
+        
+        notify_report(report)
         
         # Sync to CSV for real-time persistence
         sync_reports_to_csv(Report)

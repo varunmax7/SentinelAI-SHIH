@@ -1,0 +1,10 @@
+{
+    // Point the editor at the project's virtualenv. Without this VS Code falls
+    // back to the system Homebrew Python, which has none of the dependencies
+    // installed, and every third-party import in the project is flagged as a
+    // missing module even though the app runs fine.
+    "python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/venv/lib/python3.9/site-packages"
+    ]
+}

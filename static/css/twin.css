@@ -1,0 +1,418 @@
+/*
+ * twin.css - all Urban Digital Twin styling, scoped under .twin-console.
+ *
+ * Two rules here are functional rather than cosmetic and must not be "tidied":
+ *
+ *   1. .twin-host-card:hover { transform: none }
+ *      A CSS transform on ANY ancestor of a MapLibre canvas creates a new
+ *      containing block, which breaks MapLibre's pointer-to-map coordinate
+ *      maths - clicks and scroll-zoom land in the wrong place or stop
+ *      registering entirely. The host dashboards define global .card:hover and
+ *      .glass-card:hover translate rules, so the twin's host card opts out.
+ *
+ *   2. touch-action: none on the canvas container
+ *      Bootstrap sets touch-action: manipulation on interactive elements, which
+ *      swallows the gestures MapLibre needs for pinch-zoom.
+ *
+ * backdrop-filter is used only on the drawer (small, transient). Every larger
+ * surface uses an opaque background instead: each blurred layer forces an
+ * off-screen composite every frame, on top of a live WebGL canvas.
+ */
+
+.card.twin-host-card:hover,
+.glass-card.twin-host-card:hover,
+.twin-host-card:hover {
+    transform: none !important;
+}
+
+.twin-console {
+    --twin-bg: #0b1220;
+    --twin-panel: #111c2e;
+    --twin-border: rgba(148, 163, 184, 0.18);
+    --twin-text: #e2e8f0;
+    --twin-muted: #94a3b8;
+    --twin-accent: #38bdf8;
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--twin-bg);
+    color: var(--twin-text);
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    /* Stops scroll chaining out of the drawer into the page behind it. */
+    overscroll-behavior: contain;
+    /* Isolates the console's repaints from the rest of the dashboard. */
+    contain: paint;
+}
+
+.twin-console--compact .twin-map { height: 58vh; min-height: 380px; }
+.twin-console--embedded .twin-map { height: 74vh; min-height: 460px; }
+.twin-console--page .twin-map { height: calc(100vh - 190px); min-height: 520px; }
+
+/* ---- header ---------------------------------------------------------- */
+.twin-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--twin-panel);
+    border-bottom: 1px solid var(--twin-border);
+}
+
+.twin-header select,
+.twin-header input[type="search"] {
+    background: rgba(2, 6, 23, 0.65);
+    border: 1px solid var(--twin-border);
+    color: var(--twin-text);
+    border-radius: 8px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.82rem;
+    min-width: 8.5rem;
+}
+
+.twin-header select:focus,
+.twin-header input:focus {
+    outline: 2px solid rgba(56, 189, 248, 0.5);
+    outline-offset: 1px;
+}
+
+.twin-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--twin-muted);
+    margin-right: 0.2rem;
+}
+
+.twin-segment {
+    display: inline-flex;
+    border: 1px solid var(--twin-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.twin-segment button {
+    background: transparent;
+    border: 0;
+    color: var(--twin-muted);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+}
+
+.twin-segment button + button { border-left: 1px solid var(--twin-border); }
+.twin-segment button.is-active { background: rgba(56, 189, 248, 0.18); color: #e0f2fe; }
+.twin-segment button:hover { color: var(--twin-text); }
+
+.twin-btn {
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: #bae6fd;
+    border-radius: 8px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.twin-btn:hover { background: rgba(56, 189, 248, 0.2); }
+.twin-btn:disabled { opacity: 0.5; cursor: progress; }
+
+.twin-spacer { flex: 1 1 auto; }
+
+.twin-health {
+    font-size: 0.72rem;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--twin-border);
+    white-space: nowrap;
+    cursor: help;
+}
+
+.twin-health--ok { color: #86efac; border-color: rgba(134, 239, 172, 0.4); }
+.twin-health--degraded { color: #fcd34d; border-color: rgba(252, 211, 77, 0.45); }
+.twin-health--unknown { color: var(--twin-muted); }
+
+/* The live dot only lights when the SSE stream is actually connected. */
+.twin-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    color: var(--twin-muted);
+}
+
+.twin-live::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #475569;
+}
+
+.twin-console.is-live .twin-live { color: #86efac; }
+.twin-console.is-live .twin-live::before {
+    background: #22c55e;
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+    animation: twin-pulse 2s infinite;
+}
+
+@keyframes twin-pulse {
+    70% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+/* ---- map ------------------------------------------------------------- */
+.twin-map-wrap { position: relative; flex: 1 1 auto; }
+
+.twin-map { width: 100%; background: #050914; }
+
+/* MapLibre needs the raw touch stream; Bootstrap's touch-action: manipulation
+ * on interactive elements otherwise swallows pinch-zoom. */
+.twin-console .maplibregl-canvas-container,
+.twin-console .maplibregl-canvas {
+    touch-action: none;
+}
+
+.twin-console .maplibregl-ctrl-group {
+    background: rgba(17, 28, 46, 0.92);
+    border: 1px solid var(--twin-border);
+}
+
+.twin-console .maplibregl-ctrl-group button + button { border-top-color: var(--twin-border); }
+.twin-console .maplibregl-ctrl-group button span { filter: invert(1) brightness(1.6); }
+.twin-console .maplibregl-ctrl-attrib { background: rgba(2, 6, 23, 0.7); }
+.twin-console .maplibregl-ctrl-attrib a { color: #cbd5e1; }
+
+/* ---- overlay panels -------------------------------------------------- */
+.twin-overlay {
+    position: absolute;
+    z-index: 3;
+    background: rgba(17, 28, 46, 0.94);
+    border: 1px solid var(--twin-border);
+    border-radius: 12px;
+    padding: 0.6rem 0.7rem;
+    font-size: 0.75rem;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.45);
+}
+
+.twin-layer-panel { top: 0.7rem; left: 0.7rem; max-width: 12.5rem; }
+.twin-layer-panel h6 {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--twin-muted);
+    margin: 0 0 0.4rem;
+}
+
+.twin-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.22rem;
+    cursor: pointer;
+    color: var(--twin-text);
+}
+
+.twin-toggle input { accent-color: var(--twin-accent); margin: 0; }
+.twin-toggle.is-limited span { color: var(--twin-muted); font-style: italic; }
+
+.twin-legend { bottom: 2.1rem; left: 0.7rem; max-width: 14rem; }
+.twin-legend-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; }
+.twin-swatch { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.twin-legend small { color: var(--twin-muted); display: block; margin-top: 0.4rem; line-height: 1.35; }
+
+.twin-search-wrap { position: relative; }
+.twin-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 6;
+    background: var(--twin-panel);
+    border: 1px solid var(--twin-border);
+    border-radius: 8px;
+    max-height: 12rem;
+    overflow-y: auto;
+}
+
+.twin-search-results button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    color: var(--twin-text);
+    font-size: 0.75rem;
+    padding: 0.35rem 0.5rem;
+    cursor: pointer;
+}
+
+.twin-search-results button:hover { background: rgba(56, 189, 248, 0.15); }
+
+/* ---- drawer ---------------------------------------------------------- */
+.twin-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(24rem, 92%);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    background: rgba(11, 18, 32, 0.94);
+    /* Small and transient, so the composite cost is acceptable here. */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-left: 1px solid var(--twin-border);
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+    overscroll-behavior: contain;
+}
+
+.twin-drawer.is-open { transform: translateX(0); }
+
+.twin-drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid var(--twin-border);
+}
+
+.twin-drawer-head h5 { margin: 0; font-size: 0.92rem; font-weight: 600; }
+
+.twin-drawer-close {
+    background: transparent;
+    border: 0;
+    color: var(--twin-muted);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.twin-drawer-body {
+    padding: 0.85rem;
+    overflow-y: auto;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.twin-drawer-body h6 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--twin-muted);
+    margin: 1rem 0 0.4rem;
+}
+
+.twin-risk {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--twin-border);
+    margin-bottom: 0.6rem;
+}
+
+.twin-risk b { font-size: 1.7rem; line-height: 1; }
+.twin-risk span { color: var(--twin-muted); text-transform: capitalize; font-size: 0.78rem; }
+.twin-risk--normal { background: rgba(56, 189, 130, 0.12); }
+.twin-risk--watch { background: rgba(250, 204, 21, 0.14); }
+.twin-risk--warning { background: rgba(249, 115, 22, 0.16); }
+.twin-risk--critical { background: rgba(239, 68, 68, 0.18); }
+
+.twin-explain { color: #cbd5e1; margin: 0 0 0.4rem; }
+
+.twin-bar { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.28rem; }
+.twin-bar span { flex: 0 0 6.6rem; color: var(--twin-muted); font-size: 0.72rem; }
+.twin-bar b { flex: 0 0 1.8rem; text-align: right; font-size: 0.75rem; }
+.twin-bar-track { flex: 1 1 auto; height: 6px; border-radius: 3px; background: rgba(148, 163, 184, 0.18); }
+.twin-bar-track i { display: block; height: 100%; border-radius: 3px; }
+
+.twin-dl { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.6rem; margin: 0; }
+.twin-dl dt { color: var(--twin-muted); font-size: 0.73rem; }
+.twin-dl dd { margin: 0; font-size: 0.76rem; }
+.twin-dl dd em { color: var(--twin-muted); font-style: italic; font-size: 0.68rem; }
+
+.twin-list { margin: 0; padding-left: 1rem; }
+.twin-list li { margin-bottom: 0.18rem; }
+
+.twin-figure { margin: 0 0 0.6rem; }
+.twin-figure img { width: 100%; border-radius: 8px; border: 1px solid var(--twin-border); display: block; }
+.twin-figure figcaption { color: var(--twin-muted); font-size: 0.7rem; margin-top: 0.3rem; line-height: 1.4; }
+
+.twin-muted { color: var(--twin-muted); }
+.twin-small { font-size: 0.68rem; line-height: 1.45; }
+.twin-warn { color: #fcd34d; }
+.twin-error { color: #fca5a5; }
+
+/* ---- footer & notices ------------------------------------------------- */
+.twin-statbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.55rem;
+    padding: 0.45rem 0.85rem;
+    background: var(--twin-panel);
+    border-top: 1px solid var(--twin-border);
+    font-size: 0.72rem;
+}
+
+.twin-stat {
+    border: 1px solid var(--twin-border);
+    border-radius: 999px;
+    padding: 0.12rem 0.5rem;
+    color: var(--twin-muted);
+}
+
+.twin-stat b { color: var(--twin-text); }
+.twin-stat--critical { border-color: rgba(239, 68, 68, 0.5); color: #fca5a5; }
+.twin-stat--warning { border-color: rgba(249, 115, 22, 0.5); color: #fdba74; }
+.twin-stat--watch { border-color: rgba(250, 204, 21, 0.45); color: #fde047; }
+.twin-stat--normal { border-color: rgba(56, 189, 130, 0.45); color: #86efac; }
+.twin-stat--degraded { border-color: rgba(251, 191, 36, 0.5); color: #fcd34d; cursor: help; }
+
+.twin-footer {
+    padding: 0.35rem 0.85rem 0.5rem;
+    background: var(--twin-panel);
+    color: var(--twin-muted);
+    font-size: 0.63rem;
+    line-height: 1.5;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.twin-notice {
+    padding: 0.45rem 0.85rem;
+    background: rgba(251, 191, 36, 0.12);
+    border-top: 1px solid rgba(251, 191, 36, 0.3);
+    color: #fde68a;
+    font-size: 0.74rem;
+}
+
+.twin-hint {
+    position: absolute;
+    bottom: 2.2rem;
+    right: 0.7rem;
+    z-index: 3;
+    background: rgba(17, 28, 46, 0.94);
+    border: 1px solid var(--twin-border);
+    border-radius: 8px;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.7rem;
+    color: var(--twin-muted);
+}
+
+@media (max-width: 768px) {
+    .twin-header { gap: 0.35rem; padding: 0.5rem; }
+    .twin-header select { min-width: 6.5rem; font-size: 0.75rem; }
+    .twin-layer-panel { max-width: 9.5rem; font-size: 0.7rem; }
+    .twin-legend { display: none; }
+    .twin-console--compact .twin-map,
+    .twin-console--embedded .twin-map { height: 62vh; min-height: 320px; }
+}
+
+/* Smooth page scrolling past the console. Set on the console's own document
+ * rather than by the host page so the behaviour travels with the partial. */
+html { scroll-behavior: smooth; }

@@ -631,21 +631,29 @@ def _validate_heatmap_match(report, heatmap_data=None):
         from models import Report
         
         # Find similar hazards in same location (within 5km) in last 24 hours
-        from datetime import timedelta
+        from datetime import datetime, timedelta
         time_window = timedelta(hours=24)
         location_threshold = 0.05  # ~5.5 km
         
         if report.latitude is None or report.longitude is None:
             return {'score': 0.50, 'analysis': 'Heatmap unavailable: No coordinates provided'}
         
-        similar_hazards = Report.query.filter(
-            Report.id != report.id,
+        # This runs before the report is added/committed, so its column
+        # defaults (timestamp) and autoincrement id are still None. Centre the
+        # time window on "now" and skip the self-exclusion clause when there is
+        # no id yet - `Report.id != NULL` is NULL in SQL and matches no rows.
+        reference_time = report.timestamp or datetime.utcnow()
+        filters = [
             Report.hazard_type == report.hazard_type,
-            Report.timestamp.between(report.timestamp - time_window, report.timestamp + time_window),
+            Report.timestamp.between(reference_time - time_window, reference_time + time_window),
             Report.latitude.between(report.latitude - location_threshold, report.latitude + location_threshold),
             Report.longitude.between(report.longitude - location_threshold, report.longitude + location_threshold),
             Report.verification_status.in_(['approved', 'pending'])
-        ).count()
+        ]
+        if report.id is not None:
+            filters.insert(0, Report.id != report.id)
+
+        similar_hazards = Report.query.filter(*filters).count()
         
         # Calculate heatmap density score
         if similar_hazards >= 5:
@@ -684,19 +692,29 @@ def _validate_climate_alignment(report, weather_data=None):
             
         weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m"
         
+        # A failed lookup must not be dressed up as a reading: substituting
+        # placeholder numbers here used to surface in the report analysis as
+        # real observed weather (and quietly drove the hazard scoring off
+        # fabricated values). Report the outage instead.
+        temp = humidity = wind_speed = None
+        weather_error = None
         try:
             response = requests.get(weather_url, timeout=5)
             if response.status_code == 200:
                 weather = response.json().get('current', {})
-                temp = weather.get('temperature_2m', 25)
-                humidity = weather.get('relative_humidity_2m', 60)
-                wind_speed = weather.get('wind_speed_10m', 10)
+                temp = weather.get('temperature_2m')
+                humidity = weather.get('relative_humidity_2m')
+                wind_speed = weather.get('wind_speed_10m')
+                if temp is None or humidity is None or wind_speed is None:
+                    weather_error = 'weather API returned no current conditions'
             else:
-                # Fallback values if API fails
-                temp, humidity, wind_speed = 25, 60, 10
-        except:
-            # Default fallback
-            temp, humidity, wind_speed = 25, 60, 10
+                weather_error = f'weather API returned HTTP {response.status_code}'
+        except Exception as e:
+            weather_error = f'weather API unreachable ({type(e).__name__})'
+
+        if weather_error:
+            print(f"Climate validation: {weather_error}")
+            return {'score': 0.50, 'analysis': f'Climate data unavailable: {weather_error}'}
         
         # Validate hazard against weather conditions
         hazard_type = report.hazard_type.lower()

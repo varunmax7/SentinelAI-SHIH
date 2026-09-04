@@ -1,0 +1,173 @@
+{#
+  Embeddable Urban Digital Twin console.
+
+  Usage - set twin_variant to compact, embedded or page, then include this file:
+
+      set twin_variant = 'compact'
+      include "partials/twin_console.html"
+
+  (Written without Jinja delimiters on purpose: Jinja comments do not nest, so a
+  literal example inside this block would end the comment early and leave the
+  include live - which makes the partial include itself, forever.)
+
+  The host page passes no data. City list, zones, camera positions and every
+  layer come from GET /api/twin/... at runtime, so the same partial works on any
+  page without the view having to know anything about the twin.
+
+  Wrap it in a card carrying `twin-host-card`, which opts the card out of the
+  global hover transform - a CSS transform on any ancestor of a MapLibre canvas
+  breaks its pointer-to-map coordinate maths.
+#}
+{% set variant = twin_variant | default('embedded') %}
+
+{# MapLibre must exist exactly once per page. Loading a second copy silently
+   replaces window.maplibregl and detaches every map already built from the
+   first, with no console error. This guard injects it only if it is absent, so
+   a host page that already loads it in <head> wins. #}
+<script>
+(function () {
+    if (window.TwinMapLibreReady) return;
+    window.TwinMapLibreReady = new Promise(function (resolve, reject) {
+        if (window.maplibregl) { resolve(window.maplibregl); return; }
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
+        document.head.appendChild(css);
+
+        var script = document.createElement('script');
+        script.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';
+        script.onload = function () { resolve(window.maplibregl); };
+        script.onerror = function () { reject(new Error('MapLibre failed to load')); };
+        document.head.appendChild(script);
+    });
+})();
+</script>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/twin.css') }}">
+
+<div class="twin-console twin-console--{{ variant }}" data-twin-console data-variant="{{ variant }}">
+
+    <div class="twin-header">
+        <span class="twin-label">City</span>
+        <select data-twin-city aria-label="City"></select>
+
+        <span class="twin-label">Zone</span>
+        <select data-twin-zone aria-label="Zone"><option value="">All zones</option></select>
+
+        <span class="twin-label">Horizon</span>
+        <div class="twin-segment" data-twin-horizon role="group" aria-label="Forecast horizon">
+            <button type="button" data-horizon="0" class="is-active">Now</button>
+            <button type="button" data-horizon="3">+3h</button>
+            <button type="button" data-horizon="6">+6h</button>
+            <button type="button" data-horizon="24">+24h</button>
+        </div>
+
+        <span class="twin-label">Base</span>
+        <select data-twin-basemap aria-label="Basemap">
+            <option value="satellite">Satellite</option>
+            <option value="vector">Vector</option>
+            <option value="gibs">NASA GIBS</option>
+        </select>
+
+        <span class="twin-label">Fill</span>
+        <select data-twin-fill aria-label="Risk fill density"
+                title="How strongly the risk grid paints over the map">
+            <option value="balanced">Balanced</option>
+            <option value="solid">Solid</option>
+            <option value="outline">Outline only</option>
+        </select>
+
+        <span class="twin-spacer"></span>
+
+        <div class="twin-search-wrap">
+            <input type="search" data-twin-search placeholder="Find a place…" aria-label="Search for a place">
+            <div class="twin-search-results" data-twin-search-results></div>
+        </div>
+
+        <span class="twin-live" title="Live when the event stream is connected">Live</span>
+        <span class="twin-health twin-health--unknown" data-twin-health>Checking sources…</span>
+        <button type="button" class="twin-btn" data-twin-reset title="Return to the city view">Reset view</button>
+        <button type="button" class="twin-btn" data-twin-refresh title="Recompute the risk grid now">Recompute</button>
+    </div>
+
+    <div class="twin-map-wrap">
+        <div class="twin-map" data-twin-map></div>
+
+        <div class="twin-overlay twin-layer-panel">
+            <h6>Layers</h6>
+            <div data-twin-layers></div>
+        </div>
+
+        <div class="twin-overlay twin-legend" data-twin-legend>
+            <div class="twin-legend-row">
+                <i class="twin-swatch" style="background:rgba(239,68,68,0.75)"></i> Critical (75–100)
+            </div>
+            <div class="twin-legend-row">
+                <i class="twin-swatch" style="background:rgba(249,115,22,0.7)"></i> Warning (50–74)
+            </div>
+            <div class="twin-legend-row">
+                <i class="twin-swatch" style="background:rgba(250,204,21,0.65)"></i> Watch (25–49)
+            </div>
+            <div class="twin-legend-row">
+                <i class="twin-swatch" style="background:rgba(56,189,130,0.55)"></i> Normal (0–24)
+            </div>
+            <div class="twin-legend-row">
+                <i class="twin-swatch" style="border:1px dashed #fbbf24;background:transparent"></i> Degraded inputs
+            </div>
+            <small>
+                Risk = hazard × vulnerability, per H3 cell (~460&nbsp;m).
+                Column height tracks the score. Camera view cones are estimated
+                from the camera type, not surveyed.
+            </small>
+        </div>
+
+        <div class="twin-hint" data-twin-buildings-hint style="display:none"></div>
+
+        <aside class="twin-drawer" data-twin-drawer aria-live="polite">
+            <div class="twin-drawer-head">
+                <h5 data-twin-drawer-title>Details</h5>
+                <button type="button" class="twin-drawer-close" data-twin-drawer-close
+                        aria-label="Close details">×</button>
+            </div>
+            <div class="twin-drawer-body" data-twin-drawer-body></div>
+        </aside>
+    </div>
+
+    <div class="twin-statbar" data-twin-stats></div>
+    <div class="twin-notice" data-twin-notice style="display:none"></div>
+    <div class="twin-footer" data-twin-footer></div>
+</div>
+
+<script src="{{ url_for('static', filename='js/twin-layers.js') }}"></script>
+<script src="{{ url_for('static', filename='js/digital-twin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/twin-stream.js') }}"></script>
+<script src="{{ url_for('static', filename='js/twin-console.js') }}"></script>
+<script>
+(function () {
+    var root = document.querySelector('[data-twin-console]');
+    if (!root) return;
+
+    function boot() {
+        try {
+            window.twinConsole = new window.TwinConsole(root);
+            window.twinConsole.boot();
+        } catch (err) {
+            var notice = root.querySelector('[data-twin-notice]');
+            if (notice) {
+                notice.style.display = '';
+                notice.textContent = 'The digital twin could not start: ' + err.message +
+                                     '. The rest of this page is unaffected.';
+            }
+            console.error('[twin] boot failed', err);
+        }
+    }
+
+    window.TwinMapLibreReady.then(boot).catch(function (err) {
+        var notice = root.querySelector('[data-twin-notice]');
+        if (notice) {
+            notice.style.display = '';
+            notice.textContent = 'Map engine failed to load: ' + err.message;
+        }
+    });
+})();
+</script>

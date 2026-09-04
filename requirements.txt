@@ -17,3 +17,4 @@ email-validator>=2.1.1
 twilio>=9.0.0
 gunicorn>=21.2.0
 psycopg2-binary>=2.9.9
+h3>=4.1.0

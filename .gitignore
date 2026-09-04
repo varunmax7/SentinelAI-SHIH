@@ -17,3 +17,6 @@ instance/
 venv/
 ngrok
 cloudflared*
+
+# Digital Twin ingest disk cache (rebuilt on demand from OSM/Open-Meteo)
+data/twin/cache/

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Urban Digital Twin{% endblock %}
+
+{# Loaded here, once, pinned. A second copy anywhere on the page would replace
+   window.maplibregl and silently detach every map already built. #}
+{% block head_extra %}
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+    .twin-page-wrap { margin: 1rem 1.5rem; }
+    .twin-page-head { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .twin-page-head h4 { margin: 0; color: #fff; font-weight: 700; }
+    .twin-page-head p { margin: 0; color: rgba(226, 232, 240, 0.65); font-size: 0.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="twin-page-wrap">
+    <div class="twin-page-head">
+        <h4>🌐 Urban Digital Twin</h4>
+        <p>Live risk grid, hydrology, critical assets and mapped surveillance for Hyderabad and Bengaluru.</p>
+    </div>
+
+    <div class="card overflow-hidden twin-host-card">
+        <div class="card-body p-0">
+            {% set twin_variant = 'page' %}
+            {% include "partials/twin_console.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

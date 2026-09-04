@@ -3,7 +3,10 @@
 {% block title %}Analyst Dashboard{% endblock %}
 
 {% block head_extra %}
-<link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+<!-- Exactly one MapLibre copy per page, in <head>, pinned. Every map on this
+     page - the flood gauge maps and the digital twin console - shares it. -->
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <style>
     .main-content-container {
         background: rgba(15, 23, 42, 0.92);
@@ -21,15 +24,6 @@
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 20px;
         color: white;
-    }
-
-    .dashboard-map {
-        height: 400px;
-        width: 100%;
-        border-radius: 16px;
-        background: #111;
-        position: relative;
-        z-index: 1;
     }
 
     .stat-card {
@@ -305,25 +299,25 @@
         </div>
     </div>
 
-    <!-- Maps -->
+    <!-- Realtime City Digital Twin -->
+    <!-- Replaces the former Incident Hotspots and Weather & Early Warnings panes.
+         Both were flat 2D heat blobs over the same satellite raster, showing the
+         same reports twice and no terrain, hydrology or infrastructure. The twin
+         carries all of that on one map, scored per H3 cell and refreshed live. -->
     <div class="row g-3 mb-4">
-        <div class="col-lg-6">
-            <div class="card h-100 overflow-hidden">
-                <div class="card-header border-bottom border-white border-opacity-10 py-2">
-                    <h6 class="m-0 fw-bold">{{ translate('incident_hotspots') }}</h6>
+        <div class="col-12">
+            <div class="card overflow-hidden twin-host-card">
+                <div class="card-header border-bottom border-white border-opacity-10 py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 fw-bold">🌐 Realtime City Digital Twin</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-white-50 small">Hazard &times; vulnerability per ~460&nbsp;m cell</span>
+                        <a href="{{ url_for('twin_pages.digital_twin_page') }}"
+                           class="btn btn-sm btn-outline-light">Full screen</a>
+                    </div>
                 </div>
                 <div class="card-body p-0">
-                    <div id="heatmapMap" class="dashboard-map"></div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card h-100 overflow-hidden">
-                <div class="card-header border-bottom border-white border-opacity-10 py-2">
-                    <h6 class="m-0 fw-bold">{{ translate('weather_warnings') }}</h6>
-                </div>
-                <div class="card-body p-0">
-                    <div id="warningMap" class="dashboard-map"></div>
+                    {% set twin_variant = 'embedded' %}
+                    {% include "partials/twin_console.html" %}
                 </div>
             </div>
         </div>
@@ -1537,9 +1531,11 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Load MapLibre 3D Engine -->
-<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
-<script src="{{ url_for('static', filename='js/god-mode-maps.js') }}"></script>
+<!-- MapLibre is loaded once, pinned, in head_extra above. Loading a second copy
+     here (this page used to pull 3.6.2 at the end of <body> while other panels
+     used a different version) replaces window.maplibregl mid-page and silently
+     detaches every map already built from the first copy: zoom stops working,
+     layers stop updating, and nothing appears in the console. -->
 <!-- Load Plugins -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1561,8 +1557,6 @@
     };
 
 
-    let hMap, wMap;
-
     document.addEventListener('DOMContentLoaded', () => {
         console.log('🚀 Dashboard initializing...');
         console.log('📊 DASHBOARD_DATA:', DASHBOARD_DATA);
@@ -1576,158 +1570,13 @@
             console.error('❌ Chart initialization failed:', error);
         }
 
-        setTimeout(() => {
-            try {
-                window.initMaps();
-                console.log('✅ Maps initialized');
-            } catch (error) {
-                console.error('❌ Map initialization failed:', error);
-            }
-        }, 500);
-
         document.getElementById('exportBtn').onclick = exportDashboard;
     });
 
-    window.initMaps = function () {
-        console.log('🗺️ initMaps called (God Mode 3D)');
-
-        if (!document.getElementById('heatmapMap') || !document.getElementById('warningMap')) {
-            console.error('❌ map elements not found');
-            return;
-        }
-
-        try {
-            console.log('📍 Creating 3D maps...');
-            const satelliteStyle = {
-                version: 8,
-                sources: {
-                    'satellite': {
-                        type: 'raster',
-                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-                        tileSize: 256,
-                        attribution: '© Esri, Maxar, Earthstar Geographics'
-                    },
-                    'labels': {
-                        type: 'raster',
-                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
-                        tileSize: 256
-                    }
-                },
-                layers: [
-                    { id: 'satellite-layer', type: 'raster', source: 'satellite', paint: { 'raster-opacity': 1 } },
-                    { id: 'labels-layer', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.85 } }
-                ]
-            };
-
-            // Framed on Bengaluru city rather than the national view: incidents
-            // cluster inside the city, and setHeatmapData's auto-fit caps at
-            // zoom 8, which is too far out to read a city hotspot. Passing
-            // autoZoom=false keeps this framing instead of refitting to bounds.
-            hMap = new GodModeMap('heatmapMap', {
-                style: satelliteStyle,
-                center: [77.5946, 12.9716],
-                zoom: 11
-            });
-
-            if (DASHBOARD_DATA.reports && DASHBOARD_DATA.reports.length > 0) {
-                const pts = DASHBOARD_DATA.reports.map(r => [r.latitude, r.longitude, 1.0]);
-                hMap.setHeatmapData(pts, false);
-            }
-
-            wMap = new GodModeMap('warningMap', { showLiveUI: true, style: satelliteStyle });
-
-            async function updateLiveWeather() {
-                try {
-                    const [weatherResponse, incidentsResponse, govtHazardsResponse] = await Promise.all([
-                        fetch('/api/weather_data'),
-                        fetch('/api/live_hazard_incidents'),
-                        fetch('/api/live_govt_hazards')
-                    ]);
-
-                    const weatherData = await weatherResponse.json();
-                    const incidentsData = await incidentsResponse.json();
-                    const govtHazardsData = await govtHazardsResponse.json();
-
-                    wMap.clearDynamicData();
-
-                    if (incidentsData.incidents && incidentsData.incidents.length > 0) {
-                        const heatPoints = incidentsData.incidents.map(incident => {
-                            const intensity = incident.confidence_score || 0.5;
-                            return [incident.latitude, incident.longitude, intensity];
-                        });
-                        wMap.setHeatmapData(heatPoints, false);
-                    }
-
-                    if (weatherData.alerts && weatherData.alerts.length > 0) {
-                        weatherData.alerts.forEach(alert => {
-                            const tempColor = alert.temperature > 35 ? '#ef4444' :
-                                alert.temperature > 28 ? '#f59e0b' :
-                                    alert.temperature > 20 ? '#eab308' : '#06b6d4';
-                            
-                            wMap.addCirclePolygon(alert.latitude, alert.longitude, 15000, tempColor, 0.3, `
-                                <div style="color:#000; font-family:'Outfit'">
-                                    <b>🌡️ ${alert.city}</b><br>
-                                    Temperature: ${alert.temperature}°C<br>
-                                    Humidity: ${alert.humidity}%<br>
-                                    <small>Updated: ${new Date(alert.timestamp).toLocaleTimeString()}</small>
-                                </div>
-                            `);
-                        });
-                    }
-
-                    if (govtHazardsData.hazards && govtHazardsData.hazards.length > 0) {
-                        govtHazardsData.hazards.forEach(hazard => {
-                            wMap.addShockwaveMarker(hazard.latitude, hazard.longitude, `
-                                <div style="color:#000; font-family:'Outfit'">
-                                    <b>⚠️ ${hazard.type}</b><br>
-                                    Severity: <strong>${hazard.severity.toUpperCase()}</strong><br>
-                                    Description: ${hazard.description}<br>
-                                    <small>Updated: ${new Date(hazard.timestamp).toLocaleTimeString()}</small>
-                                </div>
-                            `);
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error fetching live hazard data:', error);
-                }
-            }
-
-            // Let MapLibre load, then start fetching
-            setTimeout(() => {
-                updateLiveWeather();
-                window.weatherUpdateInterval = setInterval(updateLiveWeather, 3500); // Slower interval for 3d performance
-            }, 1000);
-
-            // Fetch generic weather_warnings (circles)
-            fetch('/api/weather_warnings')
-                .then(r => r.json())
-                .then(data => {
-                    if (data && data.length > 0) {
-                        const bounds = new maplibregl.LngLatBounds();
-                        data.forEach(w => {
-                            const color = w.severity === 'high' ? '#ef4444' : '#f59e0b';
-                            wMap.addCirclePolygon(w.latitude, w.longitude, w.radius * 1000, color, 0.2, `<div style="color:#000;"><b>${w.type} Alert</b></div>`);
-                            bounds.extend([w.longitude, w.latitude]);
-                        });
-                        
-                        wMap.executeWhenLoaded(() => {
-                            if (!bounds.isEmpty()) {
-                                wMap.map.fitBounds(bounds, {
-                                    padding: 50,
-                                    maxZoom: 5,
-                                    pitch: 55,
-                                    bearing: -12.5,
-                                    duration: 2000
-                                });
-                            }
-                        });
-                    }
-                });
-
-        } catch (error) {
-            console.error('❌ 3D Map initialization error:', error);
-        }
-    };
+    // The two God Mode heat maps that used to live here were replaced by the
+    // Urban Digital Twin console (see the card above). It builds and owns its
+    // own MapLibre map, fetches its own data and manages its own refresh, so
+    // this page no longer initialises any map of its own for that panel.
 
     window.initCharts = function () {
         console.log('📈 initCharts called');
