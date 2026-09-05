@@ -2238,6 +2238,7 @@ A practical validation script for demo day or a staging sign-off.
 
 | Date | Change |
 |:---|:---|
+| **2026-09-05** | 🌐 **Urban Digital Twin & Live Incidents** — H3 spatial risk grids, CCTV OSINT cones, and LangGraph-powered ingestion of real NDMA SACHET / GDACS / USGS feeds |
 | **2026-09-03** | 📚 README rewritten as a complete platform reference — all 28 feature clusters, 119 routes, 23 models, full SH-SVA-03 traceability matrix |
 | **2026-05-24** | 🧪 **Sentinel Resilience Engine** — LLM-backed 7-section government resilience briefings with a deterministic fallback report |
 | **2026-05-24** | 📣 **Global Alert Broadcast console** with per-location selection and select-all |
