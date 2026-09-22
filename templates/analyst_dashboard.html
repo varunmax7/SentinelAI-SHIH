@@ -601,6 +601,39 @@
         </div>
     </div>
 
+    <!-- AI Disaster Prediction Agent -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card overflow-hidden da-panel" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.1) !important; background: #1a2234;">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: #151b2b; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h6 class="m-0 fw-bold d-flex align-items-center gap-2" style="font-size: 15px; color: #f8fafc;">
+                        <span id="daLiveDot" style="background: #10b981; width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
+                        🤖 AI Disaster Prediction Agent
+                        <span id="daStatusPill" style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; padding: 2px 8px;">Loading…</span>
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="daLastUpdated" style="font-size: 11px; color: #64748b;"></span>
+                        <button type="button" id="daRunNowBtn" onclick="window.runDisasterAgentNow && window.runDisasterAgentNow()" class="btn btn-sm" style="border: 1px solid rgba(56,217,255,0.4); color: #38d9ff; border-radius: 6px; padding: 3px 12px; font-size: 12px; font-weight: 600; background: rgba(56,217,255,0.06);">
+                            ↻ Run Now
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" style="padding: 16px 18px;">
+                    <p style="color: #94a3b8; font-size: 12px; margin-bottom: 14px; line-height: 1.5;">
+                        Watches live wind direction/speed, cloud cover and a fire-weather index across
+                        <span id="daRegionCount">…</span> monitored regions in India - the same class of
+                        model data the temperature, satellite and fire-danger panels above visualise - and
+                        deterministically projects which regions lie downwind of an elevated hazard signal
+                        over the next 1 / 3 / 6 / 24 hours. See <code>IMPLEMENTATION.md</code> for the method.
+                    </p>
+                    <div id="daHotspotList" class="da-hotspot-list">
+                        <div style="text-align:center; padding: 24px 0; color:#64748b; font-size:13px;">Loading predictions…</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <style>
         .flood-map-widget .maplibregl-popup-content {
             background: #1e2a3a;
@@ -725,6 +758,60 @@
         }
         .sa-btn-send:hover:not(:disabled) { background: #ef4444; }
         .sa-btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* AI Disaster Prediction Agent panel */
+        .da-hotspot-list { display: flex; flex-direction: column; gap: 10px; }
+        .da-hotspot-card {
+            border-radius: 10px; border: 1px solid rgba(255,255,255,0.09);
+            background: rgba(255,255,255,0.03); padding: 12px 14px;
+        }
+        .da-hotspot-head {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            gap: 10px; flex-wrap: wrap; margin-bottom: 6px;
+        }
+        .da-badge {
+            display: inline-block; font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            border-radius: 5px; padding: 2px 8px; white-space: nowrap;
+        }
+        .da-region-name { color: #f8fafc; font-weight: 700; font-size: 13.5px; }
+        .da-region-meta { color: #94a3b8; font-size: 11px; }
+        .da-headline { color: #e2e8f0; font-size: 12.5px; font-weight: 600; margin: 4px 0 4px; }
+        .da-narrative { color: #94a3b8; font-size: 12px; line-height: 1.5; margin-bottom: 6px; }
+        .da-action { color: #7dd3fc; font-size: 11.5px; margin-bottom: 8px; }
+        .da-action b { color: #38bdf8; }
+        .da-meta-row {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            font-size: 10.5px; color: #64748b; margin-bottom: 8px;
+        }
+        .da-risk-bar-track {
+            width: 64px; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.08);
+            overflow: hidden; display: inline-block; vertical-align: middle;
+        }
+        .da-risk-bar-fill { height: 100%; border-radius: 4px; }
+        .da-source-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .da-source-chip {
+            font-size: 10.5px; color: #cbd5e1; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 2px 8px;
+        }
+        .da-card-actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .da-btn-alert {
+            border: 1px solid rgba(239,68,68,0.5); background: rgba(239,68,68,0.14);
+            color: #fca5a5; border-radius: 7px; padding: 5px 12px;
+            font-size: 11.5px; font-weight: 700; cursor: pointer; transition: background 0.15s;
+        }
+        .da-btn-alert:hover:not(:disabled) { background: rgba(239,68,68,0.28); color: #fff; }
+        .da-btn-alert:disabled { opacity: 0.55; cursor: not-allowed; }
+        .da-btn-dismiss {
+            border: 1px solid rgba(255,255,255,0.14); background: transparent;
+            color: #94a3b8; border-radius: 7px; padding: 5px 12px;
+            font-size: 11.5px; font-weight: 600; cursor: pointer;
+        }
+        .da-btn-dismiss:hover { color: #f8fafc; border-color: rgba(255,255,255,0.3); }
+        .da-offline-tag {
+            font-size: 9.5px; color: #fbbf24; background: rgba(251,191,36,0.1);
+            border: 1px solid rgba(251,191,36,0.3); border-radius: 5px; padding: 1px 6px;
+        }
     </style>
 
     <script>
@@ -1361,6 +1448,173 @@
             });
         }
         initFloodMapBengaluru();
+    })();
+    </script>
+
+    <!-- AI Disaster Prediction Agent: fetch + render + actions -->
+    <script>
+    (function() {
+        const SEVERITY_COLORS = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#38bdf8' };
+        const SEVERITY_LABELS = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
+        const HAZARD_LABELS = {
+            cyclone: 'Cyclone', storm_surge: 'Storm Surge', flood: 'Flood',
+            landslide: 'Landslide', heat_wave: 'Heat Wave', wildfire: 'Wildfire',
+            air_quality: 'Air Quality', tsunami: 'Tsunami', earthquake: 'Earthquake', other: 'Hazard'
+        };
+        let currentPredictions = [];
+
+        function hazardLabel(h) { return HAZARD_LABELS[h] || (h || '').replace('_', ' '); }
+
+        function renderStatus(status) {
+            const pill = document.getElementById('daStatusPill');
+            const dot = document.getElementById('daLiveDot');
+            const regionCount = document.getElementById('daRegionCount');
+            const lastUpdated = document.getElementById('daLastUpdated');
+            if (!status) return;
+
+            if (pill) {
+                pill.textContent = status.llm_available ? 'LLM-narrated' : 'Offline mode (no LLM key)';
+                pill.style.color = status.llm_available ? '#4ade80' : '#fbbf24';
+            }
+            if (dot) dot.style.background = status.enabled ? '#10b981' : '#64748b';
+            if (regionCount) regionCount.textContent = '26+';
+            if (lastUpdated) {
+                lastUpdated.textContent = status.last_run_at
+                    ? 'Last run ' + new Date(status.last_run_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : 'Not yet run';
+            }
+        }
+
+        function riskColor(severity) { return SEVERITY_COLORS[severity] || SEVERITY_COLORS.low; }
+
+        function renderHotspots(predictions) {
+            currentPredictions = predictions;
+            const list = document.getElementById('daHotspotList');
+            if (!list) return;
+
+            if (!predictions.length) {
+                list.innerHTML = `<div style="text-align:center; padding: 20px 0; color:#64748b; font-size:13px;">
+                    ✅ No elevated wind / cloud / fire-danger signal projected right now. The panel updates automatically.
+                </div>`;
+                return;
+            }
+
+            list.innerHTML = predictions.map(function(p) {
+                const color = riskColor(p.severity);
+                const sources = (p.contributing_sources || []).slice(0, 4).map(function(s) {
+                    const bits = [s.region];
+                    if (s.distance_km != null) bits.push(s.distance_km + ' km away');
+                    if (s.wind_speed_kmh != null) bits.push(Math.round(s.wind_speed_kmh) + ' km/h wind');
+                    if (s.cloud_cover_pct != null) bits.push(Math.round(s.cloud_cover_pct) + '% cloud');
+                    if (s.fire_weather_index != null) bits.push('FFWI ' + Math.round(s.fire_weather_index));
+                    return `<span class="da-source-chip">${bits.join(' · ')}</span>`;
+                }).join('');
+
+                return `
+                <div class="da-hotspot-card" data-prediction-id="${p.id}">
+                    <div class="da-hotspot-head">
+                        <div>
+                            <span class="da-region-name">${p.region_name}</span>
+                            <span class="da-region-meta"> · ${p.state || ''} · ${hazardLabel(p.hazard_type)} · next ${p.horizon_hours}h</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            ${p.generated_offline ? '<span class="da-offline-tag">TEMPLATE</span>' : ''}
+                            <span class="da-badge" style="color:${color}; background:${color}22; border:1px solid ${color}66;">${SEVERITY_LABELS[p.severity] || p.severity}</span>
+                        </div>
+                    </div>
+                    <div class="da-headline">${p.headline || ''}</div>
+                    <div class="da-narrative">${p.narrative || ''}</div>
+                    <div class="da-action">➜ <b>Recommended:</b> ${p.recommended_action || ''}</div>
+                    <div class="da-meta-row">
+                        <span>Projected risk <span class="da-risk-bar-track"><span class="da-risk-bar-fill" style="width:${Math.round(p.risk_score)}%; background:${color};"></span></span> ${Math.round(p.risk_score)}/100</span>
+                        <span>Confidence: ${p.confidence_label || 'n/a'}</span>
+                    </div>
+                    <div class="da-source-chips">${sources}</div>
+                    <div class="da-card-actions">
+                        <button type="button" class="da-btn-dismiss" onclick="window.dismissDisasterPrediction(${p.id})">Dismiss</button>
+                        <button type="button" class="da-btn-alert" onclick="window.sendDisasterAgentAlert(${p.id})">🚨 Send Alert</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function loadStatus() {
+            fetch('/api/disaster-agent/status')
+                .then(function(r) { return r.json(); })
+                .then(renderStatus)
+                .catch(function(err) { console.error('disaster agent status fetch failed', err); });
+        }
+
+        function loadPredictions() {
+            fetch('/api/disaster-agent/predictions')
+                .then(function(r) { return r.json(); })
+                .then(function(data) { renderHotspots(data.predictions || []); })
+                .catch(function(err) {
+                    console.error('disaster agent predictions fetch failed', err);
+                    const list = document.getElementById('daHotspotList');
+                    if (list) list.innerHTML = `<div style="text-align:center; padding:20px 0; color:#f87171; font-size:13px;">Could not load predictions.</div>`;
+                });
+        }
+
+        function refreshAll() { loadStatus(); loadPredictions(); }
+
+        window.runDisasterAgentNow = function() {
+            const btn = document.getElementById('daRunNowBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Running…'; }
+            fetch('/api/disaster-agent/run', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function() { refreshAll(); })
+                .catch(function(err) { console.error('disaster agent run failed', err); })
+                .finally(function() {
+                    if (btn) { btn.disabled = false; btn.textContent = '↻ Run Now'; }
+                });
+        };
+
+        window.dismissDisasterPrediction = function(id) {
+            fetch('/api/disaster-agent/predictions/' + id + '/dismiss', { method: 'POST' })
+                .then(function() {
+                    const card = document.querySelector('[data-prediction-id="' + id + '"]');
+                    if (card) card.remove();
+                })
+                .catch(function(err) { console.error('dismiss failed', err); });
+        };
+
+        window.sendDisasterAgentAlert = function(id) {
+            const prediction = currentPredictions.find(function(p) { return p.id === id; });
+            if (!prediction) return;
+
+            const card = document.querySelector('[data-prediction-id="' + id + '"] .da-btn-alert');
+            if (card) { card.disabled = true; card.textContent = 'Sending…'; }
+
+            fetch('/send_global_alert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: `AI PREDICTION (${hazardLabel(prediction.hazard_type)}, next ${prediction.horizon_hours}h): ${prediction.headline}`,
+                    affected_locations: [{
+                        name: prediction.region_name,
+                        type: hazardLabel(prediction.hazard_type),
+                        description: prediction.narrative,
+                        latitude: prediction.latitude,
+                        longitude: prediction.longitude
+                    }]
+                })
+            })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (card) {
+                        card.textContent = data.success !== false ? 'Alert Sent ✓' : 'Failed';
+                        if (data.success === false) card.disabled = false;
+                    }
+                })
+                .catch(function(err) {
+                    console.error('send global alert failed', err);
+                    if (card) { card.disabled = false; card.textContent = '🚨 Send Alert'; }
+                });
+        };
+
+        refreshAll();
+        setInterval(refreshAll, 90000);
     })();
     </script>
 

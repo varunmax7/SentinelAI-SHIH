@@ -87,9 +87,20 @@ from twin import create_twin_blueprint, notify_report  # noqa: E402  (must follo
 twin_registration = create_twin_blueprint(
     app, db, Report, login_required=login_required, scheduler=scheduler)
 
+# --- AI Disaster Prediction Agent -------------------------------------------
+# Additive: one blueprint, one table, one scheduled job. Watches live wind,
+# cloud and fire-danger signal across India and projects downwind hazard
+# hotspots for the analyst dashboard. Set DISASTER_AGENT_ENABLED=0 to switch
+# it off. See IMPLEMENTATION.md.
+from disaster_agent import create_disaster_agent_blueprint  # noqa: E402
+
+disaster_agent_registration = create_disaster_agent_blueprint(
+    app, db, login_required=login_required, scheduler=scheduler)
+
 with app.app_context():
-    # Re-run now that the twin has declared its models; create_all() only
-    # builds tables that are on the metadata when it is called.
+    # Re-run now that the twin and the disaster agent have declared their
+    # models; create_all() only builds tables that are on the metadata when
+    # it is called.
     db.create_all()
 
 # Sample data for dashboard (would be replaced with real data)
