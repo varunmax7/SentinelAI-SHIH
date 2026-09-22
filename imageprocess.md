@@ -126,8 +126,9 @@ so `_validate_image_processing` was hardened in a few ways:
   against the same model, since the provider is just slow and retrying would
   only double the wait.
 - **Fallback model chain** — if the primary model (Nemotron) fails or times
-  out, one more attempt is made against `minimax/minimax-m3:free`, a
-  different (non-reasoning) VLM behind an independent worker pool. Since
+  out, one more attempt is made against `inclusionai/ling-3.0-flash-vl:free`
+  (overridable via `VISION_FALLBACK_MODEL`), a different VLM behind an
+  independent worker pool. Since
   saturation is model/provider-specific, trying a second model meaningfully
   raises the odds of getting a real analysis instead of the neutral 0.5
   fallback. Whichever model actually answers is reported back in the

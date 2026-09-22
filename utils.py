@@ -839,7 +839,17 @@ def _calculate_user_quality_score(user):
 
 # Hard wall-clock cap (seconds) on a single image-processing API call. Kept
 # short since this call blocks report submission - see _post_with_deadline.
-HARD_DEADLINE_SECONDS = 9
+# Measured free-tier latency is ~3.5s typical, but a queued request can sit
+# well past that, and 9s was tight enough to time out real answers. 18s gives
+# queueing headroom; VISION_TOTAL_BUDGET_SECONDS stops the retry/fallback
+# combinations (2 attempts x 2 models) from multiplying into a minute-long wait.
+HARD_DEADLINE_SECONDS = 18
+VISION_TOTAL_BUDGET_SECONDS = 30
+# The free Nemotron endpoint flips between ~2.5s and fully saturated ("worker
+# local total request limit reached"). When it hangs there is no reason to wait
+# the full cap, because a second model is queued behind it - so non-final
+# candidates get this shorter leash instead.
+VISION_FIRST_TRY_DEADLINE = 8
 
 
 def _post_with_deadline(request_kwargs, deadline_seconds):
@@ -890,6 +900,66 @@ def _downscale_image_for_upload(image_path, max_dimension=768, jpeg_quality=75):
             return f.read(), None
 
 
+def _extract_json_object(text):
+    """
+    Pull the JSON object out of a VLM reply, tolerating the three things these
+    models actually do despite being told to emit bare JSON: wrap it in ```json
+    fences, surround it with prose, and put chain-of-thought in <think> tags.
+
+    Scans with a brace counter rather than a regex because the non-greedy
+    pattern this replaced (\{.*?\}) stops at the FIRST closing brace, so any
+    nested object silently yielded a truncated fragment. Candidates are tried
+    newest-first: when a model reasons out loud and then states its answer, the
+    last complete object is the answer.
+
+    Returns a dict, or None if nothing parseable is present (including the case
+    where the reply was cut off mid-JSON by the token limit).
+    """
+    import json as _json
+    import re as _re
+
+    if not text:
+        return None
+
+    text = _re.sub(r'<think>.*?</think>', '', text, flags=_re.DOTALL)
+    text = _re.sub(r'```(?:json)?', '', text).strip()
+
+    spans = []
+    depth = 0
+    start = None
+    in_string = False
+    escaped = False
+    for i, ch in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == '\\':
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == '{':
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == '}':
+            if depth > 0:
+                depth -= 1
+                if depth == 0 and start is not None:
+                    spans.append(text[start:i + 1])
+
+    for span in reversed(spans):
+        try:
+            obj = _json.loads(span)
+        except ValueError:
+            continue
+        if isinstance(obj, dict):
+            return obj
+    return None
+
+
 def _validate_image_processing(report):
     """
     Parameter 4: Run the report's uploaded photo through the NVIDIA Nemotron
@@ -907,6 +977,7 @@ def _validate_image_processing(report):
     import json
     import mimetypes
     import re
+    import time
     import requests
 
     if not report.image_file:
@@ -934,9 +1005,11 @@ def _validate_image_processing(report):
         # Free-tier OpenRouter models each sit behind their own small worker
         # pool, so "model X is saturated" says nothing about model Y - trying
         # a second, independent model is what actually raises the odds of
-        # getting a real answer instead of a neutral fallback. FALLBACK_MODEL
-        # is a plain (non-reasoning) VLM, which also tends to answer faster.
-        fallback_model = 'minimax/minimax-m3:free'
+        # getting a real answer instead of a neutral fallback.
+        # minimax/minimax-m3:free was retired to paid-only (it now answers
+        # HTTP 404 pointing at the paid slug), so the fallback is a different
+        # free VLM that still accepts image input.
+        fallback_model = os.environ.get('VISION_FALLBACK_MODEL', 'inclusionai/ling-3.0-flash-vl:free')
         model_candidates = [primary_model] if primary_model == fallback_model else [primary_model, fallback_model]
 
         prompt = (
@@ -951,8 +1024,13 @@ def _validate_image_processing(report):
             '"reasoning": "one short sentence"}'
         )
 
-        def call_model(model_id):
-            """Try one model, retrying once on a fast rate-limit failure only. Returns (payload_json, error_message)."""
+        # One wall-clock budget shared by every attempt and candidate below, so
+        # report submission cannot block for retries x models x per-call cap.
+        overall_deadline = time.monotonic() + VISION_TOTAL_BUDGET_SECONDS
+        quota_exhausted = {'hit': False}
+
+        def call_model(model_id, is_last_candidate):
+            """Try one model, retrying once on a fast transient failure. Returns (parsed_dict, error_message)."""
             request_kwargs = dict(
                 url="https://openrouter.ai/api/v1/chat/completions",
                 headers={
@@ -975,7 +1053,11 @@ def _validate_image_processing(report):
                             ],
                         }
                     ],
-                    "max_tokens": 400,
+                    # Reasoning tokens are billed against max_tokens, and measured
+                    # chains on these models run 60-310 tokens while the JSON answer
+                    # needs only ~70. At 400 a long chain truncated content to empty
+                    # (finish_reason="length"), which read as "no parseable result".
+                    "max_tokens": 1200,
                     "temperature": 0.1,
                     "reasoning": {"effort": "low"},
                 },
@@ -990,50 +1072,76 @@ def _validate_image_processing(report):
 
             last_err = None
             for attempt in range(2):
+                # Spend at most what is left of the shared budget, so a slow
+                # first attempt cannot push the total past the overall cap.
+                remaining = overall_deadline - time.monotonic()
+                if remaining < 2:
+                    return None, last_err or f'image analysis budget of {VISION_TOTAL_BUDGET_SECONDS}s exhausted'
+                # Give up quickly on a saturated earlier candidate - its whole
+                # point is that another model can answer - but let the LAST
+                # candidate use the full cap, since nothing follows it.
+                cap = HARD_DEADLINE_SECONDS if is_last_candidate else VISION_FIRST_TRY_DEADLINE
+                attempt_deadline = min(cap, remaining)
+                request_kwargs['timeout'] = attempt_deadline
+
                 try:
-                    response = _post_with_deadline(request_kwargs, HARD_DEADLINE_SECONDS)
+                    response = _post_with_deadline(request_kwargs, attempt_deadline)
                 except TimeoutError:
-                    return None, f'{model_id} did not respond within {HARD_DEADLINE_SECONDS}s'
+                    return None, f'{model_id} did not respond within {attempt_deadline:.0f}s'
 
                 if response.status_code != 200:
-                    return None, f'{model_id} returned HTTP {response.status_code} - {response.text[:200]}'
+                    detail = response.text[:200]
+                    # The free-tier daily cap is account-wide, not per-model, so
+                    # flag it: trying the fallback would just burn another request
+                    # from the same exhausted quota.
+                    if response.status_code == 429 and 'free-models-per-day' in detail:
+                        quota_exhausted['hit'] = True
+                        return None, ('OpenRouter free-model daily limit reached (50 requests/day '
+                                      'on a free-tier key) - resets 00:00 UTC, or add credits to raise it')
+                    return None, f'{model_id} returned HTTP {response.status_code} - {detail}'
 
                 body = response.json()
                 if 'choices' not in body:
                     last_err = f"{model_id} upstream error: {body.get('error', {}).get('message', 'unknown error')}"
                     continue  # this failure mode returns in ~1-2s, cheap to retry once
 
-                return body, None
+                choice = body['choices'][0]
+                message = choice.get('message') or {}
+                # Parse here rather than after the candidate loop: a truncated or
+                # prose-only reply is a failure of THIS model, so returning it as a
+                # success would skip the fallback model that could still answer.
+                parsed = _extract_json_object(message.get('content'))
+                if parsed is None:
+                    # Reasoning models sometimes emit the JSON only inside their
+                    # chain-of-thought field, so it is worth a look before giving up.
+                    parsed = _extract_json_object(message.get('reasoning'))
+                if parsed is not None:
+                    return parsed, None
+
+                if choice.get('finish_reason') == 'length':
+                    last_err = f'{model_id} ran out of output tokens before finishing the JSON answer'
+                else:
+                    last_err = f'{model_id} returned no parseable JSON object'
+                continue  # retry once; a different sample usually lands a clean answer
 
             return None, last_err
 
-        payload_json = None
+        parsed = None
         last_error = None
         model_used = None
-        for candidate in model_candidates:
-            payload_json, err = call_model(candidate)
-            if payload_json is not None:
+        for index, candidate in enumerate(model_candidates):
+            parsed, err = call_model(candidate, index == len(model_candidates) - 1)
+            if parsed is not None:
                 model_used = candidate
                 break
             last_error = err
+            if quota_exhausted['hit']:
+                break  # every candidate draws on the same account-wide quota
 
-        if payload_json is None:
+        if parsed is None:
             return {'score': 0.50, 'analysis': f'Image processing unavailable: {last_error}', 'severity': 'unknown', 'severity_score': 0.0}
 
         model = model_used
-        message = payload_json['choices'][0]['message']
-        # Reasoning models may put chain-of-thought in a separate field and/or
-        # wrap it in <think> tags inside content - strip both before parsing.
-        content = (message.get('content') or '').strip()
-        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-
-        # Pull out the last {...} JSON object in the response, in case the
-        # model added reasoning text before or after it despite instructions.
-        json_matches = re.findall(r'\{.*?\}', content, flags=re.DOTALL)
-        if not json_matches:
-            return {'score': 0.50, 'analysis': 'Image processing unavailable: model response contained no parseable result', 'severity': 'unknown', 'severity_score': 0.0}
-
-        parsed = json.loads(json_matches[-1])
         caption = parsed.get('caption', '').strip()
         matches_hazard = bool(parsed.get('matches_hazard', False))
         model_confidence = float(parsed.get('confidence', 0.5))
@@ -1053,7 +1161,9 @@ def _validate_image_processing(report):
         score = max(0.0, min(1.0, score))
 
         analysis = (
-            f"NVIDIA Nemotron vision analysis - what it saw: \"{caption}\" | "
+            # Name the model that actually answered - the fallback credited its
+            # analysis to Nemotron, which is misleading when Nemotron was down.
+            f"Vision analysis ({model.split('/')[-1].replace(':free', '')}) - what it saw: \"{caption}\" | "
             f"detected '{detected_hazard}' ({'matches' if matches_hazard else 'does not match'} claimed '{hazard_type}'), "
             f"severity: {severity}. {reasoning}"
         )

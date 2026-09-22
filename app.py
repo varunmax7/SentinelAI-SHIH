@@ -67,6 +67,18 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 atexit.register(lambda: scheduler.shutdown())
 
+# --- Municipal Commissioner portal -----------------------------------------
+from commissioner import commissioner as commissioner_blueprint  # noqa: E402
+
+app.register_blueprint(commissioner_blueprint)
+
+# --- Relief donations ------------------------------------------------------
+# Additive: one blueprint, one table. Donations are gated on an official having
+# verified the report, and the payment step is simulated - see RELIEF_AND_COMMISSIONER.md.
+from relief import relief as relief_blueprint  # noqa: E402
+
+app.register_blueprint(relief_blueprint)
+
 # --- Urban Digital Twin ----------------------------------------------------
 # Additive: registers two blueprints, its own twin_* tables and jobs on the
 # scheduler above. Set TWIN_ENABLED=0 to switch the whole feature off.
@@ -958,33 +970,26 @@ def analyze_report_with_ai(report):
         # Use 4-parameter validation system (climate, density/heatmap, user quality, image processing)
         accuracy_result = validate_report_accuracy_4params(report)
 
-        # Initialize analysis components with legacy method
-        analysis_parts = []
         confidence_factors = []
 
         # 1. Source Reliability Analysis (User Quality from 4-param system)
         user_quality = accuracy_result['parameter_3_user_quality']
-        analysis_parts.append(f"User Quality: {user_quality['analysis']}")
         confidence_factors.append(user_quality['score'])
 
         # 2. Corroboration Analysis (Heatmap Match from 4-param system)
         heatmap_match = accuracy_result['parameter_1_heatmap']
-        analysis_parts.append(f"Heatmap Match: {heatmap_match['analysis']}")
         confidence_factors.append(heatmap_match['score'])
 
         # 3. Climate Data Analysis (Weather Alignment from 4-param system)
         climate_align = accuracy_result['parameter_2_climate']
-        analysis_parts.append(f"Climate Alignment: {climate_align['analysis']}")
         confidence_factors.append(climate_align['score'])
 
         # 4. Image Processing Analysis (NVIDIA NIM vision model from 4-param system)
         image_processing = accuracy_result['parameter_4_image_processing']
-        analysis_parts.append(f"Image Processing: {image_processing['analysis']}")
         confidence_factors.append(image_processing['score'])
 
         # 5. Linguistic Analysis
         linguistic_analysis = analyze_text(report.description, report.title)
-        analysis_parts.append(f"Linguistic Analysis: {linguistic_analysis['analysis']}")
         confidence_factors.append(linguistic_analysis['score'])
 
         # Calculate overall confidence score (weighted average)
@@ -995,12 +1000,18 @@ def analyze_report_with_ai(report):
         # Blend with 4-parameter accuracy for final score
         final_confidence_score = (confidence_score * 0.5) + (accuracy_result['overall_accuracy'] * 0.5)
 
-        # Generate comprehensive analysis text
-        analysis_text = (
-            f"4-PARAM ACCURACY: {accuracy_result['accuracy_percent']}% | "
-            f"SEVERITY: {accuracy_result['severity'].upper()} ({accuracy_result['severity_percent']}%) | "
-            f"{accuracy_result['detailed_analysis']} | " + " | ".join(analysis_parts)
-        )
+        # Generate a clean, non-redundant analysis report: one labeled line per
+        # factor, each carrying its own score inline instead of repeating a
+        # separate scores-only summary line.
+        analysis_text = "\n".join([
+            f"Overall Accuracy: {accuracy_result['accuracy_percent']}%",
+            f"Severity: {accuracy_result['severity'].upper()} ({accuracy_result['severity_percent']}%)",
+            f"Heatmap Match ({int(heatmap_match['score']*100)}%): {heatmap_match['analysis']}",
+            f"Climate Alignment ({int(climate_align['score']*100)}%): {climate_align['analysis']}",
+            f"User Quality ({int(user_quality['score']*100)}%): {user_quality['analysis']}",
+            f"Image Processing ({int(image_processing['score']*100)}%): {image_processing['analysis']}",
+            f"Linguistic Analysis ({int(linguistic_analysis['score']*100)}%): {linguistic_analysis['analysis']}",
+        ])
 
         return {
             'confidence_score': final_confidence_score,
@@ -2324,9 +2335,22 @@ def reels():
         user_approvals = LocalApproval.query.filter_by(user_id=current_user.id).all()
         user_locally_approved_reports = [appr.report_id for appr in user_approvals]
     
+    # Relief raised per report, for the donate button in the feed. One grouped
+    # query rather than a lookup inside the template loop, which would be a
+    # query per card.
+    from models import Donation
+    raised_by_report = {
+        report_id: paise
+        for report_id, paise in db.session.query(
+            Donation.report_id, db.func.sum(Donation.amount_paise))
+        .filter(Donation.status == 'completed', Donation.report_id.isnot(None))
+        .group_by(Donation.report_id).all()
+    }
+
     return render_template('reels.html', 
                          title=translate('reels'), 
                          reports=reports,
+                         raised_by_report=raised_by_report,
                          user_locally_approved_reports=user_locally_approved_reports)
 
 @app.route("/api/report/<int:report_id>/local_approve", methods=['POST'])

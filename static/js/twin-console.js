@@ -17,6 +17,10 @@
      * that has to happen the first time it is switched on. */
     var LAYER_GROUPS = {
         zones: { layers: ["zone-outline"], label: "Zones" },
+        alerts: {
+            layers: ["alert-areas", "alert-areas-outline"],
+            label: "Official alerts", lazy: "alerts"
+        },
         incidents: {
             layers: ["incidents", "incidents-detail", "incident-labels",
                      "incident-detail-labels", "incident-groups", "incident-group-count"],
@@ -36,7 +40,7 @@
         traffic: { layers: ["traffic"], label: "Traffic", lazy: "traffic" }
     };
 
-    var DEFAULT_ON = ["incidents"];
+    var DEFAULT_ON = ["incidents", "alerts"];
 
     function TwinConsole(root, options) {
         options = options || {};
@@ -81,8 +85,13 @@
             drawerClose: q(root, "[data-twin-drawer-close]"),
             notice: q(root, "[data-twin-notice]"),
             footer: q(root, "[data-twin-footer]"),
-            buildingsHint: q(root, "[data-twin-buildings-hint]")
+            buildingsHint: q(root, "[data-twin-buildings-hint]"),
+            flags: q(root, "[data-twin-flags]"),
+            flagCount: q(root, "[data-twin-flag-count]"),
+            alertNote: q(root, "[data-twin-alert-note]")
         };
+        this._alertMeta = {};
+        this._flags = [];
     }
 
     // ---- boot ------------------------------------------------------------
@@ -107,6 +116,7 @@
             self._startStream();
             self.refreshAll();
             self.refreshHealth();
+            self.refreshFlags();
         }).catch(function (err) {
             self.notice("The digital twin API is unreachable: " + err.message +
                         ". The rest of this dashboard is unaffected.");
@@ -132,6 +142,7 @@
             onCellClick: function (props) { self.openCellDrawer(props.h3); },
             onCameraClick: function (props, lngLat) { self.openCameraDrawer(props, lngLat); },
             onIncidentClick: function (props) { self.openIncidentDrawer(props); },
+            onAlertClick: function (props) { self.openAlertDrawer(props); },
             onError: function (err) { self.notice("Map error: " + err.message); }
         });
 
@@ -194,6 +205,85 @@
         fetchJSON("/api/twin/" + city.slug + "/summary?horizon=" + this.state.horizon)
             .then(function (summary) { self._renderStats(summary); })
             .catch(function () {});
+        // Official alerts expire on their own schedule, so the layer has to be
+        // refetched rather than left to go stale on screen.
+        if (this._lazyLoaded.alerts) {
+            fetchJSON("/api/twin/" + city.slug + "/alerts")
+                .then(function (fc) {
+                    self.map.setAlerts(fc);
+                    self._alertMeta = fc.meta || {};
+                    self._renderAlertNote();
+                })
+                .catch(function () {});
+        }
+        this.refreshFlags();
+    };
+
+    // ---- agent flag queue -------------------------------------------------
+    TwinConsole.prototype.refreshFlags = function () {
+        var self = this;
+        return fetchJSON("/api/twin/flags?status=pending").then(function (data) {
+            self._flags = data.flags || [];
+            self._agent = { enabled: data.agent_enabled, available: data.agent_available };
+            self._renderFlagBadge(data.pending || 0);
+        }).catch(function () {});
+    };
+
+    TwinConsole.prototype._renderFlagBadge = function (pending) {
+        if (!this.el.flags) return;
+        this.el.flags.style.display = "";
+        this.el.flags.classList.toggle("has-pending", pending > 0);
+        if (this.el.flagCount) this.el.flagCount.textContent = pending;
+        this.el.flags.title = pending
+            ? pending + " agent flag(s) awaiting review"
+            : "No flags awaiting review";
+    };
+
+    TwinConsole.prototype._renderAlertNote = function () {
+        if (!this.el.alertNote) return;
+        var meta = this._alertMeta || {};
+        if (!meta.total && !meta.live) {
+            this.el.alertNote.style.display = "none";
+            return;
+        }
+        this.el.alertNote.style.display = "";
+        this.el.alertNote.textContent = meta.live
+            ? meta.live + " official alert(s) in force"
+            : "No official alert currently in force";
+    };
+
+    TwinConsole.prototype.openFlagQueue = function () {
+        var self = this;
+        this._drawerCell = null;
+        this._showDrawer("Agent flags", '<p class="twin-muted">Loading…</p>');
+
+        fetchJSON("/api/twin/flags?status=pending").then(function (data) {
+            self._flags = data.flags || [];
+            self.el.drawerBody.innerHTML = renderFlagQueue(data);
+            // Delegated so the buttons keep working after every re-render.
+            self.el.drawerBody.onclick = function (event) {
+                var button = event.target.closest("[data-flag-decision]");
+                if (!button) return;
+                self.decideFlag(parseInt(button.getAttribute("data-flag-id"), 10),
+                                button.getAttribute("data-flag-decision"));
+            };
+        }).catch(function (err) {
+            self.el.drawerBody.innerHTML = '<p class="twin-error">Could not load the flag queue: ' +
+                                           escapeHTML(err.message) + "</p>";
+        });
+    };
+
+    TwinConsole.prototype.decideFlag = function (flagId, decision) {
+        var self = this;
+        postJSON("/api/twin/flags/" + flagId, { decision: decision })
+            .then(function () {
+                self.refreshFlags();
+                self.openFlagQueue();
+            })
+            .catch(function (err) {
+                self.notice("Could not " + decision + " that flag: " + err.message +
+                            " (reviewing needs the official or admin role).");
+            });
     };
 
     TwinConsole.prototype.refreshHealth = function () {
@@ -219,6 +309,13 @@
                     self.notice("Camera layer has not been ingested for " + city.name +
                                 " yet. It is fetched in the background; try again shortly.");
                 }
+            }).catch(function () { self._lazyLoaded[key] = false; });
+        }
+        if (key === "alerts") {
+            return fetchJSON("/api/twin/" + city.slug + "/alerts").then(function (fc) {
+                self.map.setAlerts(fc);
+                self._alertMeta = fc.meta || {};
+                self._renderAlertNote();
             }).catch(function () { self._lazyLoaded[key] = false; });
         }
         if (key === "water") {
@@ -359,6 +456,7 @@
         });
 
         on(this.el.drawerClose, "click", function () { self.closeDrawer(); });
+        on(this.el.flags, "click", function () { self.openFlagQueue(); });
 
         if (this.el.search) {
             on(this.el.search, "input", function (event) {
@@ -443,6 +541,26 @@
                 ? detail.zone.name + " · " + h3.slice(0, 9)
                 : "Cell " + h3.slice(0, 9);
             self.el.drawerBody.innerHTML = renderCellDetail(detail, self.state.horizon);
+
+            // Ground imagery for the cell, not just for whichever camera the
+            // operator managed to hit. A camera dot is a couple of pixels wide
+            // at city zoom; the cell is the thing people actually click.
+            var centre = detail.center || [];
+            if (centre.length === 2) {
+                var slot = self.el.drawerBody.querySelector("[data-cell-imagery]");
+                fetchJSON("/api/twin/cctv/view?lat=" + centre[1] + "&lon=" + centre[0] +
+                          "&city=" + encodeURIComponent(self.state.city))
+                    .then(function (view) {
+                        if (!slot) return;
+                        slot.innerHTML = renderImagery(view, { hideNote: true });
+                        bindImagery(slot, view);
+                        self._watchLiveImagery(view, centre[1], centre[0], null);
+                    })
+                    .catch(function () {
+                        if (slot) slot.innerHTML = '<p class="twin-muted twin-small">' +
+                            "Imagery lookup failed.</p>";
+                    });
+            }
         }).catch(function (err) {
             self.el.drawerBody.innerHTML = '<p class="twin-error">Could not load this cell: ' +
                                            escapeHTML(err.message) + "</p>";
@@ -457,19 +575,64 @@
         var lat = lngLat ? lngLat.lat : null;
         var lon = lngLat ? lngLat.lng : null;
         var url = "/api/twin/cctv/view?lat=" + lat + "&lon=" + lon +
+                  "&city=" + encodeURIComponent(this.state.city) +
                   (props.direction != null && props.direction !== "" ? "&direction=" + props.direction : "");
 
         fetchJSON(url).then(function (view) {
             self.el.drawerBody.innerHTML = renderCameraDetail(props, view);
+            bindImagery(self.el.drawerBody, view);
+            self._watchLiveImagery(view, lat, lon, props.direction);
         }).catch(function () {
-            self.el.drawerBody.innerHTML = renderCameraDetail(props, { images: [], facing: null,
-                caption: "Street-level imagery lookup failed." });
+            self.el.drawerBody.innerHTML = renderCameraDetail(props, {
+                images: [], live: [], facing: null, nearest: null, best: null,
+                best_kind: "none", caption: "Street-level imagery lookup failed." });
         });
+    };
+
+    TwinConsole.prototype.openAlertDrawer = function (props) {
+        this._drawerCell = null;
+        this._showDrawer(props.sender || "Official alert", renderAlertDetail(props));
     };
 
     TwinConsole.prototype.openIncidentDrawer = function (props) {
         this._drawerCell = null;
         this._showDrawer(props.title || "Incident", renderIncidentDetail(props));
+    };
+
+    /* Re-fetch a live webcam frame on an interval so "live" means live.
+     * Only started when a live frame is actually present - polling an archival
+     * photo that has not changed since 2020 would be pure noise. */
+    TwinConsole.prototype._watchLiveImagery = function (view, lat, lon, direction) {
+        this._stopLiveImagery();
+        if (!view || !(view.live && view.live.length)) return;
+
+        var self = this;
+        var url = "/api/twin/cctv/view?lat=" + lat + "&lon=" + lon +
+                  "&city=" + encodeURIComponent(this.state.city) +
+                  (direction != null && direction !== "" ? "&direction=" + direction : "") +
+                  "&fresh=true";
+        this._liveTimer = setInterval(function () {
+            // Drawer closed, or showing something else now: stop.
+            if (!self.el.drawer.classList.contains("is-open")) { self._stopLiveImagery(); return; }
+            fetchJSON(url).then(function (fresh) {
+                (fresh.live || []).forEach(function (cam, i) {
+                    var img = self.el.drawerBody.querySelector('[data-live-index="' + i + '"]');
+                    var when = self.el.drawerBody.querySelector('[data-live-time="' + i + '"]');
+                    // Cache-bust: the webcam URL is stable while the frame
+                    // behind it changes, so without this the browser would keep
+                    // showing the first frame for ever.
+                    if (img && cam.thumb_url) {
+                        img.src = cam.thumb_url + (cam.thumb_url.indexOf('?') < 0 ? '?' : '&') +
+                                  '_t=' + Date.now();
+                    }
+                    if (when) when.textContent = _shortTime(cam.captured_at);
+                });
+            }).catch(function () {});
+        }, 60000);
+    };
+
+    TwinConsole.prototype._stopLiveImagery = function () {
+        if (this._liveTimer) { clearInterval(this._liveTimer); this._liveTimer = null; }
     };
 
     TwinConsole.prototype._showDrawer = function (title, html) {
@@ -481,6 +644,7 @@
 
     TwinConsole.prototype.closeDrawer = function () {
         if (!this.el.drawer) return;
+        this._stopLiveImagery();
         this.el.drawer.classList.remove("is-open");
         this._drawerCell = null;
         if (this.map) this.map.clearSelection();
@@ -715,14 +879,104 @@
             dt("River discharge anomaly", fmt(inputs.river_discharge_anomaly, "/100") +
                " <em>(GloFAS model anomaly, not an official CWC gauge reading)</em>") +
             "</dl>" +
+            "<h6>Ground imagery</h6>" +
+            '<div data-cell-imagery><p class="twin-muted twin-small">Loading…</p></div>' +
             "<h6>Critical assets</h6>" + assets +
             "<h6>Reports</h6>" + reports;
     }
 
-    function renderCameraDetail(props, view) {
-        var facing = view.facing;
-        var images = view.images || [];
+    /* Imagery panel, in two explicitly separate sections.
+     *
+     * They are separate because they are different claims. A live webcam frame
+     * is current but is somewhere else in the city - there are three Windy
+     * webcams across both modelled cities, so for almost every cell the nearest
+     * one is kilometres away. The street-level photos genuinely show *this*
+     * area but were taken years ago. Blending them into one ranked list, which
+     * is what this used to do, meant a single city webcam led the panel for
+     * every hexagon and buried the twelve photos that actually showed the place.
+     */
+    function renderImagery(view, options) {
+        options = options || {};
+        var live = view.live || [];
+        var area = view.images || [];
 
+        if (!live.length && !area.length) {
+            return '<p class="twin-muted twin-small">' +
+                   escapeHTML(view.caption || "No imagery available for this area.") + "</p>" +
+                   (view.live_source_available
+                       ? ""
+                       : '<p class="twin-small twin-muted">No live-webcam source is ' +
+                         "configured (WINDY_WEBCAMS_KEY).</p>");
+        }
+
+        var html = "";
+
+        // --- live -----------------------------------------------------------
+        if (live.length) {
+            html += '<div class="twin-imgsec"><div class="twin-imgsec-head">' +
+                    '<span class="twin-imgbadge twin-imgbadge--live">● LIVE</span>' +
+                    "<span>Current conditions in this city</span></div>";
+            html += '<div class="twin-livegrid">' + live.slice(0, 3).map(function (cam, i) {
+                return '<figure class="twin-livecam">' +
+                       '<img data-live-index="' + i + '" src="' + escapeHTML(cam.thumb_url || "") +
+                       '" alt="Live webcam" loading="lazy">' +
+                       "<figcaption>" + escapeHTML(cam.title || cam.provider || "Webcam") +
+                       " · <b>" + (cam.distance_m != null
+                            ? (cam.distance_m / 1000).toFixed(1) + " km away" : "nearby") + "</b>" +
+                       '<br><span data-live-time="' + i + '">' +
+                       escapeHTML(_shortTime(cam.captured_at)) + "</span></figcaption></figure>";
+            }).join("") + "</div>";
+            // Said once, plainly. These frames are live but they are not this hexagon.
+            html += '<p class="twin-small twin-muted">Live frames refresh automatically. ' +
+                    "They show the city now, not this specific cell.</p></div>";
+        }
+
+        // --- this area ------------------------------------------------------
+        if (area.length) {
+            html += '<div class="twin-imgsec"><div class="twin-imgsec-head">' +
+                    '<span class="twin-imgbadge">THIS AREA</span>' +
+                    "<span>" + area.length + " street-level photo" +
+                    (area.length === 1 ? "" : "s") + " of this location</span></div>";
+            html += '<div class="twin-areagrid">' + area.slice(0, 9).map(function (img, i) {
+                var when = _shortDate(img.captured_at);
+                return '<a class="twin-areashot" data-area-index="' + i + '" target="_blank"' +
+                       ' rel="noopener" href="' + escapeHTML(img.page_url || img.full_url || "#") + '"' +
+                       ' title="' + escapeHTML((img.provider || "") + " · " + when + " · " +
+                                    Math.round(img.distance_m || 0) + " m away") + '">' +
+                       '<img src="' + escapeHTML(img.thumb_url || "") + '" alt="" loading="lazy">' +
+                       '<span class="twin-areashot-meta">' + Math.round(img.distance_m || 0) +
+                       " m · " + escapeHTML(when) + "</span></a>";
+            }).join("") + "</div>";
+            html += '<p class="twin-small twin-muted">Archival street-level photography — ' +
+                    "each frame carries its own capture date. Not a live feed.</p></div>";
+        }
+
+        if (!options.hideNote) {
+            html += '<p class="twin-muted twin-small">Imagery from Windy Webcams, KartaView ' +
+                    "and Mapillary. Sentinel never connects to a camera device and never " +
+                    "proxies a stream.</p>";
+        }
+        return html;
+    }
+
+    function _shortTime(value) {
+        if (!value) return "time unknown";
+        var d = new Date(value);
+        return isNaN(d) ? String(value) : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function _shortDate(value) {
+        if (!value) return "date unknown";
+        var d = new Date(String(value).replace(" ", "T"));
+        return isNaN(d) ? String(value).slice(0, 10) : d.toISOString().slice(0, 10);
+    }
+
+    /* Nothing to wire any more - the area grid is plain links and the live
+     * frames are swapped in place by the refresh timer. Kept as a no-op so the
+     * two call sites do not have to know that. */
+    function bindImagery() {}
+
+    function renderCameraDetail(props, view) {
         var head = "<dl class='twin-dl'>" +
             dt("Kind", escapeHTML(props.kind || "unknown")) +
             dt("Type", escapeHTML(props.camera_type || "unknown")) +
@@ -733,38 +987,12 @@
             dt("Operator", escapeHTML(props.operator || "unknown")) +
             "</dl>";
 
-        // The cone is an assumption drawn from the camera type, never a survey.
         var coneNote = (props.direction != null && props.direction !== "")
-            ? '<p class="twin-muted">The view cone is estimated from the camera type ' +
-              "(field of view and range are almost never tagged in OSM), not surveyed.</p>"
-            : '<p class="twin-muted">No bearing is recorded for this camera, so no view cone is drawn.</p>';
-
-        // Thumbnail inline, full frame behind a link: the providers' processed
-        // frames are often ~4000 px wide and this box is ~300 px.
-        var facingImage = facing
-            ? '<img src="' + escapeHTML(facing.thumb_url || "") +
-              '" alt="Street-level view roughly along the camera bearing" loading="lazy">'
-            : "";
-        var facingBlock = facing
-            ? '<figure class="twin-figure">' +
-              (facing.full_url
-                  ? '<a href="' + escapeHTML(facing.full_url) + '" target="_blank" rel="noopener">' +
-                    facingImage + "</a>"
-                  : facingImage) +
-              "<figcaption>" + escapeHTML(view.caption || "") + "</figcaption></figure>"
-            : '<p class="twin-muted">' + escapeHTML(view.caption ||
-              "No open street-level image found facing this direction.") + "</p>";
-
-        var others = images.length
-            ? "<h6>Nearby open imagery</h6><ul class='twin-list'>" +
-              images.slice(0, 6).map(function (img) {
-                  return "<li>" + escapeHTML(img.provider) + " · " +
-                         Math.round(img.distance_m) + " m · " +
-                         escapeHTML(String(img.captured_at || "date unknown")) +
-                         (img.page_url ? ' · <a href="' + escapeHTML(img.page_url) +
-                          '" target="_blank" rel="noopener">open</a>' : "") + "</li>";
-              }).join("") + "</ul>"
-            : "";
+            ? '<p class="twin-muted twin-small">The view cone is estimated from the ' +
+              "camera type — field of view and range are almost never tagged in OSM — " +
+              "not surveyed.</p>"
+            : '<p class="twin-muted twin-small">No bearing is recorded for this camera, ' +
+              "so no view cone is drawn.</p>";
 
         var links = "";
         if (props.stream_url) {
@@ -777,10 +1005,115 @@
         }
 
         return head + coneNote +
-            "<h6>What this camera is pointed at</h6>" + facingBlock + others + links +
-            '<p class="twin-muted twin-small">Camera locations from OpenStreetMap (ODbL). ' +
-            "Sentinel never connects to a camera device and never proxies a stream — " +
-            "these are public street-level photographs, not live feeds.</p>";
+            "<h6>What this location looks like</h6>" + renderImagery(view) + links +
+            '<p class="twin-muted twin-small">Camera locations from OpenStreetMap (ODbL).</p>';
+    }
+
+    function renderAlertDetail(props) {
+        var live = props.live === true || props.live === "true";
+        var district = props.geometry_kind === "district";
+        return "" +
+            '<div class="twin-risk twin-risk--' + (live ? "warning" : "normal") + '">' +
+            "<b>" + escapeHTML(props.priority || "") + "</b><span>" +
+            (live ? "in force" : "expired") + "</span></div>" +
+            "<p class='twin-explain'>" + escapeHTML(props.headline || props.event || "") + "</p>" +
+            "<dl class='twin-dl'>" +
+            dt("Issued by", escapeHTML(props.sender || "unknown")) +
+            dt("Source", escapeHTML(props.source || "")) +
+            dt("Event", escapeHTML(props.event || "")) +
+            dt("CAP severity", escapeHTML(props.severity || "n/a")) +
+            dt("CAP certainty", escapeHTML(props.certainty || "n/a")) +
+            dt("Urgency", escapeHTML(props.urgency || "n/a")) +
+            dt("Effective", escapeHTML(String(props.effective_at || "unstated"))) +
+            dt("Expires", escapeHTML(String(props.expires_at || "unstated"))) +
+            dt("Area", escapeHTML(props.area_desc || "")) +
+            "</dl>" +
+            (props.instruction
+                ? "<h6>Instruction</h6><p>" + escapeHTML(props.instruction) + "</p>"
+                : "") +
+            (district
+                ? '<p class="twin-warn">Footprint is the whole district. This alert ' +
+                  "carried no polygon, so the area shown is district-wide rather than " +
+                  "a surveyed boundary.</p>"
+                : "") +
+            (live
+                ? ""
+                : '<p class="twin-muted">This alert has expired and no longer ' +
+                  "contributes to any risk score.</p>") +
+            (props.raw_url
+                ? '<p><a href="' + escapeHTML(props.raw_url) +
+                  '" target="_blank" rel="noopener">Original CAP document ↗</a></p>'
+                : "") +
+            '<p class="twin-muted twin-small">Source: NDMA SACHET (public domain), ' +
+            "GDACS and USGS. Alerts are reproduced as issued and are not edited here.</p>";
+    }
+
+    function renderFlagQueue(data) {
+        if (!data.agent_enabled) {
+            return '<p class="twin-muted">The triage agent is switched off ' +
+                   "(TWIN_AGENT_ENABLED=0). Alerts and the risk grid are unaffected.</p>";
+        }
+        var note = data.agent_available
+            ? ""
+            : '<p class="twin-warn twin-small">No language model API key is configured ' +
+              "(KIMI_API_KEY / OPENROUTER_API_KEY), so the briefs below were generated " +
+              "from database fields only, with no model involved.</p>";
+
+        if (!data.flags.length) {
+            return note + '<p class="twin-muted">Nothing awaiting review.</p>';
+        }
+
+        return note + data.flags.map(function (flag) {
+            var citations = (flag.citations || []).map(function (c) {
+                return "<li>" + escapeHTML(c.sender || c.kind || "source") + " — " +
+                       escapeHTML((c.title || c.id || "").slice(0, 70)) +
+                       (c.url ? ' <a href="' + escapeHTML(c.url) +
+                                '" target="_blank" rel="noopener">↗</a>' : "") + "</li>";
+            }).join("");
+
+            return '<div class="twin-flag">' +
+                '<div class="twin-flag-head">' +
+                "<b>" + escapeHTML(flag.title || "Untitled flag") + "</b>" +
+                '<span class="twin-flag-score">' + flag.risk_score + "</span></div>" +
+                (flag.generated_offline
+                    ? '<p class="twin-small twin-muted">Generated without a language model.</p>'
+                    : "") +
+                '<div class="twin-flag-brief">' + markdownish(flag.brief_md || "") + "</div>" +
+                (citations ? "<h6>Cited sources</h6><ul class='twin-list'>" + citations + "</ul>" : "") +
+                '<div class="twin-flag-actions">' +
+                '<button type="button" class="twin-btn" data-flag-decision="approve" data-flag-id="' +
+                flag.id + '">Approve</button>' +
+                '<button type="button" class="twin-btn twin-btn--reject" data-flag-decision="reject" data-flag-id="' +
+                flag.id + '">Reject</button></div></div>';
+        }).join("");
+    }
+
+    /* Just enough markdown for the brief: bold, bullets and paragraphs. A full
+     * parser is not worth the bytes, and everything is escaped first so a brief
+     * can never inject markup. */
+    function markdownish(text) {
+        var escaped = escapeHTML(text);
+        var lines = escaped.split("\n");
+        var html = [];
+        var inList = false;
+        lines.forEach(function (line) {
+            var trimmed = line.trim();
+            if (trimmed.indexOf("- ") === 0) {
+                if (!inList) { html.push("<ul class='twin-list'>"); inList = true; }
+                html.push("<li>" + inline(trimmed.slice(2)) + "</li>");
+                return;
+            }
+            if (inList) { html.push("</ul>"); inList = false; }
+            if (trimmed) html.push("<p>" + inline(trimmed) + "</p>");
+        });
+        if (inList) html.push("</ul>");
+        return html.join("");
+    }
+
+    function inline(text) {
+        return text
+            .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+            .replace(/_([^_]+)_/g, "<em>$1</em>");
     }
 
     function renderIncidentDetail(props) {
@@ -860,4 +1193,14 @@
 
     global.TwinConsole = TwinConsole;
     global.TwinLayerGroups = LAYER_GROUPS;
+    // Exported so the render helpers can be exercised against a real API
+    // payload without a browser, and inspected from the devtools console.
+    global.TwinRender = {
+        renderImagery: renderImagery,
+        renderCameraDetail: renderCameraDetail,
+        renderCellDetail: renderCellDetail,
+        renderAlertDetail: renderAlertDetail,
+        renderFlagQueue: renderFlagQueue,
+        markdownish: markdownish
+    };
 })(typeof window !== "undefined" ? window : this);

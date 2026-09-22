@@ -162,11 +162,17 @@ def explain(inputs, sub_scores, risk, vulnerability):
         bits.append("Water hazard is low (%.0f/100)." % hydro)
 
     incidents = inputs.get('incident_count') or 0
+    alerts = inputs.get('alert_count') or 0
+    if alerts:
+        senders = inputs.get('alert_senders') or []
+        bits.append("%d official alert(s) in force here%s."
+                    % (alerts, (" from " + ", ".join(senders)) if senders else ""))
     if incidents:
-        bits.append("%d recent verified report(s) inside or beside this cell contribute %.0f/100."
-                    % (incidents, sub_scores.get('incident', 0.0)))
+        bits.append("%d recent verified report(s) inside or beside this cell." % incidents)
+    if alerts or incidents:
+        bits.append("Together they contribute %.0f/100." % sub_scores.get('incident', 0.0))
     else:
-        bits.append("No recent verified reports in this cell.")
+        bits.append("No official alerts or recent verified reports in this cell.")
 
     env = sub_scores.get('env', 0.0)
     if env >= 40:

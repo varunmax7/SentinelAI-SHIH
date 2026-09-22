@@ -85,6 +85,10 @@
         </div>
 
         <span class="twin-live" title="Live when the event stream is connected">Live</span>
+        <button type="button" class="twin-flagbtn" data-twin-flags style="display:none"
+                title="Agent flags awaiting review">
+            &#9873; <span data-twin-flag-count>0</span>
+        </button>
         <span class="twin-health twin-health--unknown" data-twin-health>Checking sources…</span>
         <button type="button" class="twin-btn" data-twin-reset title="Return to the city view">Reset view</button>
         <button type="button" class="twin-btn" data-twin-refresh title="Recompute the risk grid now">Recompute</button>
@@ -114,6 +118,9 @@
             <div class="twin-legend-row">
                 <i class="twin-swatch" style="border:1px dashed #fbbf24;background:transparent"></i> Degraded inputs
             </div>
+            <div class="twin-legend-row">
+                <i class="twin-swatch" style="border:1px solid #ea580c;background:rgba(234,88,12,0.13)"></i> Official alert area
+            </div>
             <small>
                 Risk = hazard × vulnerability, per H3 cell (~460&nbsp;m).
                 Column height tracks the score. Camera view cones are estimated
@@ -134,6 +141,7 @@
     </div>
 
     <div class="twin-statbar" data-twin-stats></div>
+    <div class="twin-alertnote" data-twin-alert-note style="display:none"></div>
     <div class="twin-notice" data-twin-notice style="display:none"></div>
     <div class="twin-footer" data-twin-footer></div>
 </div>

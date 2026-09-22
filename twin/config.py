@@ -11,6 +11,17 @@ sources only add layers (see analyst.md §IV.1).
 
 import os
 
+try:
+    # The host app's config.py loads .env, but only when it is imported first.
+    # Loading it here too makes `twin.config` correct on its own - a standalone
+    # script or a test that imports the twin without the app still sees the
+    # configured keys. load_dotenv does not override variables already set.
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:  # pragma: no cover - python-dotenv is optional
+    pass
+
 
 def _env_int(name, default):
     try:
@@ -59,9 +70,65 @@ BOUNDARY_DIR = os.environ.get('TWIN_BOUNDARY_DIR', 'data/twin/boundaries')
 # when a lazy layer is first opened, and a slow upstream must never become a
 # slow dashboard.
 HTTP_TIMEOUT_S = _env_float('TWIN_HTTP_TIMEOUT_S', 8.0)
+# Street-level imagery is fetched lazily when a drawer is opened, never on the
+# dashboard's critical path, so it gets a longer budget than the global one.
+STREETVIEW_TIMEOUT_S = _env_float('TWIN_STREETVIEW_TIMEOUT_S', 20.0)
 
 CCTV_RADIUS_M = _env_int('TWIN_CCTV_RADIUS_M', 400)
-STREETVIEW_RADIUS_M = _env_int('TWIN_STREETVIEW_RADIUS_M', 350)
+# 500 m is KartaView's hard API maximum, and street-level coverage in both
+# cities is sparse enough that anything smaller leaves most cells with no
+# photograph of their own.
+STREETVIEW_RADIUS_M = _env_int('TWIN_STREETVIEW_RADIUS_M', 500)
+# Live webcams get their own, much wider radius. A street-level photo 5 km away
+# is a different place and tells you nothing; a webcam 5 km away showing the
+# current sky, rain and traffic is real, current context for the same city.
+# Bengaluru has exactly one Windy webcam and it sits 7.6 km from the centre, so
+# reusing the 350 m street-view radius meant live imagery never appeared at all.
+WEBCAM_RADIUS_M = _env_int('TWIN_WEBCAM_RADIUS_M', 15000)
+
+# --- External incident feeds ----------------------------------------------
+# Which SACHET state feeds to poll. These are already scoped to the states the
+# twin's two cities sit in; the all-India feed is 10x the volume for no gain.
+SACHET_STATES = tuple(
+    s.strip().lower() for s in
+    os.environ.get('TWIN_SACHET_STATES', 'karnataka,telangana').split(',')
+    if s.strip()
+)
+ALERT_POLL_MIN = _env_int('TWIN_ALERT_POLL_MIN', 5)
+GLOBAL_FEEDS_ENABLED = _env_flag('TWIN_GLOBAL_FEEDS_ENABLED', True)
+
+# --- Triage agent ----------------------------------------------------------
+# The twin must boot and behave normally with none of this set. Disabled is a
+# fully supported steady state, not a degraded one.
+AGENT_ENABLED = _env_flag('TWIN_AGENT_ENABLED', True)
+
+# The language model is served through OpenRouter, which the host app already
+# uses for image analysis. KIMI_API_KEY is checked first because that is what
+# this deployment sets; the other names are accepted so a differently-configured
+# environment does not have to be renamed to work.
+LLM_API_KEY = (os.environ.get('KIMI_API_KEY')
+               or os.environ.get('OPENROUTER_API_KEY')
+               or os.environ.get('TWIN_LLM_API_KEY')
+               or '')
+
+# Default is the non-reasoning Kimi. The reasoning variants (kimi-k2.5,
+# kimi-k2-thinking) work too, but they spend most of max_tokens on chain of
+# thought - about 5x the tokens for identical extraction output, and an empty
+# `content` field if the budget runs out. This is classification and
+# summarisation at temperature 0; there is nothing here to reason about.
+AGENT_MODEL = os.environ.get('TWIN_AGENT_MODEL', 'moonshotai/kimi-k2-0905')
+LLM_TIMEOUT_S = _env_float('TWIN_LLM_TIMEOUT_S', 90.0)
+# Risk score above which a cluster becomes a flag for an admin to review.
+FLAG_THRESHOLD = _env_float('TWIN_FLAG_THRESHOLD', 60.0)
+# Hard cap on alerts handed to the LLM in one run, so an unusually loud feed
+# day cannot turn into an unbounded bill.
+AGENT_MAX_ITEMS = _env_int('TWIN_AGENT_MAX_ITEMS', 40)
+
+
+def agent_available():
+    """True only when the agent is switched on AND has a key to call with."""
+    return bool(AGENT_ENABLED and LLM_API_KEY)
+
 
 # --- Optional keyed sources ------------------------------------------------
 MAPILLARY_TOKEN = os.environ.get('MAPILLARY_TOKEN', '')
@@ -86,6 +153,13 @@ CITIES = [
         'slug': 'hyderabad',
         'name': 'Hyderabad',
         'state': 'Telangana',
+        # No LGD district code recorded: none of the observed Telangana alerts
+        # was scoped tightly enough to attribute a code to Hyderabad with
+        # confidence, and guessing one would silently mis-target alerts. The
+        # polygon path covers these, with areaDesc name matching behind it.
+        'lgd_district_codes': (),
+        'district_names': ('hyderabad', 'secunderabad', 'rangareddy', 'ranga reddy',
+                           'medchal', 'medchal-malkajgiri'),
         'center_latitude': 17.3850,
         'center_longitude': 78.4867,
         'default_zoom': 10.6,
@@ -106,6 +180,11 @@ CITIES = [
         'slug': 'bengaluru',
         'name': 'Bengaluru',
         'state': 'Karnataka',
+        # Verified against a live SACHET alert scoped to
+        # "Bengaluru Rural,Bengaluru Urban districts of Karnataka".
+        'lgd_district_codes': ('525', '526'),
+        'district_names': ('bengaluru', 'bangalore', 'bengaluru urban',
+                           'bengaluru rural'),
         'center_latitude': 12.9716,
         'center_longitude': 77.5946,
         'default_zoom': 10.6,

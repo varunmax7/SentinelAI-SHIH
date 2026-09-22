@@ -14,6 +14,7 @@ from . import config as twin_config
 from . import scoring
 from .grid import k_ring_neighbours
 from .ingest.base import record_snapshot
+from .alerts import alert_contributions
 from .ingest.internal_reports import collect_incidents
 from .ingest.open_meteo import (AirQualityAdapter, FloodAdapter,
                                 ForecastAdapter, sample_cells)
@@ -46,6 +47,17 @@ def compute_city(db, models, city, Report, force=False):
     incidents_by_cell, incident_pins = collect_incidents(
         Report, city.bbox, resolution=city.h3_resolution, now=started)
 
+    # Official alerts feed the same incident sub-score through the same maths.
+    # They are merged here rather than in collect_incidents so the two remain
+    # separable: an operator must be able to see that a cell is amber because
+    # the IMD said so, not because three anonymous submissions said so.
+    alerts_by_cell = alert_contributions(models, city, now=started)
+    hazard_by_cell = {}
+    for index, entries in incidents_by_cell.items():
+        hazard_by_cell.setdefault(index, []).extend(entries)
+    for index, entries in alerts_by_cell.items():
+        hazard_by_cell.setdefault(index, []).extend(entries)
+
     # Elevation range across this city, for the relative low-lying score.
     elevations = [c.elevation_m for c in cells if c.elevation_m is not None]
     elev_min = min(elevations) if elevations else None
@@ -56,8 +68,8 @@ def compute_city(db, models, city, Report, force=False):
 
     # Incident load is needed for a cell's neighbours as well as itself, so
     # compute every cell's own load once up front.
-    own_load = {index: scoring.incident_load(reports, started)
-                for index, reports in incidents_by_cell.items()}
+    own_load = {index: scoring.incident_load(entries, started)
+                for index, entries in hazard_by_cell.items()}
 
     discharge = (flood.data or {}).get('anomaly_score') or 0.0
     degraded_sources = [r.source_key for r in (forecast, air_quality, flood) if r.degraded]
@@ -125,6 +137,9 @@ def compute_city(db, models, city, Report, force=False):
                 'pm2_5': air.get('pm2_5'),
                 'river_discharge_anomaly': discharge,
                 'incident_count': len(incidents_by_cell.get(cell.h3_index, [])),
+                'alert_count': len(alerts_by_cell.get(cell.h3_index, [])),
+                'alert_senders': sorted({a['sender'] for a in alerts_by_cell.get(cell.h3_index, [])
+                                         if a.get('sender')}),
                 'incident_load': round(cell_load, 4),
                 'neighbour_load': round(neighbour_load, 4),
                 'elevation_m': cell.elevation_m,
@@ -158,6 +173,7 @@ def compute_city(db, models, city, Report, force=False):
         'max_risk': round(max_risk, 2),
         'status_counts': counts,
         'incidents': len(incident_pins),
+        'alert_cells': len(alerts_by_cell),
         'degraded_sources': degraded_sources,
         'computed_at': started.isoformat() + 'Z',
         'duration_ms': int((datetime.utcnow() - started).total_seconds() * 1000),

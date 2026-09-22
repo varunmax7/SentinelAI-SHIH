@@ -22,7 +22,8 @@
         infrastructure: "twin-infrastructure-src",
         cctv: "twin-cctv-src",
         cctvCones: "twin-cctv-cones-src",
-        water: "twin-water-src"
+        water: "twin-water-src",
+        alerts: "twin-alerts-src"
     };
 
     var EMPTY_FC = { type: "FeatureCollection", features: [] };
@@ -37,6 +38,7 @@
         this.onCellClick = options.onCellClick || function () {};
         this.onCameraClick = options.onCameraClick || function () {};
         this.onIncidentClick = options.onIncidentClick || function () {};
+        this.onAlertClick = options.onAlertClick || function () {};
         this.onError = options.onError || function () {};
 
         this._selectedH3 = null;
@@ -166,9 +168,11 @@
         map.addSource(SRC.cctv, { type: "geojson", data: EMPTY_FC });
         map.addSource(SRC.cctvCones, { type: "geojson", data: EMPTY_FC });
         map.addSource(SRC.water, { type: "geojson", data: EMPTY_FC });
+        map.addSource(SRC.alerts, { type: "geojson", data: EMPTY_FC });
 
         this._addLayer(L.buildings3dLayer());
         L.waterBodyLayers(SRC.water).forEach(this._addLayer, this);
+        L.alertLayers(SRC.alerts).forEach(this._addLayer, this);
         this._addLayer(L.twinHexFlatLayer(SRC.hexes, this._fillMode));
         this._addLayer(L.twinHexLayer(SRC.hexes, this._fillMode));
         this._addLayer(L.twinHexOutlineLayer(SRC.hexes));
@@ -184,7 +188,8 @@
         // Layers that start hidden until the operator asks for them.
         ["water-bodies", "water-bodies-outline", "water-drains-glow", "water-drains",
          "cctv", "cctv-direction", "cctv-cone", "cctv-cone-edge",
-         "infrastructure", "zone-outline"].forEach(function (id) {
+         "infrastructure", "zone-outline",
+         "alert-areas", "alert-areas-outline"].forEach(function (id) {
             this.setLayerVisible(id, false);
         }, this);
 
@@ -317,6 +322,7 @@
     TwinMap.prototype.setIncidents = function (collection) { this._setData(SRC.incidents, collection); };
     TwinMap.prototype.setInfrastructure = function (collection) { this._setData(SRC.infrastructure, collection); };
     TwinMap.prototype.setWater = function (collection) { this._setData(SRC.water, collection); };
+    TwinMap.prototype.setAlerts = function (collection) { this._setData(SRC.alerts, collection); };
 
     TwinMap.prototype.setCameras = function (collection) {
         this._setData(SRC.cctv, collection);
@@ -405,6 +411,13 @@
             map.on("mouseenter", layerId, function () { canvas.style.cursor = "pointer"; });
             map.on("mouseleave", layerId, function () { canvas.style.cursor = ""; });
         });
+
+        map.on("click", "alert-areas", function (event) {
+            if (!event.features || !event.features.length) return;
+            self.onAlertClick(event.features[0].properties, event.lngLat);
+        });
+        map.on("mouseenter", "alert-areas", function () { canvas.style.cursor = "pointer"; });
+        map.on("mouseleave", "alert-areas", function () { canvas.style.cursor = ""; });
 
         map.on("click", "incidents", function (event) {
             if (!event.features || !event.features.length) return;

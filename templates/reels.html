@@ -68,6 +68,26 @@
         margin-top: 2px;
     }
 
+    /* Donate action. Deliberately the only warm-coloured control in the row:
+       it is the one action that involves money, and it should not be mistaken
+       for another like button. Only rendered on officially verified reports. */
+    .donate-btn {
+        text-decoration: none;
+        color: #ffd166 !important;
+    }
+
+    .donate-btn i { color: #ffd166; }
+
+    .donate-btn:hover {
+        color: #ffe08a !important;
+        transform: scale(1.08);
+    }
+
+    .donate-btn .action-count {
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
     .hazard-badge {
         background: linear-gradient(135deg, #ff9800, #ff5722);
         color: white;
@@ -514,6 +534,19 @@
                 <i class="fas fa-share"></i>
                 <span class="action-count" id="shares-{{ report.id }}">{{ report.shares_count or 0 }}</span>
             </button>
+
+            {# Donate is offered only on a report an official has verified. Same
+               gate as the report page, and the relief routes re-check it
+               server-side - this condition is convenience, not access control. #}
+            {% if report.verification_status == 'approved' %}
+            {% set raised = (raised_by_report.get(report.id) or 0) / 100.0 %}
+            <a class="action-btn donate-btn"
+               href="{{ url_for('relief.donate', report_id=report.id) }}"
+               title="Support relief for this verified incident (demo payment)">
+                <i class="fas fa-hand-holding-heart"></i>
+                <span class="action-count">{% if raised %}&#8377;{{ '{:,.0f}'.format(raised) }}{% else %}Donate{% endif %}</span>
+            </a>
+            {% endif %}
         </div>
 
         <!-- Assigned Volunteers Section -->

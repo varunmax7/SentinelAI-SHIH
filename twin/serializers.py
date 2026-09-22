@@ -156,6 +156,84 @@ def incidents_collection(pins):
     return {'type': 'FeatureCollection', 'features': features}
 
 
+def alerts_collection(alerts, now=None):
+    """Official alerts as GeoJSON, mirroring the /incidents shape.
+
+    Expired and superseded alerts are included but flagged `live: false`, so an
+    operator reviewing what happened this morning can still see them while the
+    map only paints what is currently in force.
+    """
+    from datetime import datetime as _dt
+    now = now or _dt.utcnow()
+
+    features = []
+    for alert in alerts:
+        geometry = alert.geometry()
+        if geometry is None:
+            continue
+        features.append({
+            'type': 'Feature',
+            'id': '%s-%s' % (alert.source, alert.source_uid),
+            'properties': {
+                'source': alert.source,
+                'source_uid': alert.source_uid,
+                'sender': alert.sender,
+                'event': alert.event,
+                'category': alert.category,
+                'severity': alert.severity,
+                'certainty': alert.certainty,
+                'urgency': alert.urgency,
+                'priority': alert.priority,
+                'confidence': alert.confidence,
+                'headline': alert.headline,
+                'instruction': alert.instruction,
+                'area_desc': alert.area_desc,
+                # 'district' means the footprint is the whole district, not a
+                # surveyed boundary. The UI has to say so.
+                'geometry_kind': alert.geometry_kind,
+                'effective_at': _iso(alert.effective_at),
+                'expires_at': _iso(alert.expires_at),
+                'live': alert.is_live(now),
+                'superseded': alert.superseded_by_id is not None,
+                'raw_url': alert.raw_url,
+            },
+            'geometry': geometry,
+        })
+    return {
+        'type': 'FeatureCollection',
+        'attribution': 'NDMA SACHET (public domain) / GDACS / USGS',
+        'features': features,
+    }
+
+
+def flag_payload(flag, city_slug=None):
+    """One agent-drafted flag, as the admin queue renders it."""
+    return {
+        'id': flag.id,
+        'cluster_key': flag.cluster_key,
+        'city': city_slug,
+        'h3': flag.h3_index,
+        'title': flag.title,
+        'hazard_type': flag.hazard_type,
+        'severity': flag.severity,
+        'risk_score': round(flag.risk_score or 0.0, 1),
+        'brief_md': flag.brief_md,
+        'citations': flag.citations(),
+        # True when no LLM was involved. Never let a template-written brief
+        # look like a model wrote it.
+        'generated_offline': bool(flag.generated_offline),
+        'status': flag.status,
+        'reviewed_by': flag.reviewed_by,
+        'reviewed_at': _iso(flag.reviewed_at),
+        'review_note': flag.review_note,
+        'created_at': _iso(flag.created_at),
+    }
+
+
+def _iso(value):
+    return value.isoformat() + 'Z' if value else None
+
+
 def infrastructure_collection(rows):
     return {
         'type': 'FeatureCollection',

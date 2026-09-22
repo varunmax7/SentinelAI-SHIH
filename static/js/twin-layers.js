@@ -32,6 +32,8 @@
         "water-drains",
         "radar",
         "traffic",
+        "alert-areas",
+        "alert-areas-outline",
         "twin-hex-fill",
         "twin-hexes",
         "twin-hex-outline",
@@ -415,6 +417,62 @@
         ];
     }
 
+    // ---- official alerts -------------------------------------------------
+    /* Drawn *beneath* the risk grid, deliberately. The grid is the twin's own
+     * computed judgement and has to stay readable; an alert footprint is
+     * context for it, often covering a whole district. A CAP polygon over the
+     * top would bury exactly the thing the operator came to look at. */
+    function alertColorExpression() {
+        return [
+            "match", ["get", "priority"],
+            "critical", "#dc2626",
+            "high", "#ea580c",
+            "medium", "#d97706",
+            "#0891b2"
+        ];
+    }
+
+    function alertLayers(sourceId) {
+        return [
+            {
+                id: "alert-areas",
+                type: "fill",
+                source: sourceId,
+                filter: ["==", ["geometry-type"], "Polygon"],
+                paint: {
+                    "fill-color": alertColorExpression(),
+                    // Low, and lower again for a district-scoped footprint:
+                    // that geometry is the whole district, not a surveyed
+                    // boundary, and it should not look more precise than it is.
+                    "fill-opacity": [
+                        "case",
+                        ["==", ["get", "geometry_kind"], "district"], 0.07,
+                        0.13
+                    ]
+                }
+            },
+            {
+                id: "alert-areas-outline",
+                type: "line",
+                source: sourceId,
+                filter: ["==", ["geometry-type"], "Polygon"],
+                paint: {
+                    "line-color": alertColorExpression(),
+                    "line-width": 1.6,
+                    "line-opacity": 0.75,
+                    // Dashed for a district footprint - the same visual
+                    // grammar the grid uses for "this is an estimate".
+                    "line-dasharray": [
+                        "case",
+                        ["==", ["get", "geometry_kind"], "district"],
+                        ["literal", [2, 2]],
+                        ["literal", [1, 0]]
+                    ]
+                }
+            }
+        ];
+    }
+
     // ---- incidents & assets --------------------------------------------
     /* Report pins come in three layers because reports cluster hard in real
      * data - one campus accounted for twenty-one of the twenty-three in this
@@ -778,6 +836,7 @@
         buildings3dLayer: buildings3dLayer,
         buildingHeightExpression: buildingHeightExpression,
         waterBodyLayers: waterBodyLayers,
+        alertLayers: alertLayers,
         incidentLayers: incidentLayers,
         incidentGroupLayers: incidentGroupLayers,
         GROUP_SPLIT_ZOOM: GROUP_SPLIT_ZOOM,

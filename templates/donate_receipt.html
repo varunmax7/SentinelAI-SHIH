@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Demo receipt · {{ donation.reference }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    .receipt-wrap { max-width: 620px; margin: 2rem auto; padding: 0 1rem; }
+    .receipt-card {
+        background: rgba(30, 41, 59, 0.75);
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 18px; padding: 1.6rem; color: #e2e8f0;
+    }
+    .receipt-amount { font-size: 2.4rem; font-weight: 800; color: #fff; }
+    .receipt-row { display: flex; justify-content: space-between; gap: 1rem;
+        padding: 0.45rem 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 0.9rem; }
+    .receipt-row:last-of-type { border-bottom: 0; }
+    .receipt-row span { color: #94a3b8; }
+    .demo-stamp {
+        background: rgba(250, 204, 21, 0.14);
+        border: 1px solid rgba(250, 204, 21, 0.5);
+        border-radius: 12px; padding: 0.85rem 1rem; margin: 1.1rem 0;
+        color: #fde68a; font-size: 0.9rem;
+    }
+    .tick { width: 54px; height: 54px; border-radius: 50%;
+        background: rgba(34,197,94,0.2); border: 1px solid rgba(34,197,94,0.5);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.6rem; color: #86efac; margin-bottom: 0.8rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="receipt-wrap">
+    <div class="receipt-card">
+        <div class="tick">✓</div>
+        <div class="text-white-50 small text-uppercase" style="letter-spacing:.08em">Demo contribution recorded</div>
+        <div class="receipt-amount">₹{{ '{:,.2f}'.format(donation.amount_rupees) }}</div>
+
+        {# Stated in plain words rather than a footnote. Somebody may screenshot
+           this page; it has to be unambiguous on its own. #}
+        <div class="demo-stamp">
+            <b>This is a demo receipt. No money was charged or transferred.</b><br>
+            No payment gateway is connected to this system and no payment details
+            were collected. This record exists to demonstrate the relief donation
+            flow and is permanently marked as a demo.
+        </div>
+
+        <div class="receipt-row"><span>Reference</span><b>{{ donation.reference }}</b></div>
+        <div class="receipt-row"><span>Status</span><b>{{ donation.status|title }}</b></div>
+        <div class="receipt-row"><span>Method</span><b>Demo (simulated)</b></div>
+        <div class="receipt-row"><span>Donor</span><b>{{ donation.display_name() }}</b></div>
+        {% if donation.report %}
+        <div class="receipt-row">
+            <span>Towards</span>
+            <b><a href="{{ url_for('view_report', report_id=donation.report.id) }}"
+                  class="text-info text-decoration-none">{{ donation.report.title|truncate(46) }}</a></b>
+        </div>
+        {% endif %}
+        <div class="receipt-row"><span>Recorded</span>
+            <b>{{ donation.completed_at.strftime('%d %b %Y, %H:%M UTC') if donation.completed_at else '—' }}</b></div>
+        {% if donation.message %}
+        <div class="receipt-row"><span>Your message</span><b>{{ donation.message }}</b></div>
+        {% endif %}
+
+        <div class="d-flex gap-2 mt-3">
+            {% if donation.report %}
+            <a href="{{ url_for('view_report', report_id=donation.report.id) }}"
+               class="btn btn-outline-light btn-sm">Back to the report</a>
+            {% endif %}
+            <a href="{{ url_for('home') }}" class="btn btn-outline-light btn-sm">Home</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Support relief · {{ report.title }}{% endblock %}
+
+{% block head_extra %}
+<style>
+    .donate-wrap { max-width: 760px; margin: 1.5rem auto; padding: 0 1rem; }
+
+    /* The demo banner is not decoration. A payment screen that looks real and
+       is not is worse than no payment screen at all, so this is loud, at the
+       top, and repeated at the point of submission. */
+    .demo-banner {
+        background: rgba(250, 204, 21, 0.14);
+        border: 1px solid rgba(250, 204, 21, 0.5);
+        border-left-width: 5px;
+        border-radius: 12px;
+        padding: 0.9rem 1.1rem;
+        margin-bottom: 1.25rem;
+        color: #fde68a;
+    }
+    .demo-banner b { color: #fef08a; }
+
+    .donate-card {
+        background: rgba(30, 41, 59, 0.72);
+        border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 18px;
+        padding: 1.4rem;
+        color: #e2e8f0;
+        margin-bottom: 1.1rem;
+    }
+    .donate-card h5 { color: #fff; font-weight: 700; }
+
+    .verified-chip {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        background: rgba(34,197,94,0.16); border: 1px solid rgba(34,197,94,0.45);
+        color: #86efac; border-radius: 999px;
+        padding: 0.2rem 0.65rem; font-size: 0.76rem; font-weight: 600;
+    }
+
+    .raised-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.9rem; }
+    .raised-row div span { display: block; font-size: 0.72rem; color: #94a3b8;
+        text-transform: uppercase; letter-spacing: 0.06em; }
+    .raised-row div b { font-size: 1.45rem; color: #fff; }
+
+    .amount-grid { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+    .amount-btn {
+        flex: 1 1 auto; min-width: 96px;
+        background: rgba(2,6,23,0.55); border: 1px solid rgba(255,255,255,0.14);
+        color: #e2e8f0; border-radius: 10px; padding: 0.6rem 0.4rem;
+        font-size: 1rem; font-weight: 600; cursor: pointer;
+    }
+    .amount-btn:hover { border-color: rgba(56,189,248,0.6); }
+    .amount-btn.is-active { background: rgba(56,189,248,0.2); border-color: #38bdf8; color: #e0f2fe; }
+
+    .donate-wrap .form-control, .donate-wrap .form-select {
+        background: rgba(2,6,23,0.55); border: 1px solid rgba(255,255,255,0.14);
+        color: #e2e8f0;
+    }
+    .donate-wrap .form-control:focus { background: rgba(2,6,23,0.7); color: #fff;
+        border-color: #38bdf8; box-shadow: none; }
+    .donate-wrap label { font-size: 0.82rem; color: #cbd5e1; margin-bottom: 0.25rem; }
+    .donate-wrap .form-text { color: #94a3b8; }
+
+    .btn-give {
+        background: linear-gradient(135deg, #0ea5e9, #22c55e);
+        border: 0; color: #04121f; font-weight: 700;
+        border-radius: 12px; padding: 0.75rem 1.2rem; width: 100%;
+        font-size: 1.02rem;
+    }
+
+    .recent-donor { display: flex; justify-content: space-between;
+        padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+        font-size: 0.85rem; }
+    .recent-donor:last-child { border-bottom: 0; }
+    .recent-donor small { color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="donate-wrap">
+
+    <div class="demo-banner">
+        <b>⚠ DEMO PAYMENT — no money will be taken.</b><br>
+        This is a demonstration of the relief donation flow. Nothing is charged,
+        no payment gateway is connected, and this form asks for no card, UPI PIN
+        or bank detail of any kind. The record it creates is marked as a demo
+        permanently.
+    </div>
+
+    <div class="donate-card">
+        <span class="verified-chip">✓ Verified by an official</span>
+        <h5 class="mt-2 mb-1">{{ report.title }}</h5>
+        <div class="text-white-50 small">
+            {{ report.hazard_type|replace('_',' ')|title }} · {{ report.location }}
+        </div>
+        <p class="mt-2 mb-0 text-white-50" style="font-size:0.9rem">
+            {{ report.description|truncate(240) }}
+        </p>
+
+        <div class="raised-row">
+            <div><span>Raised so far</span><b>₹{{ '{:,.0f}'.format(raised_rupees) }}</b></div>
+            <div><span>Contributions</span><b>{{ donor_count }}</b></div>
+            <div><span>Status</span><b style="color:#86efac">Verified</b></div>
+        </div>
+        {% if raised_rupees > 0 %}
+        <div class="text-white-50 small mt-2">
+            All amounts shown are from demo contributions and represent no real funds.
+        </div>
+        {% endif %}
+    </div>
+
+    <form method="POST" action="{{ url_for('relief.submit_donation', report_id=report.id) }}"
+          class="donate-card">
+        <h5 class="mb-3">Choose an amount</h5>
+
+        <div class="amount-grid" id="presetGrid">
+            {% for amount in presets %}
+            <button type="button" class="amount-btn" data-amount="{{ amount }}">₹{{ '{:,}'.format(amount) }}</button>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            <label for="amount">Amount (₹)</label>
+            <input type="number" class="form-control" id="amount" name="amount"
+                   min="{{ min_rupees }}" max="{{ max_rupees }}" step="1" value="500" required>
+            <div class="form-text">
+                Between ₹{{ min_rupees }} and ₹{{ '{:,}'.format(max_rupees) }}.
+            </div>
+        </div>
+
+        <div class="row g-2">
+            <div class="col-md-6 mb-3">
+                <label for="donor_name">Your name</label>
+                <input type="text" class="form-control" id="donor_name" name="donor_name"
+                       value="{{ current_user.username }}" maxlength="120">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="donor_email">Email <span class="text-white-50">(optional)</span></label>
+                <input type="email" class="form-control" id="donor_email" name="donor_email"
+                       maxlength="120">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="message">Message to responders <span class="text-white-50">(optional)</span></label>
+            <textarea class="form-control" id="message" name="message" rows="2" maxlength="500"></textarea>
+        </div>
+
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="is_anonymous" name="is_anonymous">
+            <label class="form-check-label" for="is_anonymous">Show my contribution as anonymous</label>
+        </div>
+
+        {# No card number, CVV, UPI PIN or bank field exists on this form - not
+           even disabled. A field that is not there cannot capture anything, and
+           nobody can be trained into typing a real card number into a demo. #}
+        <p class="text-white-50 small">
+            Pressing the button below records a <b>simulated</b> contribution and
+            takes you to a demo receipt. No payment details are requested and no
+            transaction takes place.
+        </p>
+
+        <button type="submit" class="btn-give">Give ₹<span id="btnAmount">500</span> (demo)</button>
+    </form>
+
+    {% if recent %}
+    <div class="donate-card">
+        <h5 class="mb-2">Recent contributions</h5>
+        {% for donation in recent %}
+        <div class="recent-donor">
+            <span>{{ donation.display_name() }}
+                {% if donation.message %}<small> — {{ donation.message|truncate(60) }}</small>{% endif %}
+            </span>
+            <b>₹{{ '{:,.0f}'.format(donation.amount_rupees) }}</b>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <a href="{{ url_for('view_report', report_id=report.id) }}"
+       class="btn btn-outline-light btn-sm">← Back to the report</a>
+</div>
+
+<script>
+(function () {
+    var input = document.getElementById('amount');
+    var label = document.getElementById('btnAmount');
+    var buttons = document.querySelectorAll('#presetGrid .amount-btn');
+
+    function sync() {
+        var value = parseInt(input.value, 10);
+        label.textContent = isNaN(value) ? '0' : value.toLocaleString('en-IN');
+        buttons.forEach(function (b) {
+            b.classList.toggle('is-active', parseInt(b.dataset.amount, 10) === value);
+        });
+    }
+
+    buttons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            input.value = button.dataset.amount;
+            sync();
+        });
+    });
+    input.addEventListener('input', sync);
+    sync();
+})();
+</script>
+{% endblock %}

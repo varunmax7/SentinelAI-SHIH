@@ -466,7 +466,7 @@ Every report is scored the instant it lands, with no human in the loop.
 | **Heatmap Match** | 25% | Cross-references spatial density of similar reports within ~5.5 km (0.05° box) over a ±24-hour window, counting only `approved` or `pending` reports of the same hazard type |
 | **Climate Alignment** | 25% | Queries Open-Meteo — validates that live weather conditions (wind speed, humidity, WMO weather codes) actually support the claimed hazard |
 | **User Quality Score** | 25% | Historical credibility — approval rate, total report count, user level, and role-based trust multiplier |
-| **Image Processing** | 25% | Sends the reporter's photo to an NVIDIA NIM vision-language model (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` by default, served via OpenRouter, with an automatic fallback to `minimax/minimax-m3:free` if the primary model is saturated), which checks whether the image visually matches the claimed hazard type |
+| **Image Processing** | 25% | Sends the reporter's photo to an NVIDIA NIM vision-language model (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` by default, served via OpenRouter, with an automatic fallback to `inclusionai/ling-3.0-flash-vl:free` if the primary model is saturated), which checks whether the image visually matches the claimed hazard type |
 
 #### Parameter 1 — Heatmap Corroboration Scoring
 

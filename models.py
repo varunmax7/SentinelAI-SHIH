@@ -1,10 +1,24 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 import os
 import json
 
 db = SQLAlchemy()
+
+
+@event.listens_for(Engine, 'connect')
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    # WAL lets the background scheduler (twin jobs) and web requests write
+    # without immediately locking each other out; busy_timeout makes any
+    # remaining contention wait briefly instead of raising "database is locked".
+    if type(dbapi_connection).__module__.startswith('sqlite3'):
+        cursor = dbapi_connection.cursor()
+        cursor.execute('PRAGMA journal_mode=WAL')
+        cursor.execute('PRAGMA busy_timeout=30000')
+        cursor.close()
 
 # Association table for followers/following
 followers = db.Table('followers',
@@ -876,3 +890,62 @@ class ResourceMatch(db.Model):
             'requester': self.need_listing.user.username,
             'donor': self.have_listing.user.username
         }
+
+
+class Donation(db.Model):
+    """A relief contribution offered against a verified hazard report.
+
+    Two things about this model are deliberate and should not be "tidied":
+
+    1. `amount_paise` is an INTEGER of the smallest currency unit, never a
+       float. 0.1 + 0.2 != 0.3 in binary floating point, and a money column
+       that drifts by fractions of a paisa across a few thousand rows is a bug
+       found by an auditor rather than by a test.
+
+    2. `is_demo` is set on the row and never cleared. This build has no payment
+       gateway - the checkout is simulated and no money moves - and if a real
+       gateway is added later, demo rows must stay permanently distinguishable
+       from real receipts. A total that silently mixes the two is worse than
+       no total.
+    """
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Null means the general relief fund rather than one incident.
+    report_id = db.Column(db.Integer, db.ForeignKey('report.id'), nullable=True, index=True)
+    # Null so a guest can give without an account.
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+
+    amount_paise = db.Column(db.Integer, nullable=False)
+    currency = db.Column(db.String(3), default='INR')
+
+    status = db.Column(db.String(20), default='pending', index=True)  # pending|completed|failed|refunded
+    method = db.Column(db.String(20), default='demo')
+    is_demo = db.Column(db.Boolean, default=True, nullable=False, index=True)
+
+    reference = db.Column(db.String(32), unique=True, nullable=False, index=True)
+
+    donor_name = db.Column(db.String(120), nullable=True)
+    donor_email = db.Column(db.String(120), nullable=True)
+    donor_phone = db.Column(db.String(20), nullable=True)
+    is_anonymous = db.Column(db.Boolean, default=False)
+    message = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    report = db.relationship('Report', backref=db.backref('donations', lazy='dynamic'))
+    donor = db.relationship('User', backref=db.backref('donations', lazy='dynamic'))
+
+    @property
+    def amount_rupees(self):
+        """Display value. Division happens here, at the edge, and nowhere else."""
+        return (self.amount_paise or 0) / 100.0
+
+    def display_name(self):
+        if self.is_anonymous:
+            return 'Anonymous'
+        return self.donor_name or (self.donor.username if self.donor else 'Anonymous')
+
+    def __repr__(self):
+        return "<Donation %s %s paise %s>" % (self.reference, self.amount_paise, self.status)

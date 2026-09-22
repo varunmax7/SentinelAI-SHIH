@@ -250,6 +250,108 @@ def build_blueprints(db, models, Report):
         return serializers.json_response(
             serializers.infrastructure_collection(rows), max_age=600)
 
+    # -- official alerts ----------------------------------------------------
+    @api.route('/<city_slug>/alerts')
+    @twin_access_required()
+    def alerts(city_slug):
+        city, error = get_city_or_404(city_slug)
+        if error:
+            return error
+
+        include_expired = request.args.get('expired', 'false').lower() == 'true'
+        now = datetime.utcnow()
+
+        query = (models.TwinExternalAlert.query
+                 .join(models.TwinAlertCell,
+                       models.TwinAlertCell.alert_id == models.TwinExternalAlert.id)
+                 .filter(models.TwinAlertCell.city_id == city.id)
+                 .order_by(models.TwinExternalAlert.effective_at.desc())
+                 .distinct())
+        rows = query.all()
+        if not include_expired:
+            rows = [a for a in rows if a.is_live(now)]
+
+        collection = serializers.alerts_collection(rows, now=now)
+        collection['meta'] = {
+            'city': city.slug,
+            'live': sum(1 for f in collection['features'] if f['properties']['live']),
+            'total': len(collection['features']),
+            'includes_expired': include_expired,
+        }
+        return serializers.json_response(collection, etag=False)
+
+    @api.route('/alerts/poll', methods=['POST'])
+    @twin_access_required(admin=True)
+    def alerts_poll():
+        body = request.get_json(silent=True) or {}
+        from . import alerts as alert_service
+        return serializers.json_response(
+            {'polled': alert_service.poll_alerts(db, models, force=bool(body.get('force')))},
+            etag=False)
+
+    # -- agent flag queue ---------------------------------------------------
+    @api.route('/flags')
+    @twin_access_required()
+    def flags():
+        status = request.args.get('status', 'pending')
+        query = models.TwinFlag.query
+        if status and status != 'all':
+            query = query.filter(models.TwinFlag.status == status)
+        rows = query.order_by(models.TwinFlag.risk_score.desc(),
+                              models.TwinFlag.created_at.desc()).limit(100).all()
+
+        slugs = {c.id: c.slug for c in models.TwinCity.query.all()}
+        return serializers.json_response({
+            'flags': [serializers.flag_payload(f, slugs.get(f.city_id)) for f in rows],
+            'pending': models.TwinFlag.query.filter_by(status='pending').count(),
+            'agent_enabled': twin_config.AGENT_ENABLED,
+            # Distinguishes "switched off" from "switched on but keyless" - the
+            # second is a configuration mistake worth surfacing, the first is a
+            # supported steady state.
+            'agent_available': twin_config.agent_available(),
+        }, etag=False)
+
+    @api.route('/flags/<int:flag_id>', methods=['POST'])
+    @twin_access_required(admin=True)
+    def review_flag(flag_id):
+        """The human gate. Nothing reaches the map without passing through here."""
+        from flask_login import current_user
+
+        flag = models.TwinFlag.query.get(flag_id)
+        if flag is None:
+            return serializers.json_response({'error': 'Unknown flag'}, etag=False)
+
+        body = request.get_json(silent=True) or {}
+        decision = (body.get('decision') or '').lower()
+        if decision not in ('approve', 'reject'):
+            return serializers.json_response(
+                {'error': 'decision must be "approve" or "reject"'}, etag=False)
+
+        flag.status = 'approved' if decision == 'approve' else 'rejected'
+        flag.review_note = body.get('note')
+        flag.reviewed_at = datetime.utcnow()
+        flag.reviewed_by = getattr(current_user, 'id', None)
+        db.session.commit()
+
+        city = models.TwinCity.query.get(flag.city_id) if flag.city_id else None
+        if city is not None:
+            from .stream import publish
+            publish(city.slug, 'state', {
+                'city': city.slug,
+                'reason': 'flag_%s' % flag.status,
+                'flag_id': flag.id,
+            })
+        return serializers.json_response(
+            {'flag': serializers.flag_payload(flag, city.slug if city else None)}, etag=False)
+
+    @api.route('/agent/run', methods=['POST'])
+    @twin_access_required(admin=True)
+    def agent_run():
+        from .agent import run_triage
+        body = request.get_json(silent=True) or {}
+        return serializers.json_response(
+            {'triage': run_triage(db, models, city_slug=body.get('city'))}, etag=False)
+
     # -- lazy OSM layers ----------------------------------------------------
     @api.route('/<city_slug>/cameras')
     @twin_access_required()
@@ -370,13 +472,31 @@ def build_blueprints(db, models, Report):
         except ValueError:
             direction = None
 
+        # When the caller names a city, live webcams are searched around that
+        # city's centre so every cell in it gets the city's live cameras.
+        city_lat = city_lon = None
+        city_slug = request.args.get('city')
+        if city_slug:
+            city = models.TwinCity.query.filter_by(slug=city_slug).first()
+            if city is not None:
+                city_lat, city_lon = city.center_latitude, city.center_longitude
+
         result = StreetViewAdapter().run(
             lat=lat, lon=lon, direction=direction,
-            radius_m=_float_arg('radius', twin_config.STREETVIEW_RADIUS_M))
-        payload = result.data or {'images': [], 'facing': None}
+            city_lat=city_lat, city_lon=city_lon,
+            radius_m=_float_arg('radius', twin_config.STREETVIEW_RADIUS_M),
+            # Live stills go stale; don't serve a cached frame as "now".
+            force=request.args.get('fresh', 'false').lower() == 'true')
+        payload = result.data or {'images': [], 'facing': None, 'nearest': None, 'live': []}
         payload['status'] = result.status
-        payload['live'] = False
-        payload['caption'] = _view_caption(payload.get('facing'), direction)
+        payload['has_live'] = bool(payload.get('live'))
+        # `best` is what the UI should lead with, and `best_kind` says what it
+        # is. Previously the UI only ever rendered `facing`, so a camera whose
+        # bearing matched nothing showed a caption and no picture at all - even
+        # with a good photo of the same junction thirty metres away.
+        payload['best'], payload['best_kind'] = _best_view(payload)
+        payload['caption'] = _view_caption(payload, direction)
+        payload['live_source_available'] = bool(twin_config.WINDY_WEBCAMS_KEY)
         return serializers.json_response(payload, etag=False)
 
     @api.route('/streetview')
@@ -572,13 +692,55 @@ def build_blueprints(db, models, Report):
     return pages, api
 
 
-def _view_caption(facing, direction):
-    if not facing:
-        return ('No open street-level image found facing this direction. '
-                'OpenStreetMap maps camera locations, not camera feeds.')
-    date = facing.get('captured_at') or 'date unknown'
-    return ('Nearest open street-level image facing ~%s (%s, %s) - not a live feed.'
-            % (_compass(direction), facing.get('provider'), date))
+def _best_view(payload):
+    """Pick the single image to lead with, and name what it is.
+
+    Order is a strict honesty ranking, not a quality one: a live frame beats an
+    archival photo pointing the right way, which beats an archival photo
+    pointing somewhere else. The caller renders `best_kind` next to the image so
+    the operator is never left guessing which of the three they are looking at.
+    """
+    if payload.get('live'):
+        return payload['live'][0], 'live'
+    if payload.get('facing'):
+        return payload['facing'], 'facing'
+    if payload.get('nearest'):
+        return payload['nearest'], 'nearest'
+    return None, 'none'
+
+
+def _view_caption(payload, direction):
+    best, kind = payload.get('best'), payload.get('best_kind')
+
+    if kind == 'live':
+        # Distance is not optional here. The only Windy webcam near Bengaluru
+        # sits 7.6 km from the centre, and a live frame presented without its
+        # distance reads as a picture of the street you are looking at.
+        distance = best.get('distance_m')
+        where = ('%.1f km away' % (distance / 1000.0)) if distance else 'nearby'
+        return ('LIVE webcam frame - %s, %s. Captured %s. This is current city '
+                'context, not a view of this exact spot.'
+                % (best.get('title') or best.get('provider'), where,
+                   best.get('captured_at') or 'recently'))
+
+    if kind == 'facing':
+        return ('Open street-level photo looking ~%s, the direction this camera faces '
+                '(%s, %s). Archival - not a live feed.'
+                % (_compass(direction), best.get('provider'),
+                   best.get('captured_at') or 'date unknown'))
+
+    if kind == 'nearest':
+        heading = best.get('heading')
+        # Say plainly that this is not the camera's view. It is the closest
+        # picture of the place, which is useful, but it is a different claim.
+        return ('Closest open street-level photo, %d m away%s (%s, %s). It does NOT '
+                'look along the camera\'s bearing, and is archival - not a live feed.'
+                % (round(best.get('distance_m') or 0),
+                   (' looking ~%s' % _compass(heading)) if heading is not None else '',
+                   best.get('provider'), best.get('captured_at') or 'date unknown'))
+
+    return ('No open imagery within range of this point. OpenStreetMap maps camera '
+            'locations, not camera feeds, and no webcam publishes this place.')
 
 
 def _compass(bearing):

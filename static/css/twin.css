@@ -416,3 +416,148 @@
 /* Smooth page scrolling past the console. Set on the console's own document
  * rather than by the host page so the behaviour travels with the partial. */
 html { scroll-behavior: smooth; }
+
+/* ---- official alerts & the agent flag queue ---------------------------- */
+.twin-flagbtn {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid var(--twin-border);
+    color: var(--twin-muted);
+    border-radius: 999px;
+    padding: 0.18rem 0.6rem;
+    font-size: 0.74rem;
+    cursor: pointer;
+}
+
+/* Only draws attention when something is actually waiting. A badge that is
+   always lit is a badge nobody looks at. */
+.twin-flagbtn.has-pending {
+    background: rgba(249, 115, 22, 0.18);
+    border-color: rgba(249, 115, 22, 0.5);
+    color: #fdba74;
+}
+
+.twin-flagbtn:hover { color: var(--twin-text); }
+
+.twin-alertnote {
+    padding: 0.3rem 0.85rem;
+    background: rgba(234, 88, 12, 0.1);
+    border-top: 1px solid rgba(234, 88, 12, 0.25);
+    color: #fdba74;
+    font-size: 0.72rem;
+}
+
+.twin-flag {
+    border: 1px solid var(--twin-border);
+    border-radius: 10px;
+    padding: 0.6rem 0.7rem;
+    margin-bottom: 0.7rem;
+    background: rgba(2, 6, 23, 0.35);
+}
+
+.twin-flag-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+}
+
+.twin-flag-score {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fdba74;
+}
+
+.twin-flag-brief p { margin: 0 0 0.4rem; }
+.twin-flag-brief { font-size: 0.78rem; }
+
+.twin-flag-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
+}
+
+.twin-btn--reject {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+}
+
+.twin-btn--reject:hover { background: rgba(239, 68, 68, 0.2); }
+
+/* ---- ground imagery ---------------------------------------------------- */
+/* Two sections, visually distinct on purpose: a live frame from elsewhere in
+   the city and an archival photo of this exact junction are different kinds of
+   evidence, and an operator must never have to guess which one they are looking
+   at. */
+.twin-imgsec { margin-bottom: 0.9rem; }
+
+.twin-imgsec-head {
+    display: flex; align-items: center; gap: 0.45rem;
+    margin-bottom: 0.45rem; font-size: 0.72rem; color: var(--twin-muted);
+}
+
+.twin-imgbadge {
+    font-size: 0.6rem; letter-spacing: 0.08em; padding: 0.12rem 0.42rem;
+    border-radius: 4px; background: rgba(148,163,184,0.18);
+    border: 1px solid var(--twin-border); color: #cbd5e1; white-space: nowrap;
+}
+
+.twin-imgbadge--live {
+    background: rgba(34, 197, 94, 0.22);
+    border-color: rgba(34, 197, 94, 0.6);
+    color: #86efac;
+}
+
+/* --- live webcams --- */
+.twin-livegrid { display: grid; gap: 0.4rem; grid-template-columns: 1fr; }
+.twin-livegrid:has(> :nth-child(2)) { grid-template-columns: 1fr 1fr; }
+
+.twin-livecam { margin: 0; }
+
+.twin-livecam img {
+    width: 100%; height: 118px; object-fit: cover; display: block;
+    border-radius: 8px; border: 1px solid rgba(34,197,94,0.35); background: #0b1220;
+}
+
+.twin-livecam figcaption {
+    font-size: 0.68rem; color: var(--twin-muted);
+    line-height: 1.35; margin-top: 0.25rem;
+}
+
+.twin-livecam figcaption b { color: #cbd5e1; }
+
+/* --- area photos --- */
+/* A grid rather than the thumbnail strip this replaced. Twelve photos of the
+   junction are the most useful thing on the panel; at 58x42 in a scroller they
+   read as decoration and people miss them entirely. */
+.twin-areagrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+}
+
+.twin-areashot {
+    position: relative; display: block; border-radius: 7px; overflow: hidden;
+    border: 1px solid var(--twin-border); background: #0b1220; text-decoration: none;
+}
+
+.twin-areashot img {
+    width: 100%; height: 74px; object-fit: cover; display: block;
+    transition: transform 0.18s ease;
+}
+
+.twin-areashot:hover { border-color: var(--twin-accent); }
+.twin-areashot:hover img { transform: scale(1.06); }
+
+.twin-areashot-meta {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(transparent, rgba(2,6,23,0.9));
+    color: #cbd5e1; font-size: 0.6rem; padding: 0.5rem 0.3rem 0.2rem;
+    text-align: center;
+}
+
+@media (max-width: 480px) {
+    .twin-areagrid { grid-template-columns: repeat(2, 1fr); }
+    .twin-livegrid, .twin-livegrid:has(> :nth-child(2)) { grid-template-columns: 1fr; }
+}

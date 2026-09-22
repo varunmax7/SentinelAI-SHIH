@@ -139,6 +139,44 @@
         background: rgba(33, 150, 243, 0.1);
     }
 
+    .ai-analysis-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .ai-analysis-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.4rem 0.6rem;
+        padding: 0.6rem 0.85rem;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .ai-analysis-row.ai-analysis-highlight {
+        background: rgba(66, 165, 245, 0.15);
+        border-color: rgba(66, 165, 245, 0.35);
+    }
+
+    .ai-analysis-label {
+        flex: 0 0 auto;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.02em;
+        color: #90caf9;
+        white-space: nowrap;
+    }
+
+    .ai-analysis-value {
+        flex: 1 1 240px;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+
     .alert-approved {
         border-left: 4px solid #4caf50;
         background: rgba(76, 175, 80, 0.1);
@@ -305,6 +343,33 @@
             flex-direction: column;
         }
     }
+
+    /* --- relief appeal (verified reports only) --- */
+    .relief-appeal {
+        border-left: 4px solid #22c55e;
+        background: rgba(34, 197, 94, 0.08);
+    }
+
+    .relief-demo-note {
+        background: rgba(250, 204, 21, 0.12);
+        border: 1px solid rgba(250, 204, 21, 0.4);
+        border-radius: 8px;
+        padding: 0.5rem 0.7rem;
+        font-size: 0.85rem;
+        color: #b45309;
+    }
+
+    .relief-btn {
+        display: inline-block;
+        background: linear-gradient(135deg, #0ea5e9, #22c55e);
+        color: #04121f;
+        font-weight: 700;
+        border-radius: 10px;
+        padding: 0.6rem 1.1rem;
+        text-decoration: none;
+    }
+
+    .relief-btn:hover { filter: brightness(1.08); color: #04121f; }
 </style>
 {% endblock %}
 
@@ -387,7 +452,25 @@
     {% if report.ai_analysis %}
     <div class="content-section ai-analysis">
         <div class="section-header"><i class="fas fa-robot"></i>AI Analysis</div>
-        <div class="section-content">{{ report.ai_analysis }}</div>
+        <div class="section-content ai-analysis-list">
+            {% set lines = report.ai_analysis.split('\n') if '\n' in report.ai_analysis else report.ai_analysis.split(' | ') %}
+            {% for raw_line in lines %}
+                {% set line = raw_line.strip() %}
+                {% if line %}
+                    {% if ': ' in line %}
+                        {% set label, value = line.split(': ', 1) %}
+                        <div class="ai-analysis-row{% if label.lower() in ['overall accuracy', 'severity'] %} ai-analysis-highlight{% endif %}">
+                            <span class="ai-analysis-label">{{ label }}</span>
+                            <span class="ai-analysis-value">{{ value }}</span>
+                        </div>
+                    {% else %}
+                        <div class="ai-analysis-row">
+                            <span class="ai-analysis-value">{{ line }}</span>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
 
@@ -397,6 +480,30 @@
         <div class="section-content">
             <strong>Approved by:</strong> {{ report.verifier.username }}
             {% if report.verified_at %}on {{ report.verified_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Relief appeal. Rendered only for an officially approved report - the same
+       human decision that lets a report reach an operator is what lets money be
+       offered against it. The server re-checks this on both GET and POST of the
+       donate endpoint; this block alone is not the gate. #}
+    {% if report.verification_status == 'approved' %}
+    <div class="content-section relief-appeal">
+        <div class="section-header"><i class="fas fa-hand-holding-heart"></i>Support relief for this incident</div>
+        <div class="section-content">
+            <p class="mb-2">
+                An official has verified this report. You can contribute towards
+                the response effort.
+            </p>
+            <p class="relief-demo-note mb-3">
+                <i class="fas fa-flask me-1"></i>
+                <strong>Demo payment</strong> — nothing is charged, no payment
+                gateway is connected, and no card or UPI details are collected.
+            </p>
+            <a href="{{ url_for('relief.donate', report_id=report.id) }}" class="relief-btn">
+                <i class="fas fa-heart me-1"></i> Donate to this relief effort
+            </a>
         </div>
     </div>
     {% endif %}

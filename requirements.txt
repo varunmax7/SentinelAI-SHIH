@@ -18,3 +18,14 @@ twilio>=9.0.0
 gunicorn>=21.2.0
 psycopg2-binary>=2.9.9
 h3>=4.1.0
+
+# --- Digital Twin: live incident feeds + LangGraph triage agent ---
+lxml>=5.0.0
+feedparser>=6.0.11
+pydantic>=2.6
+langgraph>=0.6
+langgraph-checkpoint-sqlite>=2.0
+langchain-core>=0.3
+# The language model is reached over OpenRouter's HTTP API directly (twin/llm.py)
+# rather than through a LangChain chat model: langchain-openai requires Python
+# >= 3.10 and this project runs on 3.9.
