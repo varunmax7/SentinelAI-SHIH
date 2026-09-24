@@ -15,6 +15,8 @@ ALERT_JOB_ID = 'twin_poll_alerts'
 AGENT_JOB_ID = 'twin_triage'
 WARM_JOB_ID = 'twin_warm_osm'
 PRUNE_JOB_ID = 'twin_prune_history'
+STATION_JOB_ID = 'twin_ingest_stations'
+TRANSIT_JOB_ID = 'twin_ingest_transit'
 
 # History rows older than this are dropped by the weekly prune.
 HISTORY_RETENTION_DAYS = 30
@@ -72,13 +74,44 @@ def register_jobs(app, scheduler, db, models, Report):
                 app.logger.warning('twin alert poll failed: %s', exc)
                 db.session.rollback()
 
+    def ingest_stations():
+        with app.app_context():
+            try:
+                from . import live
+                for city in models.TwinCity.query.all():
+                    live.poll_stations(db, models, city)
+            except Exception as exc:  # noqa: BLE001
+                app.logger.warning('twin station poll failed: %s', exc)
+                db.session.rollback()
+
+    def ingest_transit():
+        with app.app_context():
+            try:
+                from . import live
+                for city in models.TwinCity.query.all():
+                    live.poll_transit(db, models, city)
+            except Exception as exc:  # noqa: BLE001
+                app.logger.warning('twin transit poll failed: %s', exc)
+                db.session.rollback()
+
     def run_triage():
+        # Triage (what is true now), then forecast (what wind is carrying
+        # toward the city) - one job, sequentially, so both write to the flag
+        # queue on the same cadence an official is already checking. Kept as
+        # two try/excepts: a forecast failure must not hide a triage result
+        # that already succeeded, or vice versa.
         with app.app_context():
             try:
                 from .agent import run_triage as _run
                 _run(db, models)
             except Exception as exc:  # noqa: BLE001
                 app.logger.warning('twin triage failed: %s', exc)
+                db.session.rollback()
+            try:
+                from .agent import run_forecast as _run_forecast
+                _run_forecast(db, models)
+            except Exception as exc:  # noqa: BLE001
+                app.logger.warning('twin forecast failed: %s', exc)
                 db.session.rollback()
 
     def prune():
@@ -102,12 +135,17 @@ def register_jobs(app, scheduler, db, models, Report):
     schedule = [
         (COMPUTE_JOB_ID, compute, twin_config.COMPUTE_INTERVAL_MIN),
         (ALERT_JOB_ID, poll_alerts, twin_config.ALERT_POLL_MIN),
+        (STATION_JOB_ID, ingest_stations, twin_config.STATION_POLL_MIN),
+        (TRANSIT_JOB_ID, ingest_transit, twin_config.TRANSIT_POLL_MIN),
         (WARM_JOB_ID, warm_osm, 24 * 60),
         (PRUNE_JOB_ID, prune, 7 * 24 * 60),
     ]
-    # Only scheduled when the agent is switched on. With TWIN_AGENT_ENABLED=0
-    # the job does not exist at all - not a job that wakes up and returns early.
-    if twin_config.AGENT_ENABLED:
+    # Only scheduled when at least one of the two agents is switched on. With
+    # both TWIN_AGENT_ENABLED=0 and TWIN_FORECAST_ENABLED=0 the job does not
+    # exist at all - not a job that wakes up and returns early. `run_triage`
+    # itself calls both agents and each checks its own flag independently, so
+    # switching one off here still runs the other.
+    if twin_config.AGENT_ENABLED or twin_config.FORECAST_ENABLED:
         schedule.append((AGENT_JOB_ID, run_triage, twin_config.ALERT_POLL_MIN * 2))
 
     for job_id, func, minutes in schedule:

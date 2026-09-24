@@ -117,6 +117,7 @@
 
 .twin-btn:hover { background: rgba(56, 189, 248, 0.2); }
 .twin-btn:disabled { opacity: 0.5; cursor: progress; }
+.twin-btn.is-active { background: rgba(56, 189, 248, 0.32); color: #e0f2fe; border-color: rgba(56, 189, 248, 0.6); }
 
 .twin-spacer { flex: 1 1 auto; }
 
@@ -338,6 +339,11 @@
 .twin-dl dd em { color: var(--twin-muted); font-style: italic; font-size: 0.68rem; }
 
 .twin-list { margin: 0; padding-left: 1rem; }
+
+.twin-live-feed { margin-bottom: 0.6rem; }
+.twin-live-feed video, .twin-live-feed img {
+    width: 100%; border-radius: 6px; background: #0b1220; display: block;
+}
 .twin-list li { margin-bottom: 0.18rem; }
 
 .twin-figure { margin: 0 0 0.6rem; }
@@ -348,6 +354,13 @@
 .twin-small { font-size: 0.68rem; line-height: 1.45; }
 .twin-warn { color: #fcd34d; }
 .twin-error { color: #fca5a5; }
+
+.twin-note {
+    width: 100%; min-height: 44px; margin: 0.4rem 0; resize: vertical;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--twin-border);
+    border-radius: 6px; color: var(--twin-text); font-size: 0.72rem; padding: 0.35rem 0.5rem;
+}
+.twin-dispatch-preview { margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px dashed var(--twin-border); }
 
 /* ---- footer & notices ------------------------------------------------- */
 .twin-statbar {
@@ -438,6 +451,71 @@ html { scroll-behavior: smooth; }
 
 .twin-flagbtn:hover { color: var(--twin-text); }
 
+/* ---- agent status button ------------------------------------------------ */
+.twin-agentbtn {
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid var(--twin-border);
+    color: var(--twin-muted);
+    border-radius: 999px;
+    padding: 0.18rem 0.6rem;
+    font-size: 0.74rem;
+    cursor: pointer;
+}
+.twin-agentbtn:hover { color: var(--twin-text); }
+.twin-agentbtn--unknown { color: var(--twin-muted); }
+.twin-agentbtn--live { background: rgba(56, 189, 130, 0.16); border-color: rgba(56, 189, 130, 0.45); color: #86efac; }
+.twin-agentbtn--fallback { background: rgba(252, 211, 77, 0.14); border-color: rgba(252, 211, 77, 0.4); color: #fcd34d; }
+.twin-agentbtn--off { background: rgba(148, 163, 184, 0.08); border-color: var(--twin-border); color: var(--twin-muted); }
+
+.twin-agent-runbtn {
+    background: rgba(56, 189, 130, 0.16);
+    border: 1px solid rgba(56, 189, 130, 0.45);
+    color: #86efac;
+    border-radius: 6px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    margin: 0.5rem 0;
+}
+.twin-agent-runbtn:hover { filter: brightness(1.1); }
+.twin-agent-runbtn:disabled { opacity: 0.55; cursor: default; }
+
+.twin-agent-citycard {
+    border: 1px solid var(--twin-border);
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    margin-bottom: 0.5rem;
+}
+.twin-agent-citycard h6 { margin: 0 0 0.3rem; font-size: 0.85rem; }
+.twin-agent-citycard .twin-small { color: var(--twin-muted); }
+
+/* ---- vision-model caption of ground imagery ----------------------------- */
+.twin-vision-caption {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: #e0e7ff;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 0.5rem;
+}
+.twin-vision-caption--loading { color: var(--twin-muted); font-style: italic; }
+.twin-vision-caption--muted {
+    color: var(--twin-muted);
+    background: rgba(148, 163, 184, 0.08);
+    border-color: var(--twin-border);
+    font-style: italic;
+}
+.twin-vision-hazard {
+    color: #fca5a5;
+    font-weight: 600;
+    background: rgba(239, 68, 68, 0.12);
+    border-radius: 4px;
+    padding: 0 0.3rem;
+}
+.twin-vision-model { color: var(--twin-muted); font-size: 0.72rem; }
+
 .twin-alertnote {
     padding: 0.3rem 0.85rem;
     background: rgba(234, 88, 12, 0.1);
@@ -509,6 +587,19 @@ html { scroll-behavior: smooth; }
     color: #86efac;
 }
 
+.twin-imgbadge--lead {
+    background: rgba(56, 189, 248, 0.22);
+    border-color: rgba(56, 189, 248, 0.6);
+    color: #7dd3fc;
+}
+
+/* A real nearby photo of the clicked point leading the panel demotes the
+ * shared city webcam to smaller, secondary context below it - still shown,
+ * just not implied to be a view of this exact spot. */
+.twin-imgsec--secondary { opacity: 0.82; }
+.twin-imgsec--secondary .twin-livegrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.twin-imgsec--secondary .twin-livecam img { height: 72px; }
+
 /* --- live webcams --- */
 .twin-livegrid { display: grid; gap: 0.4rem; grid-template-columns: 1fr; }
 .twin-livegrid:has(> :nth-child(2)) { grid-template-columns: 1fr 1fr; }
@@ -560,4 +651,201 @@ html { scroll-behavior: smooth; }
 @media (max-width: 480px) {
     .twin-areagrid { grid-template-columns: repeat(2, 1fr); }
     .twin-livegrid, .twin-livegrid:has(> :nth-child(2)) { grid-template-columns: 1fr; }
+}
+
+/* ---- city-wide ground imagery board ------------------------------------ */
+/* Same drawer, same palette, same 12px-ish radii as every other twin card -
+   this is a second view of the imagery the drawer already shows, not a new
+   surface with a look of its own. The only visual language added is the live
+   accent (green) already used by .twin-imgbadge--live, so "this frame is
+   current" reads identically wherever it appears. */
+.twin-ground-head {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--twin-bg);
+    padding-bottom: 0.5rem; margin-bottom: 0.25rem;
+    border-bottom: 1px solid var(--twin-border);
+}
+
+.twin-ground-head p { margin: 0 0 0.45rem; font-size: 0.76rem; color: var(--twin-muted); }
+.twin-ground-head p b { color: var(--twin-text); }
+
+.twin-segment.twin-ground-filters { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.twin-ground-filters button span { opacity: 0.6; margin-left: 0.2rem; }
+
+.twin-ground-card {
+    border: 1px solid var(--twin-border);
+    border-radius: 10px;
+    background: var(--twin-panel);
+    padding: 0.55rem;
+    margin-bottom: 0.55rem;
+}
+
+.twin-ground-card--live { border-color: rgba(34, 197, 94, 0.42); }
+.twin-ground-card--report { border-color: rgba(56, 189, 248, 0.38); }
+
+.twin-ground-card > header {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.35rem;
+    margin-bottom: 0.45rem;
+}
+
+.twin-ground-card > header b { font-size: 0.8rem; color: var(--twin-text); }
+
+.twin-ground-card > header span:not(.twin-imgbadge) {
+    font-size: 0.68rem; color: var(--twin-muted);
+    flex: 1 1 100%;
+}
+
+.twin-ground-goto { cursor: pointer; border-bottom: 1px dashed var(--twin-accent); }
+.twin-ground-goto:hover { color: var(--twin-accent); }
+
+.twin-ground-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 0.35rem;
+}
+
+.twin-ground-tile {
+    position: relative; display: block; margin: 0;
+    border-radius: 8px; overflow: hidden; text-decoration: none;
+    border: 1px solid var(--twin-border); background: #0b1220;
+}
+
+.twin-ground-tile img {
+    width: 100%; height: 92px; object-fit: cover; display: block;
+    transition: transform 0.18s ease;
+}
+
+a.twin-ground-tile:hover { border-color: var(--twin-accent); }
+a.twin-ground-tile:hover img { transform: scale(1.05); }
+
+.twin-ground-card--live .twin-ground-tile img { height: 128px; }
+
+.twin-ground-tile-meta {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; gap: 0.25rem;
+    background: linear-gradient(transparent, rgba(2, 6, 23, 0.92));
+    color: #cbd5e1; font-size: 0.6rem; line-height: 1.3;
+    padding: 0.7rem 0.35rem 0.25rem;
+}
+
+.twin-ground-tile-meta em { font-style: normal; color: var(--twin-muted); margin-left: auto; }
+
+/* A live frame is the one thing on this board that changes while you watch it,
+   so it is the one thing that gets motion. Anything that does not respect
+   reduced-motion has no business pulsing on an operator's screen all shift. */
+.twin-ground-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #22c55e; flex: 0 0 auto;
+    animation: twin-ground-pulse 2s ease-in-out infinite;
+}
+
+@keyframes twin-ground-pulse { 50% { opacity: 0.25; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .twin-ground-dot { animation: none; }
+    .twin-ground-tile img { transition: none; }
+}
+
+.twin-ground-srcs { list-style: none; margin: 0.35rem 0 0.6rem; padding: 0; }
+
+.twin-ground-src {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem;
+    font-size: 0.68rem; color: var(--twin-muted);
+    padding: 0.3rem 0.45rem; margin-bottom: 0.25rem;
+    border-radius: 7px; border: 1px solid var(--twin-border);
+    border-left-width: 3px;
+}
+
+.twin-ground-src b { color: var(--twin-text); font-size: 0.72rem; }
+.twin-ground-src em { flex: 1 1 100%; font-style: normal; line-height: 1.4; }
+
+.twin-ground-src--ok { border-left-color: #22c55e; }
+.twin-ground-src--degraded { border-left-color: #facc15; }
+.twin-ground-src--blocked { border-left-color: #f97316; }
+.twin-ground-src--failed { border-left-color: #ef4444; }
+.twin-ground-src--unconfigured { border-left-color: rgba(148, 163, 184, 0.5); }
+
+@media (max-width: 480px) {
+    .twin-ground-tiles { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+}
+
+/* --- satellite crop of the clicked point --- */
+/* Wider than a street thumbnail and never gridded: there is exactly one of
+   these per point, and at thumbnail size an aerial view is unreadable. */
+.twin-aerialshot {
+    position: relative; display: block; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--twin-border); background: #0b1220; text-decoration: none;
+}
+
+.twin-aerialshot img {
+    width: 100%; height: 170px; object-fit: cover; display: block;
+    transition: transform 0.18s ease;
+}
+
+.twin-aerialshot:hover { border-color: var(--twin-accent); }
+.twin-aerialshot:hover img { transform: scale(1.04); }
+
+@media (prefers-reduced-motion: reduce) {
+    .twin-aerialshot img { transition: none; }
+}
+
+/* ---- OSINT panel -------------------------------------------------------- */
+/* Reuses .twin-ground-srcs for the source-health list so a feed that is
+   unkeyed, throttled or failing reads identically wherever it appears. */
+.twin-osint-list { list-style: none; margin: 0 0 0.7rem; padding: 0; }
+
+.twin-osint-list li {
+    font-size: 0.72rem; line-height: 1.45; color: var(--twin-text);
+    padding: 0.3rem 0.45rem; margin-bottom: 0.22rem;
+    border-radius: 6px; border: 1px solid var(--twin-border);
+    background: var(--twin-panel);
+}
+
+.twin-osint-list li a { color: var(--twin-accent); text-decoration: none; }
+.twin-osint-list li a:hover { text-decoration: underline; }
+.twin-osint-list .twin-muted { font-size: 0.66rem; }
+
+.twin-ground-src--throttled { border-left-color: #f59e0b; }
+
+/* --- OSINT news cards --- */
+/* Articles lead with their own lead image when they have one. The image is
+   hotlinked from the publisher and is frequently missing or dead, so the card
+   is laid out to read correctly with no image at all and the <img> removes
+   itself on error rather than leaving a broken frame. */
+.twin-newsgrid { display: grid; gap: 0.4rem; grid-template-columns: 1fr; }
+
+.twin-newscard {
+    display: flex; gap: 0.5rem; align-items: stretch;
+    border: 1px solid var(--twin-border); border-radius: 8px;
+    background: var(--twin-panel); overflow: hidden; text-decoration: none;
+}
+
+.twin-newscard:hover { border-color: var(--twin-accent); }
+
+.twin-newscard-thumb {
+    flex: 0 0 92px; width: 92px; height: 72px; object-fit: cover;
+    display: block; background: #0b1220;
+}
+
+.twin-newscard-body {
+    flex: 1 1 auto; min-width: 0; padding: 0.4rem 0.5rem 0.4rem 0;
+    display: flex; flex-direction: column; justify-content: center;
+}
+
+/* No image: the text reclaims the gutter rather than sitting in an indent. */
+.twin-newscard--textonly .twin-newscard-body { padding-left: 0.5rem; }
+
+.twin-newscard-title {
+    font-size: 0.72rem; line-height: 1.35; color: var(--twin-text);
+    font-weight: 600;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.twin-newscard-meta {
+    font-size: 0.64rem; color: var(--twin-muted); margin-top: 0.22rem;
+}
+
+@media (max-width: 420px) {
+    .twin-newscard-thumb { flex-basis: 72px; width: 72px; height: 62px; }
 }

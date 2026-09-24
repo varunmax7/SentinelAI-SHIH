@@ -77,6 +77,7 @@ class Brief(BaseModel):
     )
     recommended_action: str = Field(description="One concrete next step.")
     citation_ids: List[str] = Field(
-        description="Ids of the supplied sources this brief actually rests on. "
-                    "Every factual claim must trace to one of them."
+        description="Ids of the supplied sources this brief actually rests on, "
+                    "including any 'sop-N' SOP passage the recommended action "
+                    "draws on. Every factual claim must trace to one of them."
     )

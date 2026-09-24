@@ -10,8 +10,11 @@ the path from raw input to score is short enough to follow.
 import json
 from datetime import datetime, timedelta
 
+from . import anomaly
 from . import config as twin_config
+from . import live
 from . import scoring
+from .geo import haversine_m
 from .grid import k_ring_neighbours
 from .ingest.base import record_snapshot
 from .alerts import alert_contributions
@@ -19,6 +22,12 @@ from .ingest.internal_reports import collect_incidents
 from .ingest.open_meteo import (AirQualityAdapter, FloodAdapter,
                                 ForecastAdapter, sample_cells)
 from .stream import publish
+
+# A station or vehicle further than this from a cell centre does not
+# represent conditions there - the same "how far is still local" judgement
+# `config.WEBCAM_RADIUS_M` makes for live imagery.
+STATION_MATCH_RADIUS_M = 15000
+DISRUPTION_MATCH_RADIUS_M = 1500
 
 # How often a history row is appended per cell. The compute pass runs every
 # 5 minutes; writing 7k history rows that often would grow the table by ~2M rows
@@ -66,6 +75,20 @@ def compute_city(db, models, city, Report, force=False):
     # Criticality summed per cell, in one query rather than 919.
     criticality = _criticality_by_cell(db, models, city)
 
+    # Empty until `scripts/backfill_baselines.py` has run at least once - an
+    # honestly-absent baseline, not a wrong one. anomaly_for_cell() already
+    # returns None for a missing baseline, so no branch is needed here.
+    baselines = anomaly.baselines_by_sample_cell(models, city)
+
+    # Fetched once per city, not per cell - real-world station/vehicle counts
+    # near either city are small (often zero; live.py's own module docstring
+    # explains why none of these sources could be tested against live data
+    # while building them), so one query up front plus in-memory distance
+    # matching per cell is simpler and cheaper than 919 DB round-trips.
+    live_stations = [s for s in live.live_stations(models, city, now=started)
+                     if not s['stale'] and s['aqi'] is not None and s['lat'] is not None]
+    live_vehicles = [v for v in live.live_vehicles(models, city) if v['lat'] is not None]
+
     # Incident load is needed for a cell's neighbours as well as itself, so
     # compute every cell's own load once up front.
     own_load = {index: scoring.incident_load(entries, started)
@@ -97,9 +120,19 @@ def compute_city(db, models, city, Report, force=False):
         terrain = scoring.terrain_sub_score(low_lying, water_proximity, drain_gap)
         infra = scoring.infra_sub_score(criticality.get(cell.id, 0))
         incident = scoring.incident_sub_score(cell_load, neighbour_load)
-        env = scoring.env_sub_score(air.get('aqi'), weather.get('temperature_c'))
+        # A real station reading within range is preferred over the
+        # Open-Meteo model's own AQI estimate; falling back to it (not to a
+        # neutral value) when no station is near is what keeps a city with
+        # zero configured stations scoring exactly as it always has.
+        station_aqi = _nearest_station_aqi(live_stations, cell.center_latitude, cell.center_longitude)
+        env = scoring.env_sub_score(
+            station_aqi if station_aqi is not None else air.get('aqi'),
+            weather.get('temperature_c'))
+        disruption = _disruption_near(live_vehicles, cell.center_latitude, cell.center_longitude)
 
         rain_forecast = weather.get('rain_forecast_mm') or {}
+        anomaly_reading = anomaly.anomaly_for_cell(
+            baselines.get(sample_key), rain_forecast.get('24'), weather.get('temperature_c'))
 
         for horizon in twin_config.HORIZONS:
             hydro = scoring.hydro_sub_score(
@@ -109,7 +142,7 @@ def compute_city(db, models, city, Report, force=False):
                 horizon,
             )
             risk, status, vulnerability = scoring.compose(
-                hydro, incident, env, terrain, infra)
+                hydro, incident, env, terrain, infra, disruption)
 
             state = existing.get((cell.id, horizon))
             if state is None:
@@ -133,9 +166,17 @@ def compute_city(db, models, city, Report, force=False):
                 'temperature_c': weather.get('temperature_c'),
                 'humidity': weather.get('humidity'),
                 'wind_speed_kmh': weather.get('wind_speed_kmh'),
-                'aqi': air.get('aqi'),
+                # The value env_sub_score() actually used - a real station
+                # reading when one was in range, the Open-Meteo estimate
+                # otherwise. `open_meteo_aqi` keeps the model estimate
+                # visible too, so a drill-down can see both when they differ.
+                'aqi': station_aqi if station_aqi is not None else air.get('aqi'),
+                'open_meteo_aqi': air.get('aqi'),
+                'station_aqi': station_aqi,
                 'pm2_5': air.get('pm2_5'),
                 'river_discharge_anomaly': discharge,
+                'anomaly': anomaly_reading,
+                'disruption_pct': disruption,
                 'incident_count': len(incidents_by_cell.get(cell.h3_index, [])),
                 'alert_count': len(alerts_by_cell.get(cell.h3_index, [])),
                 'alert_senders': sorted({a['sender'] for a in alerts_by_cell.get(cell.h3_index, [])
@@ -191,6 +232,34 @@ def compute_all(db, models, Report, force=False):
             db.session.rollback()
             out[city.slug] = {'city': city.slug, 'error': "%s: %s" % (type(exc).__name__, exc)}
     return out
+
+
+def _nearest_station_aqi(live_stations, lat, lon):
+    """Nearest already-filtered (non-stale, has an AQI) station within
+
+    `STATION_MATCH_RADIUS_M`, or None. `live_stations` is pre-fetched once
+    per city by the caller - see the comment where it is built.
+    """
+    best_aqi, best_distance = None, None
+    for station in live_stations:
+        distance = haversine_m(lat, lon, station['lat'], station['lon'])
+        if distance <= STATION_MATCH_RADIUS_M and (best_distance is None or distance < best_distance):
+            best_aqi, best_distance = station['aqi'], distance
+    return best_aqi
+
+
+def _disruption_near(live_vehicles, lat, lon):
+    """0-100 share of nearby transit vehicles currently stalled, or None if
+
+    none are nearby to judge from - see `hazard_score`'s own doc on why
+    `None` (not `0.0`) is what keeps an unconfigured city's score unchanged.
+    """
+    nearby = [v for v in live_vehicles
+             if haversine_m(lat, lon, v['lat'], v['lon']) <= DISRUPTION_MATCH_RADIUS_M]
+    if not nearby:
+        return None
+    stalled = sum(1 for v in nearby if v['stalled'])
+    return round(100.0 * stalled / len(nearby), 1)
 
 
 def _criticality_by_cell(db, models, city):

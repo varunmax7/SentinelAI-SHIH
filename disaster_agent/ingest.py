@@ -29,6 +29,12 @@ CURRENT_FIELDS = (
     'cloud_cover,precipitation,surface_pressure,weather_code'
 )
 
+# Same list minus weather_code, which has no part in any hazard score.
+HOURLY_FIELDS = (
+    'temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,'
+    'cloud_cover,precipitation,surface_pressure'
+)
+
 
 def fetch_region_signals(regions=None, timeout=None):
     """One live signal dict per region. Never raises - a failed HTTP call
@@ -44,8 +50,12 @@ def fetch_region_signals(regions=None, timeout=None):
         'latitude': ','.join('%.4f' % r['lat'] for r in regions),
         'longitude': ','.join('%.4f' % r['lon'] for r in regions),
         'current': CURRENT_FIELDS,
-        'hourly': 'precipitation,cloud_cover',
-        'forecast_days': 2,
+        # Every field `advect.source_strengths()` reads, not just the two the
+        # 3-hour rain look-ahead needed. window.py re-runs that same scoring
+        # function over these hours to work out when a hazard starts, peaks
+        # and eases - which it cannot do from rain and cloud alone.
+        'hourly': HOURLY_FIELDS,
+        'forecast_days': agent_config.FORECAST_DAYS,
         'timezone': 'UTC',
     }
 
@@ -93,6 +103,10 @@ def _parse_entry(region, entry):
         'rain_forecast_3h_mm': _rain_ahead(entry, hours=3),
         'fire_weather_index': fosberg_fire_weather_index(
             temperature_c, humidity_pct, wind_speed_kmh),
+        # Carried through untouched so window.py can re-score each hour with
+        # the same function that produced the headline number above.
+        'hourly': entry.get('hourly') or {},
+        'observed_at': current.get('time'),
     })
     return signal
 

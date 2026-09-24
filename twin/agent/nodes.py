@@ -424,18 +424,21 @@ def make_draft_brief(ctx):
                 if item_id in items_by_id and item_id not in seen:
                     seen.add(item_id)
                     sources.append(items_by_id[item_id])
-            result = ctx.invoke(Brief, _brief_prompt(cluster, sources, ctx.city))
+            sop_chunks = _sop_citations(cluster)
+            result = ctx.invoke(Brief, _brief_prompt(cluster, sources, ctx.city, sop_chunks))
 
             if result is None:
-                briefs.append(_offline_brief(cluster, sources, ctx.city))
+                briefs.append(_offline_brief(cluster, sources, ctx.city, sop_chunks))
                 continue
 
-            cited = [s for s in sources if s['id'] in set(result.citation_ids)]
+            cited_ids = set(result.citation_ids)
+            cited = [s for s in sources if s['id'] in cited_ids]
             # A brief that cites nothing is a brief nobody can check. If the
             # model cited nothing valid, fall back to citing everything it was
             # shown rather than publishing an uncheckable claim.
             if not cited:
                 cited = sources
+            cited_sop = [c for c in sop_chunks if c['id'] in cited_ids]
             briefs.append({
                 'cluster_key': _cluster_key(ctx.city, cluster),
                 'title': result.headline,
@@ -443,16 +446,17 @@ def make_draft_brief(ctx):
                 'severity': cluster['status'],
                 'risk_score': cluster['risk_score'],
                 'h3_index': cluster.get('worst_cell'),
+                'cells': cluster.get('cells') or [],
                 'brief_md': '%s\n\n**Recommended action:** %s' % (
                     result.body_md, result.recommended_action),
-                'citations': [_citation(s) for s in cited],
+                'citations': [_citation(s) for s in cited] + cited_sop,
                 'generated_offline': False,
             })
         return {'briefs': briefs, 'used_llm': True}
     return draft_brief
 
 
-def _brief_prompt(cluster, sources, city):
+def _brief_prompt(cluster, sources, city, sop_chunks=None):
     lines = [
         "Write a short brief for a city emergency official who must decide whether",
         "to act on this event in %s." % city.name,
@@ -475,16 +479,43 @@ def _brief_prompt(cluster, sources, city):
             source.get('effective_at') or 'unstated',
             source.get('expires_at') or 'unstated',
             (source.get('text') or '')[:400]))
+    if sop_chunks:
+        lines.append("")
+        lines.append("Relevant SOP passages (cite by id if the recommended action draws on one):")
+        for chunk in sop_chunks:
+            lines.append("- id=%s | %s | %s" % (chunk['id'], chunk['source'], chunk['text'][:400]))
     return "\n".join(lines)
 
 
-def _offline_brief(cluster, sources, city):
+def _sop_citations(cluster):
+    """Up to 4 corpus passages relevant to this event, as citation-shaped
+
+    dicts (same shape `_citation()` produces for alerts/reports) so the
+    review UI needs no special case for a SOP source. `[]` when the corpus is
+    empty - see rag.py's own docstring on why that is the fully-supported
+    default, not degraded behaviour.
+    """
+    from . import rag
+    query = '%s %s' % (cluster.get('title') or '', cluster.get('hazard_type') or '')
+    chunks = rag.retrieve(query, top_k=4)
+    out = []
+    for i, chunk in enumerate(chunks):
+        out.append({
+            'id': 'sop-%d' % i, 'kind': 'sop', 'sender': None,
+            'title': chunk['source'], 'url': None, 'effective_at': None,
+            'text': chunk['text'],
+        })
+    return out
+
+
+def _offline_brief(cluster, sources, city, sop_chunks=None):
     """A template brief, written when no model is available.
 
     Marked `generated_offline` everywhere it surfaces. It states only facts
     already in the database - no interpretation - because a template that
     editorialises would be worse than no brief at all.
     """
+    sop_chunks = sop_chunks or []
     senders = sorted({s.get('sender') for s in sources if s.get('sender')})
     official = [s for s in sources if s['kind'] == 'official_alert']
     reports = [s for s in sources if s['kind'] == 'citizen_report']
@@ -499,6 +530,9 @@ def _offline_brief(cluster, sources, city):
     ]
     if senders:
         body.append("- Issued by: %s." % ", ".join(senders))
+    if sop_chunks:
+        body.append("- Related SOP passage(s): %s." %
+                    ", ".join(sorted({c['title'] for c in sop_chunks})))
     body.append("")
     body.append("_No language model was available, so this brief is generated from "
                 "database fields only and carries no interpretation._")
@@ -510,8 +544,9 @@ def _offline_brief(cluster, sources, city):
         'severity': cluster['status'],
         'risk_score': cluster['risk_score'],
         'h3_index': cluster.get('worst_cell'),
+        'cells': cluster.get('cells') or [],
         'brief_md': "\n".join(body),
-        'citations': [_citation(s) for s in sources],
+        'citations': [_citation(s) for s in sources] + sop_chunks,
         'generated_offline': True,
     }
 
@@ -570,6 +605,16 @@ def make_persist_flags(ctx):
                                              separators=(',', ':'))
             flag.generated_offline = bool(brief.get('generated_offline'))
             flag.status = 'pending'
+            ctx.db.session.flush()  # flag.id is needed below on the first save
+
+            # Replace rather than accumulate: a re-run's cluster membership can
+            # shrink (an item aged out of the window) as well as grow, and
+            # dispatch must compute its blast radius from the current
+            # footprint, not every footprint this cluster_key has ever had.
+            models.TwinFlagCell.query.filter_by(flag_id=flag.id).delete(synchronize_session=False)
+            for h3_index in brief.get('cells') or []:
+                ctx.db.session.add(models.TwinFlagCell(flag_id=flag.id, h3_index=h3_index))
+
             written.append(brief['cluster_key'])
 
         ctx.db.session.commit()

@@ -87,6 +87,34 @@ from twin import create_twin_blueprint, notify_report  # noqa: E402  (must follo
 twin_registration = create_twin_blueprint(
     app, db, Report, login_required=login_required, scheduler=scheduler)
 
+# The twin owns no users, so it cannot reach anyone on its own - an analyst's
+# click on `POST /api/twin/flags/<id>/dispatch` is the only path from a flag
+# to a real phone, and this is the one place that path is wired up. See
+# twin/dispatch.py's module docstring for the contract these three callables
+# must satisfy.
+def _twin_recipients_near(lat, lon, radius_km):
+    return [
+        {
+            'user_id': user.id,
+            'username': user.username,
+            'distance_km': distance,
+            'whatsapp_number': user.whatsapp_number,
+        }
+        for user, distance, _volunteer in _users_near_point(lat, lon, radius_km)
+    ]
+
+
+def _twin_notify(user_id, message):
+    db.session.add(Notification(
+        user_id=user_id, message=message, is_alert=True, is_read=False,
+        expires_at=datetime.utcnow() + timedelta(hours=12),
+    ))
+
+
+from twin.dispatch import register_alert_channel  # noqa: E402
+
+register_alert_channel(_twin_recipients_near, _twin_notify, send_whatsapp_message)
+
 # --- AI Disaster Prediction Agent -------------------------------------------
 # Additive: one blueprint, one table, one scheduled job. Watches live wind,
 # cloud and fire-danger signal across India and projects downwind hazard
@@ -1027,6 +1055,10 @@ def analyze_report_with_ai(report):
         return {
             'confidence_score': final_confidence_score,
             'analysis': analysis_text,
+            # Carried up from the image parameter: a photo of a screen can
+            # never auto-approve, whatever the blended number says.
+            'requires_human_review': bool(accuracy_result.get('requires_human_review')),
+            'rephotographed': bool(accuracy_result.get('rephotographed')),
             'severity': accuracy_result['severity'],
             'severity_score': accuracy_result['severity_score'],
             'severity_percent': accuracy_result['severity_percent'],
@@ -1578,7 +1610,13 @@ def report():
         # --- AI AUTO-APPROVAL SYSTEM (SH-SVA-03) ---
         # Automatically approve reports with extremely high confidence (>= 85%)
         is_auto_approved = False
-        if report.confidence_score >= 0.85:
+        # A re-photographed image (a picture of a screen or a printout) is a
+        # hard block, not a score penalty. The depicted hazard may be real, but
+        # the file cannot show the reporter was at the scene, so it must reach
+        # a human rather than auto-publish. See utils.py's provenance check.
+        if ai_result.get('requires_human_review'):
+            report.verification_status = 'pending'
+        elif report.confidence_score >= 0.85:
             report.verification_status = 'approved'
             report.verified = True
             report.verified_at = datetime.utcnow()

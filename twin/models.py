@@ -345,6 +345,129 @@ def build_twin_models(db):
             except (TypeError, ValueError):
                 return []
 
+    class TwinFlagCell(db.Model):
+        """Every grid cell a flag's cluster actually covers, not just the
+
+        one worst cell `TwinFlag.h3_index` names. Dispatch needs the real
+        footprint to compute a blast radius; keeping `TwinFlag` itself
+        single-cell (it already ships and is read by the review UI) and
+        adding this as a side table is additive rather than a migration on
+        a table the review flow already depends on.
+        """
+
+        __tablename__ = 'twin_flag_cell'
+        __table_args__ = (
+            db.UniqueConstraint('flag_id', 'h3_index', name='uq_twin_flag_cell'),
+        )
+
+        id = db.Column(db.Integer, primary_key=True)
+        flag_id = db.Column(db.Integer, db.ForeignKey('twin_flag.id'), nullable=False, index=True)
+        h3_index = db.Column(db.String(20), nullable=False, index=True)
+
+    class TwinBaseline(db.Model):
+        """Per-sample-point climatology, for the anomaly sigma.
+
+        Keyed on the same coarse H3 sample cell `ingest/open_meteo.py`
+        already shares a weather reading across every child cell with
+        (`sample_cells()`, resolution 6) - a baseline is a 5-year statistic,
+        not a live reading, so it does not need per-cell (805-per-city)
+        precision, and computing it at that precision would mean 805x the
+        archive calls for no discriminating power.
+
+        Deliberately an **annual** climatology, not day-of-year binned: mean
+        and standard deviation of daily rainfall and daily max temperature
+        across `TWIN_BASELINE_YEARS` years of history at this point. A rainy
+        June day is judged against the point's whole-year normal, not a
+        June-specific one. Binning by month is the natural next step and
+        only changes the backfill script and the lookup key, not this table.
+        """
+
+        __tablename__ = 'twin_baseline'
+        __table_args__ = (
+            db.UniqueConstraint('city_id', 'sample_h3', name='uq_twin_baseline_point'),
+        )
+
+        id = db.Column(db.Integer, primary_key=True)
+        city_id = db.Column(db.Integer, db.ForeignKey('twin_city.id'), nullable=False, index=True)
+        sample_h3 = db.Column(db.String(20), nullable=False, index=True)
+        latitude = db.Column(db.Float, nullable=False)
+        longitude = db.Column(db.Float, nullable=False)
+
+        years = db.Column(db.Integer, default=0)
+        sample_days = db.Column(db.Integer, default=0)
+
+        rain_daily_mean_mm = db.Column(db.Float, nullable=True)
+        rain_daily_std_mm = db.Column(db.Float, nullable=True)
+        temp_max_mean_c = db.Column(db.Float, nullable=True)
+        temp_max_std_c = db.Column(db.Float, nullable=True)
+
+        computed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    class TwinDispatch(db.Model):
+        """Audit row for every alert actually sent to real people. C7 again -
+
+        this is the one table in the twin that touches the public, so every
+        row on it is load-bearing for "who sent what, to how many people,
+        and when" if that is ever questioned.
+        """
+
+        __tablename__ = 'twin_dispatch'
+
+        id = db.Column(db.Integer, primary_key=True)
+        flag_id = db.Column(db.Integer, db.ForeignKey('twin_flag.id'), nullable=False, index=True)
+        dispatched_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+        center_latitude = db.Column(db.Float, nullable=True)
+        center_longitude = db.Column(db.Float, nullable=True)
+        radius_km = db.Column(db.Float, nullable=True)
+        note = db.Column(db.Text, nullable=True)
+
+        recipients = db.Column(db.Integer, default=0)
+        whatsapp_sent = db.Column(db.Integer, default=0)
+        whatsapp_failed = db.Column(db.Integer, default=0)
+
+        created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    class TwinObservation(db.Model):
+        """A live station reading or transit vehicle position - latest only,
+
+        overwritten in place per `(city, source, external_id)` the same way
+        `TwinCellState` overwrites per `(cell, horizon)`. Two `kind`s share
+        one table rather than two, because both answer the same question
+        ("what does the live world look like right now, here") and both
+        expire on the same principle: `observed_at` is the *source's own*
+        timestamp, never the twin's poll time, so staleness is measured
+        against reality - a station that stopped reporting 3 hours ago must
+        read as stale even if the twin polled it 30 seconds ago.
+        """
+
+        __tablename__ = 'twin_observation'
+        __table_args__ = (
+            db.UniqueConstraint('city_id', 'source', 'external_id', name='uq_twin_observation'),
+        )
+
+        id = db.Column(db.Integer, primary_key=True)
+        city_id = db.Column(db.Integer, db.ForeignKey('twin_city.id'), nullable=False, index=True)
+        kind = db.Column(db.String(20), nullable=False, index=True)  # air_quality | transit_vehicle
+        source = db.Column(db.String(40), nullable=False)  # openaq | aqicn | cpcb | gtfs_rt:<agency>
+        external_id = db.Column(db.String(120), nullable=False)
+
+        name = db.Column(db.String(200), nullable=True)
+        latitude = db.Column(db.Float, nullable=True)
+        longitude = db.Column(db.Float, nullable=True)
+
+        # air_quality fields
+        aqi = db.Column(db.Float, nullable=True)
+        pm2_5 = db.Column(db.Float, nullable=True)
+
+        # transit_vehicle fields
+        route_id = db.Column(db.String(80), nullable=True)
+        speed_kmh = db.Column(db.Float, nullable=True)
+        stalled = db.Column(db.Boolean, default=False)
+
+        observed_at = db.Column(db.DateTime, nullable=True, index=True)
+        fetched_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     class TwinDataSnapshot(db.Model):
         """One row per ingest attempt. C7 - audit everything."""
 
@@ -370,6 +493,10 @@ def build_twin_models(db):
         TwinExternalAlert=TwinExternalAlert,
         TwinAlertCell=TwinAlertCell,
         TwinFlag=TwinFlag,
+        TwinFlagCell=TwinFlagCell,
+        TwinBaseline=TwinBaseline,
+        TwinDispatch=TwinDispatch,
+        TwinObservation=TwinObservation,
     )
     _CACHE[id(db)] = models
     return models

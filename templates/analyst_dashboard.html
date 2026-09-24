@@ -776,6 +776,26 @@
         }
         .da-region-name { color: #f8fafc; font-weight: 700; font-size: 13.5px; }
         .da-region-meta { color: #94a3b8; font-size: 11px; }
+        .da-time-window {
+            color: #fbbf24; font-size: 11px; margin: 4px 0 2px; background: rgba(251,191,36,0.08);
+            border: 1px solid rgba(251,191,36,0.25); border-radius: 5px; padding: 3px 8px; display: inline-block;
+        }
+        .da-time-window b { color: #fcd34d; }
+        /* An open-ended window - still elevated at the end of the forecast -
+           is the case a plain "until HH:MM" label would misreport as an end
+           time, so it gets its own, louder treatment. */
+        .da-time-window--open {
+            color: #fca5a5; background: rgba(239,68,68,0.10); border-color: rgba(239,68,68,0.35);
+        }
+        .da-time-window--open b { color: #fecaca; }
+        .da-time-window--upcoming {
+            color: #93c5fd; background: rgba(59,130,246,0.10); border-color: rgba(59,130,246,0.30);
+        }
+        .da-time-window--upcoming b { color: #bfdbfe; }
+        .da-time-window--clear {
+            color: #86efac; background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.25);
+        }
+        .da-time-window--clear b { color: #bbf7d0; }
         .da-headline { color: #e2e8f0; font-size: 12.5px; font-weight: 600; margin: 4px 0 4px; }
         .da-narrative { color: #94a3b8; font-size: 12px; line-height: 1.5; margin-bottom: 6px; }
         .da-action { color: #7dd3fc; font-size: 11.5px; margin-bottom: 8px; }
@@ -812,6 +832,12 @@
             font-size: 9.5px; color: #fbbf24; background: rgba(251,191,36,0.1);
             border: 1px solid rgba(251,191,36,0.3); border-radius: 5px; padding: 1px 6px;
         }
+        .da-target-select {
+            flex: 1 1 auto; min-width: 0; max-width: 320px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14);
+            color: #cbd5e1; border-radius: 7px; padding: 5px 8px; font-size: 11.5px;
+        }
+        .da-target-select:focus { outline: none; border-color: rgba(56,189,248,0.5); }
     </style>
 
     <script>
@@ -1281,7 +1307,7 @@
                 },
                 center: [78.4867, 17.3850],
                 zoom: 11,
-                pitch: 30,
+                pitch: 45,
                 bearing: 0,
                 attributionControl: false
             });
@@ -1291,7 +1317,7 @@
 
             // Quick-jump camera presets, wired to the header buttons
             window.zoomToHyderabad = function() {
-                map.flyTo({ center: [78.4867, 17.3850], zoom: 11, pitch: 30, bearing: 0, duration: 1800 });
+                map.flyTo({ center: [78.4867, 17.3850], zoom: 11, pitch: 45, bearing: 0, duration: 1800 });
             };
             window.zoomToTelangana = function() {
                 map.flyTo({ center: [79.5, 17.8], zoom: 6.8, pitch: 20, bearing: 0, duration: 1800 });
@@ -1334,6 +1360,33 @@
             };
 
             map.on('load', function() {
+                // Real terrain (15.1/15.9): the same AWS Terrarium tiles the
+                // twin console uses, at a gentler exaggeration since this
+                // view sits at a lower pitch than the console's. Two raster-
+                // dem sources over the same tiles, deliberately - see
+                // twin-layers.js::hillshadeDemSource for why the 3D mesh and
+                // the 2D hillshade must not share one.
+                map.addSource('dashboard-dem', {
+                    type: 'raster-dem',
+                    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                    encoding: 'terrarium', tileSize: 256, maxzoom: 14
+                });
+                map.setTerrain({ source: 'dashboard-dem', exaggeration: 1.4 });
+                map.addSource('dashboard-dem-hillshade', {
+                    type: 'raster-dem',
+                    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                    encoding: 'terrarium', tileSize: 256, maxzoom: 14
+                });
+                map.addLayer({
+                    id: 'dashboard-hillshade', type: 'hillshade', source: 'dashboard-dem-hillshade',
+                    paint: {
+                        'hillshade-shadow-color': 'rgba(2,6,23,0.55)',
+                        'hillshade-highlight-color': 'rgba(148,163,184,0.25)',
+                        'hillshade-exaggeration': 0.35,
+                        'hillshade-illumination-direction': 315
+                    }
+                }, 'labels-layer');
+
                 // Add rivers
                 map.addSource('rivers', { type: 'geojson', data: rivers });
                 map.addLayer({ id: 'rivers-glow', type: 'line', source: 'rivers',
@@ -1389,7 +1442,7 @@
                 },
                 center: [77.5946, 12.9716],
                 zoom: 11,
-                pitch: 30,
+                pitch: 45,
                 bearing: 0,
                 attributionControl: false
             });
@@ -1399,7 +1452,7 @@
 
             // Quick-jump camera preset, wired to the header button
             window.zoomToBengaluru = function() {
-                map.flyTo({ center: [77.5946, 12.9716], zoom: 11, pitch: 30, bearing: 0, duration: 1800 });
+                map.flyTo({ center: [77.5946, 12.9716], zoom: 11, pitch: 45, bearing: 0, duration: 1800 });
             };
 
             // Bengaluru's main waterways (simplified GeoJSON) - the city floods
@@ -1423,6 +1476,29 @@
             };
 
             map.on('load', function() {
+                // Real terrain (15.1/15.9) - see the Hyderabad map's init
+                // above for why this is two sources, not one.
+                map.addSource('dashboard-dem-blr', {
+                    type: 'raster-dem',
+                    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                    encoding: 'terrarium', tileSize: 256, maxzoom: 14
+                });
+                map.setTerrain({ source: 'dashboard-dem-blr', exaggeration: 1.4 });
+                map.addSource('dashboard-dem-hillshade-blr', {
+                    type: 'raster-dem',
+                    tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                    encoding: 'terrarium', tileSize: 256, maxzoom: 14
+                });
+                map.addLayer({
+                    id: 'dashboard-hillshade-blr', type: 'hillshade', source: 'dashboard-dem-hillshade-blr',
+                    paint: {
+                        'hillshade-shadow-color': 'rgba(2,6,23,0.55)',
+                        'hillshade-highlight-color': 'rgba(148,163,184,0.25)',
+                        'hillshade-exaggeration': 0.35,
+                        'hillshade-illumination-direction': 315
+                    }
+                }, 'labels-layer');
+
                 // Add rivers/valleys
                 map.addSource('bengaluru-rivers', { type: 'geojson', data: rivers });
                 map.addLayer({ id: 'bengaluru-rivers-glow', type: 'line', source: 'bengaluru-rivers',
@@ -1462,8 +1538,147 @@
             air_quality: 'Air Quality', tsunami: 'Tsunami', earthquake: 'Earthquake', other: 'Hazard'
         };
         let currentPredictions = [];
+        let currentSignals = [];
+        let localitiesBySlug = {};
 
         function hazardLabel(h) { return HAZARD_LABELS[h] || (h || '').replace('_', ' '); }
+
+        // A "from now until roughly this clock time" window, not a precise
+        // ETA - the deterministic model behind this gives an hour count
+        // (wind speed x horizon), not a minute-level prediction, so the
+        // honest way to show it is "now -> ~time", in the browser's own
+        // local time zone.
+        function formatClock(date) {
+            return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+
+        function formatWindow(hoursFromNow) {
+            if (hoursFromNow == null) return null;
+            const now = new Date();
+            const until = new Date(now.getTime() + hoursFromNow * 3600000);
+            const sameDay = now.toDateString() === until.toDateString();
+            const untilLabel = sameDay
+                ? formatClock(until)
+                : until.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + formatClock(until);
+            return { fromLabel: formatClock(now), untilLabel: untilLabel, hours: hoursFromNow };
+        }
+
+
+        // --- hazard window -------------------------------------------------
+        // How long a signal lasts, not just how strong it is now. The server
+        // re-runs the same scoring function over Open-Meteo's hourly forecast
+        // (see disaster_agent/window.py) and returns the stretch of time the
+        // hazard is at or above the alert threshold. Everything here is
+        // formatting - no time is computed in the browser, because the two
+        // would drift apart the moment the forecast updated.
+        //
+        // `ends_at: null` with `open_ended: true` is NOT an all-clear: it
+        // means the signal is still elevated in the last forecast hour and
+        // the data contains no end. That case must read as "no end time yet",
+        // never as "over".
+        function formatStamp(iso) {
+            if (!iso) return null;
+            const d = new Date(iso);
+            if (isNaN(d)) return null;
+            const sameDay = new Date().toDateString() === d.toDateString();
+            return sameDay
+                ? formatClock(d)
+                : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + formatClock(d);
+        }
+
+        function formatDuration(hours) {
+            if (hours == null) return null;
+            if (hours < 24) return '≈' + hours + 'h';
+            const days = Math.floor(hours / 24), rem = hours % 24;
+            return '≈' + days + 'd' + (rem ? ' ' + rem + 'h' : '');
+        }
+
+        function renderHazardWindow(w) {
+            if (!w || !w.state) return '';
+
+            const peak = (w.peak_strength != null && w.peak_at)
+                ? ` <span class="da-region-meta">· peaks ${Math.round(w.peak_strength)}/100 at ${formatStamp(w.peak_at)}</span>`
+                : '';
+
+            if (w.state === 'clear') {
+                return `<div class="da-time-window da-time-window--clear">⏱ Stays below the alert
+                    threshold for the whole forecast${peak}</div>`;
+            }
+
+            const starts = formatStamp(w.starts_at);
+
+            if (w.open_ended) {
+                // Deliberately loud. An open-ended window is the dangerous
+                // case and the one a "→ 23:00" style label would quietly
+                // misreport as an end time.
+                return `<div class="da-time-window da-time-window--open">⏱ ${w.state === 'active'
+                        ? `Underway since <b>${starts}</b>`
+                        : `Starts <b>${starts}</b>`} ·
+                    <b>still elevated at the end of the forecast</b>
+                    <span class="da-region-meta">(${formatStamp(w.forecast_until)}) — no end time in the
+                    data yet</span>${peak}</div>`;
+            }
+
+            const ends = formatStamp(w.ends_at);
+            const dur = formatDuration(w.duration_hours);
+
+            if (w.state === 'active') {
+                return `<div class="da-time-window">⏱ Underway since <b>${starts}</b> · expected to ease
+                    by <b>${ends}</b> <span class="da-region-meta">(${dur} in total)</span>${peak}</div>`;
+            }
+
+            const lead = w.hours_until_start != null
+                ? ` <span class="da-region-meta">(in ~${w.hours_until_start}h)</span>` : '';
+            return `<div class="da-time-window da-time-window--upcoming">⏱ Expected to cross the
+                threshold at <b>${starts}</b>${lead} · easing by <b>${ends}</b>
+                <span class="da-region-meta">(${dur})</span>${peak}</div>`;
+        }
+
+        function loadLocalities() {
+            return fetch('/api/disaster-agent/localities')
+                .then(function(r) { return r.json(); })
+                .then(function(data) { localitiesBySlug = data.localities || {}; })
+                .catch(function(err) { console.error('disaster agent localities fetch failed', err); });
+        }
+
+        // Shared by hotspot cards and watch-list rows: a dropdown offering the
+        // whole city, every named locality within it (Kondapur, Hitec City, ...
+        // - see localities.py), and, for watch-list rows, any other watched
+        // city currently downwind of this signal.
+        function buildAreaSelect(selectId, regionSlug, regionName, possibleTargets) {
+            const locals = localitiesBySlug[regionSlug] || [];
+            const localOptions = locals.map(function(loc, i) {
+                return `<option value="local:${i}">${loc.name}</option>`;
+            }).join('');
+            const targetOptions = (possibleTargets || []).map(function(t) {
+                const w = formatWindow(t.horizon_hours);
+                const eta = w ? `by ~${w.untilLabel}` : `~${t.horizon_hours}h`;
+                return `<option value="target:${t.slug}">${t.name}, ${t.state} (${eta})</option>`;
+            }).join('');
+
+            let html = `<select class="da-target-select" id="${selectId}" title="Which area should the alert be sent to?">`;
+            html += `<option value="">${regionName} (whole city)</option>`;
+            if (localOptions) html += `<optgroup label="Areas in ${regionName}">${localOptions}</optgroup>`;
+            if (targetOptions) html += `<optgroup label="Downwind regions">${targetOptions}</optgroup>`;
+            html += `</select>`;
+            return html;
+        }
+
+        // Reads that dropdown back at send-time and resolves it to a concrete
+        // {name, state, lat, lon} to alert.
+        function resolveAreaSelection(selectId, regionSlug, regionName, regionState, lat, lon, possibleTargets) {
+            const select = document.getElementById(selectId);
+            const value = select ? select.value : '';
+            if (value.indexOf('local:') === 0) {
+                const loc = (localitiesBySlug[regionSlug] || [])[parseInt(value.slice(6), 10)];
+                if (loc) return { name: loc.name + ', ' + regionName, state: regionState, lat: loc.lat, lon: loc.lon };
+            }
+            if (value.indexOf('target:') === 0) {
+                const t = (possibleTargets || []).find(function(x) { return x.slug === value.slice(7); });
+                if (t) return { name: t.name, state: t.state, lat: t.latitude, lon: t.longitude };
+            }
+            return { name: regionName, state: regionState, lat: lat, lon: lon };
+        }
 
         function renderStatus(status) {
             const pill = document.getElementById('daStatusPill');
@@ -1493,9 +1708,7 @@
             if (!list) return;
 
             if (!predictions.length) {
-                list.innerHTML = `<div style="text-align:center; padding: 20px 0; color:#64748b; font-size:13px;">
-                    ✅ No elevated wind / cloud / fire-danger signal projected right now. The panel updates automatically.
-                </div>`;
+                loadWatchList();
                 return;
             }
 
@@ -1522,6 +1735,7 @@
                             <span class="da-badge" style="color:${color}; background:${color}22; border:1px solid ${color}66;">${SEVERITY_LABELS[p.severity] || p.severity}</span>
                         </div>
                     </div>
+                    ${renderHazardWindow(p.window)}
                     <div class="da-headline">${p.headline || ''}</div>
                     <div class="da-narrative">${p.narrative || ''}</div>
                     <div class="da-action">➜ <b>Recommended:</b> ${p.recommended_action || ''}</div>
@@ -1530,12 +1744,95 @@
                         <span>Confidence: ${p.confidence_label || 'n/a'}</span>
                     </div>
                     <div class="da-source-chips">${sources}</div>
-                    <div class="da-card-actions">
-                        <button type="button" class="da-btn-dismiss" onclick="window.dismissDisasterPrediction(${p.id})">Dismiss</button>
-                        <button type="button" class="da-btn-alert" onclick="window.sendDisasterAgentAlert(${p.id})">🚨 Send Alert</button>
+                    <div class="da-card-actions" style="justify-content:space-between;">
+                        ${buildAreaSelect('daHotspotTarget' + p.id, p.region_slug, p.region_name, null)}
+                        <div style="display:flex; gap:8px; flex-shrink:0;">
+                            <button type="button" class="da-btn-dismiss" onclick="window.dismissDisasterPrediction(${p.id})">Dismiss</button>
+                            <button type="button" class="da-btn-alert" onclick="window.sendDisasterAgentAlert(${p.id})">🚨 Send Alert</button>
+                        </div>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // Fallback shown only when no hotspot has cleared the alert threshold -
+        // the raw per-region numbers the agent is working from, so a quiet day
+        // still visibly proves the agent is running rather than reading as broken.
+        function renderWatchList(data) {
+            currentSignals = data.signals || [];
+            const list = document.getElementById('daHotspotList');
+            if (!list) return;
+            const rows = currentSignals;
+
+            if (!rows.length) {
+                list.innerHTML = `<div style="text-align:center; padding: 20px 0; color:#64748b; font-size:13px;">
+                    ✅ No measurable wind / cloud / fire-danger signal anywhere in the ${data.regions_monitored || ''} monitored regions right now.
+                </div>`;
+                return;
+            }
+
+            const watchRows = rows.map(function(s, idx) {
+                const pct = Math.min(100, Math.round((s.strength / (data.source_threshold || 35)) * 100));
+                const bits = [];
+                if (s.wind_speed_kmh != null) bits.push(Math.round(s.wind_speed_kmh) + ' km/h wind');
+                if (s.cloud_cover_pct != null) bits.push(Math.round(s.cloud_cover_pct) + '% cloud');
+                if (s.fire_weather_index != null) bits.push('FFWI ' + Math.round(s.fire_weather_index));
+                if (s.temperature_c != null) bits.push(Math.round(s.temperature_c) + '°C');
+
+                const targets = s.possible_targets || [];
+                const targetSelect = buildAreaSelect('daWatchTarget' + idx, s.region_slug, s.region_name, targets);
+                const earliest = targets.reduce(function(min, t) {
+                    return (t.horizon_hours != null && (min == null || t.horizon_hours < min)) ? t.horizon_hours : min;
+                }, null);
+                const earliestWindow = formatWindow(earliest);
+                const targetHint = targets.length
+                    ? `<span class="da-region-meta">${targets.length} region${targets.length > 1 ? 's' : ''} downwind of this signal's current wind direction${earliestWindow ? ' · earliest estimated arrival by ~' + earliestWindow.untilLabel : ''}</span>`
+                    : `<span class="da-region-meta">No region currently downwind of this signal's wind direction</span>`;
+
+                return `
+                <div class="da-hotspot-card" style="padding: 9px 14px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                        <div>
+                            <span class="da-region-name" style="font-size:12.5px;">${s.region_name}</span>
+                            <span class="da-region-meta"> · ${s.state || ''} · ${hazardLabel(s.hazard_type)}</span>
+                        </div>
+                        <span class="da-region-meta">${bits.join(' · ')}</span>
+                    </div>
+                    <div style="margin-top:5px; display:flex; align-items:center; gap:8px;">
+                        <span class="da-risk-bar-track"><span class="da-risk-bar-fill" style="width:${pct}%; background:#38bdf8;"></span></span>
+                        <span style="font-size:10.5px; color:#64748b;">${s.strength}/100 · alert fires above ${data.source_threshold}</span>
+                    </div>
+                    ${renderHazardWindow(s.window)}
+                    <div style="margin-top:8px;">${targetHint}</div>
+                    <div class="da-card-actions" style="justify-content:space-between; margin-top:8px;">
+                        ${targetSelect}
+                        <button type="button" class="da-btn-alert" onclick="window.sendWatchAlert(${idx}, this)">🚨 Send Alert</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            list.innerHTML = `
+                <div style="text-align:center; padding: 4px 0 12px; color:#64748b; font-size:12px;">
+                    ✅ Nothing has crossed the alert threshold. Here is what the agent is currently watching
+                    across ${data.regions_monitored || ''} regions - the strongest signal is
+                    <b style="color:#94a3b8;">${rows[0].strength}/100</b>, an alert fires above
+                    <b style="color:#94a3b8;">${data.source_threshold}</b>. Sending an alert below
+                    threshold is a judgment call an analyst makes - the agent will not do it on its own.
+                </div>
+                <div class="da-hotspot-list">${watchRows}</div>`;
+        }
+
+        function loadWatchList() {
+            fetch('/api/disaster-agent/signals')
+                .then(function(r) { return r.json(); })
+                .then(renderWatchList)
+                .catch(function(err) {
+                    console.error('disaster agent signals fetch failed', err);
+                    const list = document.getElementById('daHotspotList');
+                    if (list) list.innerHTML = `<div style="text-align:center; padding: 20px 0; color:#64748b; font-size:13px;">
+                        ✅ No elevated wind / cloud / fire-danger signal projected right now. The panel updates automatically.
+                    </div>`;
+                });
         }
 
         function loadStatus() {
@@ -1583,6 +1880,10 @@
             const prediction = currentPredictions.find(function(p) { return p.id === id; });
             if (!prediction) return;
 
+            const target = resolveAreaSelection(
+                'daHotspotTarget' + id, prediction.region_slug, prediction.region_name,
+                prediction.state, prediction.latitude, prediction.longitude, null);
+
             const card = document.querySelector('[data-prediction-id="' + id + '"] .da-btn-alert');
             if (card) { card.disabled = true; card.textContent = 'Sending…'; }
 
@@ -1592,11 +1893,11 @@
                 body: JSON.stringify({
                     message: `AI PREDICTION (${hazardLabel(prediction.hazard_type)}, next ${prediction.horizon_hours}h): ${prediction.headline}`,
                     affected_locations: [{
-                        name: prediction.region_name,
+                        name: target.name,
                         type: hazardLabel(prediction.hazard_type),
                         description: prediction.narrative,
-                        latitude: prediction.latitude,
-                        longitude: prediction.longitude
+                        latitude: target.lat,
+                        longitude: target.lon
                     }]
                 })
             })
@@ -1613,7 +1914,54 @@
                 });
         };
 
-        refreshAll();
+        // Below-threshold watch-list row -> a real alert, for whichever region
+        // the analyst picked in the dropdown (the source itself by default,
+        // or one of the downwind regions the wind is currently pointed at).
+        window.sendWatchAlert = function(idx, btn) {
+            const signal = currentSignals[idx];
+            if (!signal) return;
+
+            const selectId = 'daWatchTarget' + idx;
+            const rawValue = (document.getElementById(selectId) || {}).value || '';
+            const target = resolveAreaSelection(
+                selectId, signal.region_slug, signal.region_name, signal.state,
+                signal.latitude, signal.longitude, signal.possible_targets);
+
+            const isDownwind = rawValue.indexOf('target:') === 0;
+            const downwindMatch = isDownwind
+                ? (signal.possible_targets || []).find(function(t) { return t.slug === rawValue.slice(7); })
+                : null;
+            const description = downwindMatch
+                ? `Analyst-flagged: ${hazardLabel(signal.hazard_type)} signal at ${signal.region_name} (${signal.strength}/100, below the alert threshold) is currently downwind of ${target.name}, ~${downwindMatch.horizon_hours}h out.`
+                : `Analyst-flagged: below-threshold ${hazardLabel(signal.hazard_type)} signal at ${signal.region_name} (${signal.strength}/100). Sent ahead of the agent's own alert threshold.`;
+
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+            fetch('/send_global_alert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: `ANALYST WATCH ALERT (${hazardLabel(signal.hazard_type)}${downwindMatch ? ', via ' + signal.region_name : ''}): ${target.name}, ${target.state}`,
+                    affected_locations: [{
+                        name: target.name, type: hazardLabel(signal.hazard_type),
+                        description: description, latitude: target.lat, longitude: target.lon
+                    }]
+                })
+            })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (btn) {
+                        btn.textContent = data.success !== false ? 'Alert Sent ✓' : 'Failed';
+                        if (data.success === false) btn.disabled = false;
+                    }
+                })
+                .catch(function(err) {
+                    console.error('send watch alert failed', err);
+                    if (btn) { btn.disabled = false; btn.textContent = '🚨 Send Alert'; }
+                });
+        };
+
+        loadLocalities().then(refreshAll);
         setInterval(refreshAll, 90000);
     })();
     </script>

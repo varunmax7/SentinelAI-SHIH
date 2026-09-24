@@ -63,6 +63,44 @@ class GodModeMap {
         else this.pendingOps.push(fn);
     }
 
+    // 15.9: terrain is available on this map but never enabled automatically -
+    // these heatmap/warning views are about density, and relief can distract
+    // from that, per the twin's own design notes. Call this explicitly (e.g.
+    // from a future settings toggle) to turn it on for one instance.
+    enableTerrain(exaggeration) {
+        const self = this;
+        this.executeWhenLoaded(() => {
+            if (self.map.getSource('god-mode-dem')) return; // idempotent
+            self.map.addSource('god-mode-dem', {
+                type: 'raster-dem',
+                tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                encoding: 'terrarium', tileSize: 256, maxzoom: 14
+            });
+            self.map.setTerrain({ source: 'god-mode-dem', exaggeration: exaggeration || 1.4 });
+            self.map.addSource('god-mode-dem-hillshade', {
+                type: 'raster-dem',
+                tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                encoding: 'terrarium', tileSize: 256, maxzoom: 14
+            });
+            self.map.addLayer({
+                id: 'god-mode-hillshade', type: 'hillshade', source: 'god-mode-dem-hillshade',
+                paint: {
+                    'hillshade-shadow-color': 'rgba(2,6,23,0.55)',
+                    'hillshade-highlight-color': 'rgba(148,163,184,0.25)',
+                    'hillshade-exaggeration': 0.35,
+                    'hillshade-illumination-direction': 315
+                }
+            });
+        });
+    }
+
+    disableTerrain() {
+        this.executeWhenLoaded(() => {
+            this.map.setTerrain(null);
+            if (this.map.getLayer('god-mode-hillshade')) this.map.removeLayer('god-mode-hillshade');
+        });
+    }
+
     addLiveUIBadge() {
         const liveBadge = document.createElement('div');
         liveBadge.style.position = 'absolute';

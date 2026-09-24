@@ -60,6 +60,24 @@ def build_prediction_models(db):
         # wind/cloud/fire readings - what the drill-down panel renders and
         # what the narrative above is supposed to be traceable to.
         contributing_json = db.Column(db.Text, nullable=True)
+        # --- hazard window (see window.py) ---
+        # When this hazard is expected to be above the alert threshold, read
+        # off the hourly forecast with the same scoring function that produced
+        # `risk_score`. `window_ends_at` is NULL whenever the signal is still
+        # elevated at the end of the available forecast - that is the
+        # `window_open_ended` case, and it must never be rendered as an
+        # all-clear.
+        window_state = db.Column(db.String(20), nullable=True)  # active | upcoming | clear
+        window_starts_at = db.Column(db.DateTime, nullable=True)
+        window_ends_at = db.Column(db.DateTime, nullable=True)
+        window_peak_at = db.Column(db.DateTime, nullable=True)
+        window_peak_strength = db.Column(db.Float, nullable=True)
+        window_open_ended = db.Column(db.Boolean, default=False)
+        # The one-sentence rendering, generated deterministically (never by the
+        # LLM - it is times and durations, which the model may quote but not
+        # produce).
+        window_text = db.Column(db.Text, nullable=True)
+
         # True when written by the deterministic template because no LLM key
         # was configured or the call failed - the UI must say so, never imply
         # a model wrote a brief it did not.
@@ -99,6 +117,15 @@ def build_prediction_models(db):
                 'narrative': self.narrative,
                 'recommended_action': self.recommended_action,
                 'contributing_sources': self.contributing_sources(),
+                'window': {
+                    'state': self.window_state,
+                    'starts_at': self.window_starts_at.isoformat() + 'Z' if self.window_starts_at else None,
+                    'ends_at': self.window_ends_at.isoformat() + 'Z' if self.window_ends_at else None,
+                    'peak_at': self.window_peak_at.isoformat() + 'Z' if self.window_peak_at else None,
+                    'peak_strength': self.window_peak_strength,
+                    'open_ended': bool(self.window_open_ended),
+                },
+                'window_text': self.window_text,
                 'generated_offline': self.generated_offline,
                 'status': self.status,
                 'created_at': self.created_at.isoformat() if self.created_at else None,

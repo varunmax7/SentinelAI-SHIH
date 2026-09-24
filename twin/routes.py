@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, Response, render_template, request, stream_with_context
 
 from . import config as twin_config
-from . import engine, seed, serializers
+from . import aerial, engine, seed, serializers
 from .geo import haversine_m
 from .ingest.overpass import CameraAdapter, WaterAdapter
 from .ingest.rainviewer import RainViewerAdapter
@@ -39,6 +39,13 @@ ATTRIBUTIONS = [
     {'data': 'NASA GIBS', 'text': 'NASA EOSDIS GIBS'},
     {'data': 'KartaView', 'text': '(c) KartaView contributors (CC BY-SA)'},
     {'data': 'Mapillary', 'text': '(c) Mapillary contributors (CC BY-SA)'},
+    {'data': 'Esri World Imagery (aerial crops)',
+     'text': '(c) Esri, Maxar, Earthstar Geographics'},
+    {'data': 'OpenSky Network', 'text': 'Aircraft positions (c) OpenSky Network, CC BY-SA 4.0'},
+    {'data': 'EMSC', 'text': 'Seismicity (c) EMSC-CSEM (seismicportal.eu)'},
+    {'data': 'NASA EONET / FIRMS', 'text': 'Natural events and thermal anomalies: NASA, open data'},
+    {'data': 'GDELT', 'text': 'Geocoded news: The GDELT Project'},
+    {'data': 'Windy Webcams', 'text': 'Live webcam frames via Windy Webcams API, (c) their respective operators'},
     {'data': 'RainViewer', 'text': 'RainViewer.com'},
     {'data': 'Open-Meteo', 'text': 'Open-Meteo.com (CC BY 4.0)'},
 ]
@@ -175,6 +182,12 @@ def build_blueprints(db, models, Report):
         reports = [p for p in pins if p['h3'] == h3_index]
 
         payload = serializers.cell_detail(cell, states, assets, reports, zone=cell.zone)
+        # Instant, and of this exact cell. The imagery panel is a separate,
+        # much slower request (five to seventeen KartaView round trips on a
+        # cold cell); without this the drawer shows "Loading..." and no
+        # picture at all for that whole time.
+        payload['aerial'] = aerial.crop_for_point(cell.center_latitude,
+                                                  cell.center_longitude)
         return serializers.json_response(payload, etag=False)
 
     @api.route('/<city_slug>/summary')
@@ -289,6 +302,39 @@ def build_blueprints(db, models, Report):
             {'polled': alert_service.poll_alerts(db, models, force=bool(body.get('force')))},
             etag=False)
 
+    # -- live stations & transit ---------------------------------------------
+    @api.route('/<city_slug>/live')
+    @twin_access_required()
+    def live_all(city_slug):
+        city, error = get_city_or_404(city_slug)
+        if error:
+            return error
+        from . import live
+        return serializers.json_response({
+            'city': city.slug,
+            'stations': live.live_stations(models, city),
+            'vehicles': live.live_vehicles(models, city),
+        }, etag=False)
+
+    @api.route('/<city_slug>/live/<kind>')
+    @twin_access_required()
+    def live_kind(city_slug, kind):
+        city, error = get_city_or_404(city_slug)
+        if error:
+            return error
+        from . import live
+        if kind == 'stations':
+            return serializers.json_response({'city': city.slug, 'stations': live.live_stations(models, city)}, etag=False)
+        if kind == 'transit':
+            return serializers.json_response({'city': city.slug, 'vehicles': live.live_vehicles(models, city)}, etag=False)
+        return serializers.json_response({'error': 'kind must be "stations" or "transit"'}, etag=False)
+
+    @api.route('/live/refresh', methods=['POST'])
+    @twin_access_required(admin=True)
+    def live_refresh():
+        from . import live
+        return serializers.json_response(live.poll_all(db, models), etag=False)
+
     # -- agent flag queue ---------------------------------------------------
     @api.route('/flags')
     @twin_access_required()
@@ -310,6 +356,40 @@ def build_blueprints(db, models, Report):
             # supported steady state.
             'agent_available': twin_config.agent_available(),
         }, etag=False)
+
+    @api.route('/<city_slug>/flags/areas')
+    @twin_access_required()
+    def flag_areas(city_slug):
+        """A circle footprint per active flag, for the map's 3D flag walls.
+
+        Reuses `dispatch.flag_footprint` rather than recomputing a shape -
+        the same circle a dispatch would actually alert around is the one
+        drawn as "this area is under review", so the map never shows a
+        footprint that disagrees with what Send would really reach.
+        """
+        city, error = get_city_or_404(city_slug)
+        if error:
+            return error
+
+        from . import dispatch as dispatch_service
+
+        rows = (models.TwinFlag.query
+                .filter_by(city_id=city.id)
+                .filter(models.TwinFlag.status.in_(('pending', 'approved')))
+                .all())
+
+        areas = []
+        for flag in rows:
+            footprint = dispatch_service.flag_footprint(models, flag)
+            if footprint is None:
+                continue
+            lat, lon, radius_km = footprint
+            areas.append({
+                'id': flag.id, 'hazard_type': flag.hazard_type,
+                'severity': flag.severity, 'status': flag.status,
+                'lat': lat, 'lon': lon, 'radius_m': round(radius_km * 1000.0, 1),
+            })
+        return serializers.json_response({'city': city.slug, 'areas': areas}, etag=False)
 
     @api.route('/flags/<int:flag_id>', methods=['POST'])
     @twin_access_required(admin=True)
@@ -344,13 +424,72 @@ def build_blueprints(db, models, Report):
         return serializers.json_response(
             {'flag': serializers.flag_payload(flag, city.slug if city else None)}, etag=False)
 
+    @api.route('/flags/<int:flag_id>/dispatch/preview')
+    @twin_access_required(admin=True)
+    def dispatch_preview(flag_id):
+        """How many people a dispatch would reach, before anything sends."""
+        from . import dispatch as dispatch_service
+
+        flag = models.TwinFlag.query.get(flag_id)
+        if flag is None:
+            return serializers.json_response({'error': 'Unknown flag'}, etag=False)
+
+        try:
+            return serializers.json_response(dispatch_service.preview(models, flag), etag=False)
+        except dispatch_service.DispatchError as exc:
+            return serializers.json_response({'error': str(exc)}, etag=False), 400
+
+    @api.route('/flags/<int:flag_id>/dispatch', methods=['POST'])
+    @twin_access_required(admin=True)
+    def dispatch_flag(flag_id):
+        """Send. The only route in the twin that can reach a real phone."""
+        from flask_login import current_user
+
+        from . import dispatch as dispatch_service
+
+        flag = models.TwinFlag.query.get(flag_id)
+        if flag is None:
+            return serializers.json_response({'error': 'Unknown flag'}, etag=False)
+
+        body = request.get_json(silent=True) or {}
+        try:
+            result = dispatch_service.send(
+                db, models, flag, getattr(current_user, 'id', None),
+                note=body.get('note'), force=bool(body.get('force')))
+        except dispatch_service.DispatchError as exc:
+            return serializers.json_response({'error': str(exc)}, etag=False), 400
+
+        city = models.TwinCity.query.get(flag.city_id) if flag.city_id else None
+        if city is not None:
+            from .stream import publish
+            publish(city.slug, 'state', {
+                'city': city.slug, 'reason': 'flag_dispatched', 'flag_id': flag.id,
+            })
+        return serializers.json_response(result, etag=False)
+
+    @api.route('/flags/<int:flag_id>/dispatch/history')
+    @twin_access_required(admin=True)
+    def dispatch_history(flag_id):
+        from . import dispatch as dispatch_service
+        return serializers.json_response(
+            {'dispatches': dispatch_service.dispatch_history(models, flag_id)}, etag=False)
+
     @api.route('/agent/run', methods=['POST'])
     @twin_access_required(admin=True)
     def agent_run():
-        from .agent import run_triage
+        from .agent import run_forecast, run_triage
         body = request.get_json(silent=True) or {}
-        return serializers.json_response(
-            {'triage': run_triage(db, models, city_slug=body.get('city'))}, etag=False)
+        slug = body.get('city')
+        return serializers.json_response({
+            'triage': run_triage(db, models, city_slug=slug),
+            'forecast': run_forecast(db, models, city_slug=slug),
+        }, etag=False)
+
+    @api.route('/agent/status')
+    @twin_access_required()
+    def agent_status_route():
+        from .agent import agent_status
+        return serializers.json_response(agent_status(), etag=False)
 
     # -- lazy OSM layers ----------------------------------------------------
     @api.route('/<city_slug>/cameras')
@@ -421,6 +560,60 @@ def build_blueprints(db, models, Report):
                 'cells': count,
             } for at, avg, mx, count in rows],
         }, etag=False)
+
+    def _report_photos_near(lat, lon, radius_m, limit=6):
+        """Photos from this app's own reports within `radius_m` of a point.
+
+        These are the only pictures in the drawer that are both recent AND
+        genuinely of this exact place, so they lead the panel whenever one
+        exists. Scanning is bounded by a lat/lon box first so the distance
+        maths only ever runs over a handful of rows.
+        """
+        from urllib.parse import quote
+
+        span = radius_m / 111000.0
+        since = datetime.utcnow() - timedelta(hours=twin_config.GROUND_REPORT_LOOKBACK_H)
+        try:
+            rows = (Report.query
+                    .filter(Report.timestamp >= since,
+                            Report.image_file.isnot(None),
+                            Report.image_file != '',
+                            Report.latitude.between(lat - span, lat + span),
+                            Report.longitude.between(lon - span, lon + span))
+                    .order_by(Report.timestamp.desc())
+                    .limit(50)
+                    .all())
+        except Exception:  # noqa: BLE001 - C1: a DB surprise hides this source, not the drawer
+            return []
+
+        out = []
+        for report in rows:
+            distance = haversine_m(lat, lon, report.latitude, report.longitude)
+            if distance > radius_m:
+                continue
+            url = '/static/uploads/%s' % quote(report.image_file)
+            out.append({
+                'provider': 'Citizen report',
+                'licence': 'reporter-submitted',
+                'id': 'report:%s' % report.id,
+                'lat': float(report.latitude),
+                'lon': float(report.longitude),
+                'heading': None,
+                'title': report.title,
+                'hazard_type': report.hazard_type,
+                'status': report.verification_status,
+                'captured_at': report.timestamp.isoformat() + 'Z' if report.timestamp else None,
+                'thumb_url': url,
+                'full_url': url,
+                # /report/<id> does not exist in this app - the route is
+                # /view_report/<id>, so the old link 404'd.
+                'page_url': '/view_report/%s' % report.id,
+                'distance_m': round(distance, 1),
+                'live': False,
+            })
+            if len(out) >= limit:
+                break
+        return out
 
     # -- ground truth -------------------------------------------------------
     @api.route('/cctv')
@@ -494,10 +687,173 @@ def build_blueprints(db, models, Report):
         # is. Previously the UI only ever rendered `facing`, so a camera whose
         # bearing matched nothing showed a caption and no picture at all - even
         # with a good photo of the same junction thirty metres away.
+        # Report photos are the only imagery that is both recent and genuinely
+        # of this exact spot, so they are fetched for every point and rendered
+        # ahead of everything else when one exists.
+        payload['reports'] = _report_photos_near(
+            lat, lon, twin_config.STREETVIEW_REPORT_RADIUS_M)
+        # The floor: every point gets a satellite crop of itself, so no
+        # location is ever left showing only the shared city webcam. Ranked
+        # below every ground-level source - it is the right answer to "what is
+        # here" and the wrong answer to "what does this look like".
+        payload['aerial'] = aerial.crop_for_point(lat, lon)
         payload['best'], payload['best_kind'] = _best_view(payload)
         payload['caption'] = _view_caption(payload, direction)
         payload['live_source_available'] = bool(twin_config.WINDY_WEBCAMS_KEY)
         return serializers.json_response(payload, etag=False)
+
+    @api.route('/cctv/caption')
+    @twin_access_required()
+    def cctv_caption():
+        """A vision-model reading of the same 'best' image `/cctv/view` would
+        lead with, for this exact point.
+
+        Deliberately re-derives the image server-side from lat/lon rather
+        than accepting an image URL from the client - that keeps this route
+        from ever fetching an arbitrary caller-supplied URL (SSRF), and it
+        only ever reads from the same three providers `/cctv/view` already
+        trusts. Called lazily by the drawer, never from the compute pass.
+        """
+        from . import vision
+        if not vision.vision_available():
+            return serializers.json_response(
+                {'available': False,
+                 'reason': 'No NVIDIA_API_KEY/OPENROUTER_API_KEY configured.'}, etag=False)
+
+        lat, lon, bad = _point_args()
+        if bad:
+            return bad
+        direction = request.args.get('direction')
+        try:
+            direction = float(direction) if direction not in (None, '') else None
+        except ValueError:
+            direction = None
+
+        city_lat = city_lon = None
+        city_slug = request.args.get('city')
+        if city_slug:
+            city = models.TwinCity.query.filter_by(slug=city_slug).first()
+            if city is not None:
+                city_lat, city_lon = city.center_latitude, city.center_longitude
+
+        result = StreetViewAdapter().run(
+            lat=lat, lon=lon, direction=direction,
+            city_lat=city_lat, city_lon=city_lon,
+            radius_m=_float_arg('radius', twin_config.STREETVIEW_RADIUS_M))
+        payload = result.data or {'images': [], 'facing': None, 'nearest': None, 'live': []}
+        best, best_kind = _best_view(payload)
+        if not best:
+            return serializers.json_response(
+                {'available': True, 'caption': None, 'reason': 'No imagery for this point.'}, etag=False)
+
+        image_url = best.get('thumb_url') or best.get('full_url')
+        caption = vision.caption_ground_image(image_url, label=best.get('title') or best.get('provider'))
+        if caption is None or caption.get('error'):
+            # Say which thing failed. "Vision model call failed" was reported
+            # even when the real problem was the provider's own image URL
+            # returning 404, which points an operator at the wrong fix.
+            return serializers.json_response(
+                {'available': True, 'caption': None,
+                 'reason': (caption or {}).get(
+                     'reason', 'Vision model call failed or timed out.')}, etag=False)
+        caption['kind'] = best_kind
+        return serializers.json_response({'available': True, 'caption': caption}, etag=False)
+
+    @api.route('/cctv/streams')
+    @twin_access_required()
+    def cctv_streams():
+        """Operator-supplied live feeds - see cameras.py's module docstring.
+
+        Every URL is returned as-is for the browser to load directly; this
+        route never fetches one itself.
+        """
+        from . import cameras
+        city_slug = request.args.get('city')
+        if not city_slug:
+            return serializers.json_response({'error': 'city is required'}, etag=False)
+
+        lat, lon = None, None
+        try:
+            lat = float(request.args.get('lat')) if request.args.get('lat') else None
+            lon = float(request.args.get('lon')) if request.args.get('lon') else None
+        except ValueError:
+            pass
+
+        radius = _float_arg('radius', None)
+        streams = cameras.streams_near(city_slug, lat, lon, radius_m=radius)
+        return serializers.json_response({'city': city_slug, 'streams': streams}, etag=False)
+
+    @api.route('/<city_slug>/osint')
+    @twin_access_required()
+    def osint_feed(city_slug):
+        """Open-source intelligence within OSINT_RADIUS_KM of this city.
+
+        A GeoJSON FeatureCollection of located observations - live aircraft,
+        regional seismicity, open natural-event tracks, satellite thermal
+        anomalies - plus a `news` list, which is deliberately NOT geometry:
+        GDELT says an article is about this city, never where in it. See
+        twin/osint.py for what each source is and what was verified.
+
+        Never an official warning. Official alerts stay on their own
+        SACHET/IMD layer, and this route must never be mistaken for one.
+        """
+        from . import osint
+
+        city, error = get_city_or_404(city_slug)
+        if error:
+            return error
+        kinds = request.args.get('kinds')
+        payload = osint.collect(
+            city, kinds=[k.strip() for k in kinds.split(',')] if kinds else None)
+        # Aircraft positions are seconds old; nothing here may sit in an
+        # edge cache.
+        return serializers.json_response(payload, etag=False)
+
+    @api.route('/<city_slug>/osint/near')
+    @twin_access_required()
+    def osint_near(city_slug):
+        """OSINT for one clicked point, not the whole city.
+
+        Served from the same cached city collection `/osint` builds, with
+        every distance re-measured against this point - so opening cell
+        drawers costs no extra requests to OpenSky, EMSC, EONET or FIRMS.
+        """
+        from . import osint
+
+        city, error = get_city_or_404(city_slug)
+        if error:
+            return error
+        lat, lon, bad = _point_args()
+        if bad:
+            return bad
+        radius = _float_arg('radius', twin_config.OSINT_NEAR_RADIUS_KM)
+        return serializers.json_response(
+            osint.near_point(city, lat, lon, radius_km=radius), etag=False)
+
+    @api.route('/<city_slug>/ground-imagery')
+    @twin_access_required()
+    def ground_imagery(city_slug):
+        """Every location in one city that has a picture, from every source.
+
+        This is the city-scale counterpart to `/cctv/view`, which answers for
+        one point. See twin/ground.py for which sources are real, which are
+        blocked and why, and which were checked and rejected.
+
+        `?fresh=1` re-pulls the live webcam frames only. The archival
+        providers are left on their own 24 h cache - a 60-second refresh loop
+        re-querying photographs taken in 2019 would be pure noise upstream.
+        """
+        from . import ground
+
+        city, error = get_city_or_404(city_slug)
+        if error:
+            return error
+        zones = city.zones.order_by(models.TwinZone.name).all()
+        board = ground.build_board(
+            city, zones, Report=Report,
+            fresh=request.args.get('fresh', '').lower() in ('1', 'true', 'yes'))
+        # Never cached at the edge: half of what this returns claims to be live.
+        return serializers.json_response(board, etag=False)
 
     @api.route('/streetview')
     @twin_access_required()
@@ -695,17 +1051,44 @@ def build_blueprints(db, models, Report):
 def _best_view(payload):
     """Pick the single image to lead with, and name what it is.
 
-    Order is a strict honesty ranking, not a quality one: a live frame beats an
-    archival photo pointing the right way, which beats an archival photo
-    pointing somewhere else. The caller renders `best_kind` next to the image so
-    the operator is never left guessing which of the three they are looking at.
+    A citizen report photo within STREETVIEW_REPORT_RADIUS_M wins outright: it
+    is the only imagery here that is recent AND of this exact place. After
+    that, a genuine nearby photo of THIS point - found within the normal search
+    radius, not the widened fallback (see streetview.py's
+    STREETVIEW_FALLBACK_RADIUS_M) - beats the live webcam. The live frame is
+    current, but it is shared across every cell in the city (Bengaluru has
+    exactly one registered public webcam - see streetview.py's module
+    docstring), so leading with it made every cell's drawer show the
+    identical image. A real photo actually taken near the clicked point is
+    the one thing that differs cell to cell, so it leads whenever one
+    exists close enough to mean something. A widened-fallback photo - found
+    several km out - is honest borrowed context, same tier as the webcam,
+    not "this location" either, so it only leads when nothing closer exists
+    at all. The caller renders `best_kind` next to the image so the
+    operator is never left guessing which of the three they are looking at.
     """
+    # A citizen report photo outranks everything: it is recent AND it is this
+    # exact place, which no other source here manages at once.
+    reports = payload.get('reports') or []
+    if reports:
+        return reports[0], 'report'
+
+    close_photo = payload.get('facing') or payload.get('nearest')
+    if close_photo and not payload.get('widened'):
+        return close_photo, ('facing' if payload.get('facing') else 'nearest')
+
+    # Nothing close exists. Everything still on the table is a picture of
+    # somewhere else, except the satellite crop - so the crop leads. A photo
+    # found 2 km out by the widened ring and a webcam 4.5 km out are both
+    # "not here", and the webcam is worse: it is byte-identical in every cell
+    # of the city, which is exactly how eight different locations end up
+    # showing the same image.
+    if payload.get('aerial'):
+        return payload['aerial'], 'aerial'
+    if close_photo:
+        return close_photo, ('facing' if payload.get('facing') else 'nearest')
     if payload.get('live'):
         return payload['live'][0], 'live'
-    if payload.get('facing'):
-        return payload['facing'], 'facing'
-    if payload.get('nearest'):
-        return payload['nearest'], 'nearest'
     return None, 'none'
 
 
@@ -723,6 +1106,15 @@ def _view_caption(payload, direction):
                 % (best.get('title') or best.get('provider'), where,
                    best.get('captured_at') or 'recently'))
 
+    if kind == 'report':
+        return ('Photo from a citizen report %d m from this point - %s (%s, %s). '
+                'Recent and genuinely this place; it is a reporter\'s photo, not a '
+                'camera feed.'
+                % (round(best.get('distance_m') or 0),
+                   best.get('title') or 'untitled report',
+                   (best.get('hazard_type') or 'report').replace('_', ' '),
+                   best.get('status') or 'unreviewed'))
+
     if kind == 'facing':
         return ('Open street-level photo looking ~%s, the direction this camera faces '
                 '(%s, %s). Archival - not a live feed.'
@@ -739,8 +1131,17 @@ def _view_caption(payload, direction):
                    (' looking ~%s' % _compass(heading)) if heading is not None else '',
                    best.get('provider'), best.get('captured_at') or 'date unknown'))
 
-    return ('No open imagery within range of this point. OpenStreetMap maps camera '
-            'locations, not camera feeds, and no webcam publishes this place.')
+    if kind == 'aerial':
+        return ('Satellite view of this exact point (%s, ~%d m across). No ground-level '
+                'photograph of this place exists in any open source, so this is the '
+                'closest honest answer - it looks straight down, not along a street, '
+                'and carries no capture date.'
+                % (best.get('provider'), best.get('span_m') or 0))
+
+    return ('No street-level photograph exists for this point in KartaView or '
+            'Mapillary, and no citizen report here carries a photo. OpenStreetMap '
+            'maps camera locations, not camera feeds, and no webcam publishes this '
+            'place.')
 
 
 def _compass(bearing):

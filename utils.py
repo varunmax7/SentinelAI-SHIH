@@ -600,9 +600,20 @@ def validate_report_accuracy_4params(report, weather_data=None, heatmap_data=Non
     severity_score = max(0.0, min(1.0, severity_score))
     severity = _severity_label(severity_score)
 
+    # An image that is a photograph OF A SCREEN blocks auto-approval outright,
+    # rather than merely scoring low enough to miss the bar. Today the capped
+    # image score happens to hold the blended total to ~0.81 against an 0.85
+    # threshold - but that is arithmetic coincidence across two weighted
+    # averages, and reweighting any parameter would silently re-open the hole.
+    # A provenance failure is a categorical "a human must look at this", so it
+    # is carried as a flag and enforced as one.
+    rephotographed = bool(image_processing.get('rephotographed'))
+
     return {
         'overall_accuracy': overall_accuracy,
         'accuracy_percent': int(overall_accuracy * 100),
+        'rephotographed': rephotographed,
+        'requires_human_review': rephotographed,
         'severity': severity,
         'severity_score': severity_score,
         'severity_percent': int(severity_score * 100),
@@ -960,6 +971,163 @@ def _extract_json_object(text):
     return None
 
 
+
+# --- vision providers and model candidates ------------------------------------
+# Two providers, tried in that order. All timings verified directly against a
+# real KartaView street photo on 2026-09-24 with the production prompt:
+#
+#   OpenAI (OPENAI_API_KEY, a real sk-proj- key, billed)
+#     gpt-4.1-mini    200, 2.2s,   539 tokens, clean JSON   <- default
+#     gpt-5.4-nano    200, 4.6s,   446 tokens, clean JSON
+#     gpt-4o-mini     200, 4.1s, 14316 tokens  - works, but ~26x the tokens
+#                     of gpt-4.1-mini for the same picture, so it is not used
+#
+#   OpenRouter free tier (KIMI_API_KEY; NVIDIA_API_KEY is EXPIRED - verified
+#   HTTP 401 "API key expired" against /api/v1/key)
+#     nex-agi/nex-n2.5-mini:free          200, 4.3s, clean JSON
+#     nvidia/nemotron-3-nano-...:free     200, 4.5s, clean JSON
+#     google/gemma-4-31b-it:free          200, 5.3s, clean JSON
+#
+# Checked and rejected, each for a specific reason:
+#   inclusionai/ling-3.0-flash-vl:free   404, retired to paid-only. This was
+#                                        the old fallback and is exactly what
+#                                        produced the "HTTP 404 ... use this
+#                                        slug instead" error an analyst saw.
+#   thinkingmachines/inkling-small:free  403, agentic harnesses only.
+#   dots-studio/dots-3-note-preview:free 200 but never parseable JSON.
+#   nex-agi/nex-n2.5-pro:free            200 but 37s, past every deadline here.
+#   qwen/qwen3.8-27b:free                429 while testing; kept as a late
+#   google/gemma-4-26b-a4b-it:free       fallback since free-pool saturation
+#                                        is transient, unlike a 404.
+#
+# The free models stay in the chain behind OpenAI deliberately: they cost
+# nothing, and they are what keeps captions working if the OpenAI key hits a
+# billing or quota wall. A paid key failing should degrade to free, not to
+# no caption at all.
+OPENAI_VISION_MODELS = tuple(
+    m.strip() for m in os.environ.get(
+        'OPENAI_VISION_MODELS', 'gpt-4.1-mini,gpt-5.4-nano').split(',') if m.strip())
+
+OPENROUTER_VISION_MODELS = (
+    'nex-agi/nex-n2.5-mini:free',
+    'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+    'google/gemma-4-31b-it:free',
+    'qwen/qwen3.8-27b:free',
+    'google/gemma-4-26b-a4b-it:free',
+)
+
+# How sure the model must be that a photo is a re-capture of a screen or
+# printout before it is penalised. Measured on a real submission with a macOS
+# dock and keyboard in frame: gpt-4.1-mini said 0.95, gpt-5.4-nano 0.95, and
+# both named the specific evidence. A genuine outdoor photo scored
+# direct_photo at 0.9. 0.70 sits well clear of both.
+REPHOTOGRAPH_MIN_CONFIDENCE = float(os.environ.get('REPHOTOGRAPH_MIN_CONFIDENCE', '0.70'))
+# Capped, not zeroed: the hazard depicted may be perfectly real and worth an
+# analyst's eye. What a photo of a screen cannot do is prove the reporter was
+# there, so it must never carry enough weight to clear an auto-approval bar.
+REPHOTOGRAPH_SCORE_CAP = float(os.environ.get('REPHOTOGRAPH_SCORE_CAP', '0.25'))
+
+OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions'
+OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions'
+
+# Models that answered 404/403 in THIS process. A retired or gated model
+# answers the same way every time, so re-asking only burns the budget that
+# the next, working candidate needs.
+_DEAD_VISION_MODELS = set()
+
+
+def vision_routes():
+    """[(provider, api_key, model_id)] in the order they should be tried.
+
+    OpenAI first because its key is verified live and billed, so it is not
+    subject to the free tier's per-model saturation. OpenRouter's free models
+    follow as a genuine fallback rather than as decoration.
+
+    NVIDIA_VISION_MODEL / VISION_FALLBACK_MODEL still win when set, so an
+    operator can pin a model without editing code.
+    """
+    routes = []
+
+    openai_key = os.environ.get('OPENAI_API_KEY')
+    if openai_key:
+        for model_id in OPENAI_VISION_MODELS:
+            routes.append(('openai', openai_key, model_id))
+
+    # Every configured OpenRouter key is tried, not just the first present
+    # one: a plain `A or B` only falls through when A is unset, which never
+    # helps when A is set but expired - exactly the NVIDIA_API_KEY case.
+    or_keys = []
+    for candidate in (os.environ.get('OPENROUTER_API_KEY'),
+                      os.environ.get('KIMI_API_KEY'),
+                      os.environ.get('NVIDIA_API_KEY')):
+        if candidate and candidate not in or_keys:
+            or_keys.append(candidate)
+
+    pinned = [v for v in (os.environ.get('NVIDIA_VISION_MODEL'),
+                          os.environ.get('VISION_FALLBACK_MODEL')) if v]
+    or_models = pinned + [m for m in OPENROUTER_VISION_MODELS if m not in pinned]
+    for key in or_keys:
+        for model_id in or_models:
+            routes.append(('openrouter', key, model_id))
+
+    return [r for r in routes if r[2] not in _DEAD_VISION_MODELS]
+
+
+def mark_vision_model_dead(model_id):
+    """Remember a 404/403 so the rest of this process stops asking."""
+    _DEAD_VISION_MODELS.add(model_id)
+
+
+def vision_request_kwargs(provider, api_key, model_id, prompt, mime_type,
+                          image_b64, timeout):
+    """One provider-shaped request for the same vision question.
+
+    The two APIs differ in three ways that each cause a silent failure if got
+    wrong: OpenAI's reasoning models (gpt-5*) reject `max_tokens` and require
+    `max_completion_tokens`, they reject a non-default `temperature`, and
+    OpenRouter needs the `reasoning` block to keep a reasoning model from
+    spending its whole allowance thinking and returning empty content.
+    """
+    body = {
+        'model': model_id,
+        'messages': [{
+            'role': 'user',
+            'content': [
+                {'type': 'text', 'text': prompt},
+                {'type': 'image_url',
+                 'image_url': {'url': 'data:%s;base64,%s' % (mime_type, image_b64)}},
+            ],
+        }],
+    }
+
+    if provider == 'openai':
+        # gpt-5 and o-series are reasoning models with a different parameter
+        # contract; sending the older pair is a 400, not a warning.
+        if model_id.startswith(('gpt-5', 'o1', 'o3', 'o4')):
+            body['max_completion_tokens'] = 1200
+        else:
+            body['max_tokens'] = 1200
+            body['temperature'] = 0.1
+        url = OPENAI_CHAT_URL
+        headers = {'Authorization': 'Bearer %s' % api_key,
+                   'Content-Type': 'application/json'}
+    else:
+        # Reasoning tokens are billed against max_tokens. At 300 a reasoning
+        # model spent the entire allowance on its chain and returned
+        # content=None - which surfaced to an analyst as "Vision model call
+        # failed or timed out". Verified: same model, same image, 300 -> empty,
+        # 1200 -> a clean caption in 4.5s.
+        body['max_tokens'] = 1200
+        body['temperature'] = 0.1
+        body['reasoning'] = {'effort': 'low'}
+        url = OPENROUTER_CHAT_URL
+        headers = {'Authorization': 'Bearer %s' % api_key,
+                   'Accept': 'application/json',
+                   'HTTP-Referer': 'https://sentinel-ai.local',
+                   'X-Title': 'Sentinel AI'}
+
+    return dict(url=url, headers=headers, json=body, timeout=timeout)
+
 def _validate_image_processing(report):
     """
     Parameter 4: Run the report's uploaded photo through the NVIDIA Nemotron
@@ -983,9 +1151,20 @@ def _validate_image_processing(report):
     if not report.image_file:
         return {'score': 0.30, 'analysis': 'Image processing skipped: No photo attached to report', 'severity': 'unknown', 'severity_score': 0.0}
 
-    api_key = os.environ.get('NVIDIA_API_KEY') or os.environ.get('OPENROUTER_API_KEY')
-    if not api_key:
-        return {'score': 0.50, 'analysis': 'Image processing unavailable: NVIDIA_API_KEY not configured', 'severity': 'unknown', 'severity_score': 0.0}
+    # NVIDIA_API_KEY is an OpenRouter key (format sk-or-...) and was found
+    # expired on OpenRouter's side (verified directly - HTTP 401 "API key
+    # expired" against https://openrouter.ai/api/v1/key). KIMI_API_KEY, used
+    # elsewhere in this app for the twin's triage/forecast agent, is a
+    # separate, live OpenRouter key that reaches the same free vision
+    # models. A plain `A or B` only falls through when A is unset - it never
+    # helps when A is set but invalid, which is exactly this case - so every
+    # configured key is tried in turn below, not just resolved once here.
+    routes = vision_routes()
+    if not routes:
+        return {'score': 0.50,
+                'analysis': ('Image processing unavailable: no vision key configured '
+                             '(set OPENAI_API_KEY, or an OpenRouter key)'),
+                'severity': 'unknown', 'severity_score': 0.0}
 
     try:
         upload_folder = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
@@ -1001,22 +1180,23 @@ def _validate_image_processing(report):
         image_b64 = base64.b64encode(image_bytes).decode('utf-8')
 
         hazard_type = report.hazard_type
-        primary_model = os.environ.get('NVIDIA_VISION_MODEL', 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free')
-        # Free-tier OpenRouter models each sit behind their own small worker
-        # pool, so "model X is saturated" says nothing about model Y - trying
-        # a second, independent model is what actually raises the odds of
-        # getting a real answer instead of a neutral fallback.
-        # minimax/minimax-m3:free was retired to paid-only (it now answers
-        # HTTP 404 pointing at the paid slug), so the fallback is a different
-        # free VLM that still accepts image input.
-        fallback_model = os.environ.get('VISION_FALLBACK_MODEL', 'inclusionai/ling-3.0-flash-vl:free')
-        model_candidates = [primary_model] if primary_model == fallback_model else [primary_model, fallback_model]
-
         prompt = (
             "Coastal disaster verification. Claimed hazard: "
             f"'{hazard_type}' (one of: tsunami, storm_surge, high_waves, swell_surge, coastal_flooding, abnormal_tide). "
+            "Answer TWO independent questions. Do not let either answer influence the other.\n"
+            "A) PROVENANCE - how was this FILE produced? Look for a monitor, laptop "
+            "or phone screen in frame, device bezels, desktop or browser UI, "
+            "taskbars or docks, a visible keyboard, moire or scanline patterns, "
+            "screen glare, a printed page or paper texture. If ANY of that is "
+            "present, this is a re-photograph of existing media and NOT a direct "
+            "photo of a real scene. Judge the FILE, not the scene inside it - a "
+            "genuine-looking flood displayed on a laptop is still a screen capture.\n"
+            "B) HAZARD - what hazard, if any, is visible in the depicted scene.\n"
             "Reply with ONLY this compact JSON object, no prose, no markdown fencing: "
-            '{"caption": "one short sentence on exactly what the image shows", '
+            '{"capture_medium": "direct_photo" or "screen" or "printout" or "unclear", '
+            '"capture_confidence": 0-1, '
+            '"provenance_evidence": "what specifically you saw, or null", '
+            '"caption": "one short sentence on exactly what the image shows", '
             '"matches_hazard": true or false, "confidence": 0-1, '
             '"detected_hazard": "short label of what the image actually shows", '
             '"severity": "low", "medium", "high" or "critical" - how dangerous the scene looks, '
@@ -1027,48 +1207,23 @@ def _validate_image_processing(report):
         # One wall-clock budget shared by every attempt and candidate below, so
         # report submission cannot block for retries x models x per-call cap.
         overall_deadline = time.monotonic() + VISION_TOTAL_BUDGET_SECONDS
-        quota_exhausted = {'hit': False}
 
-        def call_model(model_id, is_last_candidate):
-            """Try one model, retrying once on a fast transient failure. Returns (parsed_dict, error_message)."""
-            request_kwargs = dict(
-                url="https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Accept": "application/json",
-                    "HTTP-Referer": "https://sentinel-ai.local",
-                    "X-Title": "Sentinel AI Disaster Reports",
-                },
-                json={
-                    "model": model_id,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": prompt},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {"url": f"data:{mime_type};base64,{image_b64}"},
-                                },
-                            ],
-                        }
-                    ],
-                    # Reasoning tokens are billed against max_tokens, and measured
-                    # chains on these models run 60-310 tokens while the JSON answer
-                    # needs only ~70. At 400 a long chain truncated content to empty
-                    # (finish_reason="length"), which read as "no parseable result".
-                    "max_tokens": 1200,
-                    "temperature": 0.1,
-                    "reasoning": {"effort": "low"},
-                },
-                # requests' own `timeout=` only bounds the gap between chunks
-                # of a streamed/slow-trickling response, not total wall-clock
-                # time - a response dribbling in one byte every few seconds
-                # never trips it while still taking 30-40s overall. The
-                # ThreadPoolExecutor deadline in _post_with_deadline enforces
-                # an actual hard cap on total request time instead.
-                timeout=HARD_DEADLINE_SECONDS,
-            )
+        def call_model(provider, model_id, api_key, is_last_candidate):
+            """Try one model on one key, retrying once on a fast transient
+            failure. Returns (parsed_dict, error_message, key_is_dead) -
+            key_is_dead signals the caller to skip this key's remaining
+            model candidates (invalid key, or its quota is exhausted).
+
+            The request body differs per provider - see
+            vision_request_kwargs, where the three parameter differences that
+            each cause a silent failure are handled."""
+            # requests' own `timeout=` only bounds the gap between chunks of a
+            # slow-trickling response, not total wall-clock time. The
+            # ThreadPoolExecutor deadline in _post_with_deadline enforces the
+            # real cap; this is only the per-socket floor.
+            request_kwargs = vision_request_kwargs(
+                provider, api_key, model_id, prompt, mime_type, image_b64,
+                HARD_DEADLINE_SECONDS)
 
             last_err = None
             for attempt in range(2):
@@ -1076,7 +1231,7 @@ def _validate_image_processing(report):
                 # first attempt cannot push the total past the overall cap.
                 remaining = overall_deadline - time.monotonic()
                 if remaining < 2:
-                    return None, last_err or f'image analysis budget of {VISION_TOTAL_BUDGET_SECONDS}s exhausted'
+                    return None, last_err or f'image analysis budget of {VISION_TOTAL_BUDGET_SECONDS}s exhausted', False
                 # Give up quickly on a saturated earlier candidate - its whole
                 # point is that another model can answer - but let the LAST
                 # candidate use the full cap, since nothing follows it.
@@ -1087,18 +1242,25 @@ def _validate_image_processing(report):
                 try:
                     response = _post_with_deadline(request_kwargs, attempt_deadline)
                 except TimeoutError:
-                    return None, f'{model_id} did not respond within {attempt_deadline:.0f}s'
+                    return None, f'{model_id} did not respond within {attempt_deadline:.0f}s', False
 
                 if response.status_code != 200:
                     detail = response.text[:200]
+                    if response.status_code == 401:
+                        return None, f'{model_id} auth failed - key expired or invalid', True
                     # The free-tier daily cap is account-wide, not per-model, so
                     # flag it: trying the fallback would just burn another request
-                    # from the same exhausted quota.
+                    # from the same exhausted quota. It IS per-key though, so a
+                    # different key is still worth trying.
                     if response.status_code == 429 and 'free-models-per-day' in detail:
-                        quota_exhausted['hit'] = True
                         return None, ('OpenRouter free-model daily limit reached (50 requests/day '
-                                      'on a free-tier key) - resets 00:00 UTC, or add credits to raise it')
-                    return None, f'{model_id} returned HTTP {response.status_code} - {detail}'
+                                      'on a free-tier key) - resets 00:00 UTC, or add credits to raise it'), True
+                    # 404 = retired (this is how ling-3.0-flash-vl broke), 403 =
+                    # gated. Neither changes on a retry, and re-asking spends
+                    # budget the next working candidate needs.
+                    if response.status_code in (403, 404):
+                        mark_vision_model_dead(model_id)
+                    return None, f'{model_id} returned HTTP {response.status_code} - {detail}', False
 
                 body = response.json()
                 if 'choices' not in body:
@@ -1116,7 +1278,7 @@ def _validate_image_processing(report):
                     # chain-of-thought field, so it is worth a look before giving up.
                     parsed = _extract_json_object(message.get('reasoning'))
                 if parsed is not None:
-                    return parsed, None
+                    return parsed, None, False
 
                 if choice.get('finish_reason') == 'length':
                     last_err = f'{model_id} ran out of output tokens before finishing the JSON answer'
@@ -1124,19 +1286,28 @@ def _validate_image_processing(report):
                     last_err = f'{model_id} returned no parseable JSON object'
                 continue  # retry once; a different sample usually lands a clean answer
 
-            return None, last_err
+            return None, last_err, False
+
+        # Routes are already ordered provider-first (see vision_routes): the
+        # billed OpenAI key leads, the free OpenRouter models back it up. A
+        # key that fails one model fails every model on that provider
+        # identically, so a dead key skips the rest of its own routes.
+        dead_keys = set()
 
         parsed = None
         last_error = None
         model_used = None
-        for index, candidate in enumerate(model_candidates):
-            parsed, err = call_model(candidate, index == len(model_candidates) - 1)
+        for index, (provider, key, candidate) in enumerate(routes):
+            if key in dead_keys:
+                continue
+            parsed, err, key_dead = call_model(
+                provider, candidate, key, index == len(routes) - 1)
             if parsed is not None:
                 model_used = candidate
                 break
             last_error = err
-            if quota_exhausted['hit']:
-                break  # every candidate draws on the same account-wide quota
+            if key_dead:
+                dead_keys.add(key)
 
         if parsed is None:
             return {'score': 0.50, 'analysis': f'Image processing unavailable: {last_error}', 'severity': 'unknown', 'severity_score': 0.0}
@@ -1160,12 +1331,67 @@ def _validate_image_processing(report):
         score = model_confidence if matches_hazard else model_confidence * 0.3
         score = max(0.0, min(1.0, score))
 
+        # --- provenance ------------------------------------------------------
+        # A photo OF A SCREEN is not evidence from the scene. The hazard in it
+        # may be entirely real - and the model will happily describe it as
+        # "people in waist-deep floodwater", which is what it shows - but the
+        # file proves nothing about where the reporter was or when. Verified on
+        # a real submission whose bottom third was a macOS dock, Touch Bar and
+        # the F4-F9 keys: the grader scored it 'coastal_flooding, high' and
+        # never mentioned the laptop, because nothing had asked it to look.
+        #
+        # EXIF is deliberately NOT used as a corroborating signal. Checked
+        # directly: every photo taken through this app's own camera widget has
+        # zero EXIF tags, because the browser canvas capture path strips them.
+        # An "absent EXIF means suspicious" rule would flag every legitimate
+        # in-app capture while missing this case entirely - a phone photo of a
+        # screen carries perfectly normal camera EXIF.
+        capture_medium = str(parsed.get('capture_medium') or 'unclear').lower().strip()
+        if capture_medium not in ('direct_photo', 'screen', 'printout', 'unclear'):
+            capture_medium = 'unclear'
+        try:
+            capture_confidence = max(0.0, min(1.0, float(parsed.get('capture_confidence', 0.0))))
+        except (TypeError, ValueError):
+            capture_confidence = 0.0
+        provenance_evidence = parsed.get('provenance_evidence')
+        if isinstance(provenance_evidence, str) and provenance_evidence.strip().lower() in (
+                '', 'null', 'none', 'n/a'):
+            provenance_evidence = None
+
+        rephotographed = (capture_medium in ('screen', 'printout')
+                          and capture_confidence >= REPHOTOGRAPH_MIN_CONFIDENCE)
+
+        provenance_note = ''
+        if rephotographed:
+            # Capped, not zeroed. The depicted hazard may be real and worth an
+            # analyst's eye; what it cannot do is carry the reporter's own
+            # verification weight. Auto-approval thresholds sit above this cap.
+            score = min(score, REPHOTOGRAPH_SCORE_CAP)
+            severity_score = min(severity_score, REPHOTOGRAPH_SCORE_CAP)
+            medium_label = 'a screen' if capture_medium == 'screen' else 'a printed page'
+            provenance_note = (
+                f" \u26a0 NOT A DIRECT PHOTO: this file is a re-capture of {medium_label} "
+                f"(confidence {capture_confidence:.0%}"
+                + (f"; {provenance_evidence}" if provenance_evidence else '')
+                + "). The hazard shown may be real, but this image cannot confirm the "
+                  "reporter was at the scene. Confidence capped at "
+                  f"{REPHOTOGRAPH_SCORE_CAP:.2f} pending human review."
+            )
+        elif capture_medium in ('screen', 'printout'):
+            # Below the threshold: say so, change nothing. A weak suspicion is
+            # worth an analyst's attention and is not worth auto-penalising a
+            # genuine report over.
+            provenance_note = (
+                f" Note: possible re-capture of a screen/printout, but only "
+                f"{capture_confidence:.0%} confident - not penalised."
+            )
+
         analysis = (
             # Name the model that actually answered - the fallback credited its
             # analysis to Nemotron, which is misleading when Nemotron was down.
             f"Vision analysis ({model.split('/')[-1].replace(':free', '')}) - what it saw: \"{caption}\" | "
             f"detected '{detected_hazard}' ({'matches' if matches_hazard else 'does not match'} claimed '{hazard_type}'), "
-            f"severity: {severity}. {reasoning}"
+            f"severity: {severity}. {reasoning}{provenance_note}"
         )
 
         return {
@@ -1177,6 +1403,12 @@ def _validate_image_processing(report):
             'severity': severity,
             'severity_score': severity_score,
             'model': model,
+            # Structured so a reviewer UI can badge this rather than having to
+            # parse it back out of the prose above.
+            'capture_medium': capture_medium,
+            'capture_confidence': capture_confidence,
+            'provenance_evidence': provenance_evidence,
+            'rephotographed': rephotographed,
         }
 
     except requests.exceptions.Timeout:

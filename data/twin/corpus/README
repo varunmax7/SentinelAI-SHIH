@@ -1,0 +1,14 @@
+Urban Digital Twin - RAG corpus
+
+Drop SOPs, escalation matrices, shelter registers and past sitreps here as
+.md, .txt or .json files. twin/agent/rag.py indexes every file in this
+directory (and its subdirectories) and cites the most relevant passages in
+agent-drafted briefs.
+
+This file is named README with no extension deliberately, so it is never
+itself picked up and cited as a corpus document - retrieve() only reads
+files ending in .md, .txt or .json.
+
+Empty by default. With nothing here, briefs simply carry no citations - an
+honestly-empty list, not a wrong one - rather than the agent inventing a
+source that does not exist.

@@ -8,6 +8,9 @@ points. That is a genuinely useful answer, and it must always be captioned with
 its provider and capture date so nobody mistakes a 2019 photo for a live feed.
 """
 
+import math
+from concurrent.futures import ThreadPoolExecutor
+
 from .base import IngestAdapter
 from .. import config as twin_config
 from ..geo import bearing_delta, haversine_m
@@ -91,6 +94,37 @@ class StreetViewAdapter(IngestAdapter):
         images += _kartaview(self, lat, lon, radius_m)
         images += _mapillary(self, lat, lon, radius_m)
 
+        # Verified directly: at the normal 500-800 m radius, roughly half the
+        # cells in both modelled cities come back with zero photos even though
+        # a real one exists a little further out. Rather than show "no
+        # imagery" for half the city, widen once and let `nearest` carry the
+        # honest, larger distance - never silently presented as this exact
+        # spot (see routes.py::_view_caption's 'nearest' case).
+        #
+        # KartaView is NOT re-queried here: its own API hard-caps `radius` at
+        # KARTAVIEW_MAX_RADIUS_M (500 m, see `_kartaview`), so a "wider"
+        # KartaView call at any radius_m above that clamps to the exact same
+        # request already made above - a duplicate round trip for a
+        # guaranteed-identical, already-empty result. Only Mapillary's tile
+        # fallback actually gains anything from a wider radius, since the
+        # z14 tile it reads covers ~1-2 km regardless and the radius is only
+        # a post-fetch filter on points already in hand.
+        widened = False
+        if not images:
+            widened = True
+            # Two wider rings of legal 500 m KartaView queries, since KartaView
+            # cannot be asked for a bigger radius directly. Measured on five
+            # Hyderabad cells that returned nothing at all from the close ring:
+            # four of the five found real photographs 1.3-2.6 km out, in 1-2 s.
+            # Whatever comes back carries its true distance into the caption
+            # (routes.py::_view_caption's 'nearest' case), so a photo 2 km away
+            # is never presented as a picture of this spot.
+            images += _kartaview_wide(self, lat, lon)
+            # Mapillary is queried too and costs nothing while its token is
+            # unscoped; it is the source that would actually fill these gaps
+            # properly if the token were fixed.
+            images += _mapillary(self, lat, lon, twin_config.STREETVIEW_FALLBACK_RADIUS_M)
+
         for image in live:
             # Distance from the point the operator clicked, not from the anchor
             # the search used - otherwise a city-anchored webcam would claim to
@@ -100,7 +134,8 @@ class StreetViewAdapter(IngestAdapter):
         live.sort(key=lambda i: i['distance_m'])
 
         if not images:
-            return {'images': [], 'facing': None, 'nearest': None, 'live': live}
+            return {'images': [], 'facing': None, 'nearest': None, 'live': live,
+                    'widened': widened}
 
         for image in images:
             image['distance_m'] = round(haversine_m(lat, lon, image['lat'], image['lon']), 1)
@@ -121,10 +156,99 @@ class StreetViewAdapter(IngestAdapter):
             # show nothing just because the bearing did not line up.
             'nearest': images[0],
             'live': live,
+            'widened': widened,
         }
 
 
 def _kartaview(adapter, lat, lon, radius_m):
+    """KartaView around a point, sampled as a small ring rather than one call.
+
+    KartaView's API hard-caps `radius` at 500 m (KARTAVIEW_MAX_RADIUS_M), which
+    is smaller than an H3 res-8 cell is wide, so a single centre query leaves a
+    large share of cells with no photograph of their own - and a cell with no
+    photograph of its own falls back to the city webcam, which is the same
+    picture in every cell. That is exactly the "why is every location showing
+    me the same image" failure.
+
+    Measured directly on 24 random Hyderabad cells:
+
+        single 500 m query   14/24 cells had a photo, median 1 photo
+        5-point ring         19/24 cells had a photo, median 5 photos
+
+    The ring is four offsets at STREETVIEW_RING_STEP_M around the centre,
+    queried in parallel and de-duplicated by image id. Each call is still a
+    legal 500 m query; together they cover roughly a 900 m box. Results are
+    cached for a day by the adapter, so a cell pays this once.
+    """
+    points = _ring_points(lat, lon, twin_config.STREETVIEW_RING_POINTS,
+                          twin_config.STREETVIEW_RING_STEP_M)
+
+    rows = []
+    if len(points) == 1:
+        rows = _kartaview_at(adapter, points[0][0], points[0][1], radius_m)
+    else:
+        with ThreadPoolExecutor(max_workers=len(points)) as pool:
+            for chunk in pool.map(
+                    lambda p: _kartaview_at(adapter, p[0], p[1], radius_m), points):
+                rows.extend(chunk)
+
+    seen, out = set(), []
+    for row in rows:
+        if row['id'] in seen:
+            continue
+        seen.add(row['id'])
+        out.append(row)
+    return out
+
+
+def _kartaview_wide(adapter, lat, lon):
+    """The widened search: rings at two larger radii, de-duplicated.
+
+    Only reached when the close ring found nothing, and only ever labelled
+    `widened` so the caller captions the real distance.
+    """
+    points = []
+    for step in twin_config.STREETVIEW_WIDE_RING_STEPS_M:
+        points += _ring_points(lat, lon,
+                               twin_config.STREETVIEW_WIDE_RING_POINTS + 1, step)[1:]
+    if not points:
+        return []
+
+    rows = []
+    with ThreadPoolExecutor(max_workers=min(12, len(points))) as pool:
+        for chunk in pool.map(
+                lambda p: _kartaview_at(adapter, p[0], p[1], KARTAVIEW_MAX_RADIUS_M), points):
+            rows.extend(chunk)
+
+    seen, out = set(), []
+    for row in rows:
+        if row['id'] in seen:
+            continue
+        seen.add(row['id'])
+        out.append(row)
+    return out
+
+
+def _ring_points(lat, lon, count, step_m):
+    """The centre, plus `count - 1` offsets evenly spaced around it.
+
+    Longitude is scaled by cos(latitude) so the ring is round on the ground
+    rather than an ellipse stretched east-west.
+    """
+    points = [(lat, lon)]
+    extra = max(0, int(count) - 1)
+    if not extra or step_m <= 0:
+        return points
+    d_lat = step_m / 111000.0
+    cos_lat = max(0.2, math.cos(math.radians(lat)))
+    for i in range(extra):
+        bearing = math.radians(360.0 * i / extra)
+        points.append((lat + d_lat * math.cos(bearing),
+                       lon + (d_lat * math.sin(bearing)) / cos_lat))
+    return points
+
+
+def _kartaview_at(adapter, lat, lon, radius_m):
     try:
         payload = adapter.get_json(KARTAVIEW_URL, params={
             'lat': lat, 'lng': lon,
@@ -165,6 +289,7 @@ def _mapillary(adapter, lat, lon, radius_m):
     token = twin_config.MAPILLARY_TOKEN
     if not token:
         return []
+    out = []
     # Mapillary takes a bbox, not a radius. ~111 km per degree of latitude.
     delta = radius_m / 111000.0
     try:
@@ -174,26 +299,42 @@ def _mapillary(adapter, lat, lon, radius_m):
             'bbox': '%f,%f,%f,%f' % (lon - delta, lat - delta, lon + delta, lat + delta),
             'limit': 20,
         })
+        for row in payload.get('data', []):
+            coords = ((row.get('geometry') or {}).get('coordinates')) or []
+            if len(coords) != 2:
+                continue
+            out.append({
+                'provider': 'Mapillary',
+                'licence': 'CC BY-SA',
+                'id': row.get('id'),
+                'lat': coords[1],
+                'lon': coords[0],
+                'heading': _to_float(row.get('compass_angle')),
+                'captured_at': row.get('captured_at'),
+                'thumb_url': row.get('thumb_1024_url'),
+                'full_url': row.get('thumb_1024_url'),
+                'page_url': 'https://www.mapillary.com/app/?pKey=%s' % row.get('id'),
+                'live': False,
+            })
     except Exception:  # noqa: BLE001
-        return []
-    out = []
-    for row in payload.get('data', []):
-        coords = ((row.get('geometry') or {}).get('coordinates')) or []
-        if len(coords) != 2:
-            continue
-        out.append({
-            'provider': 'Mapillary',
-            'licence': 'CC BY-SA',
-            'id': row.get('id'),
-            'lat': coords[1],
-            'lon': coords[0],
-            'heading': _to_float(row.get('compass_angle')),
-            'captured_at': row.get('captured_at'),
-            'thumb_url': row.get('thumb_1024_url'),
-            'full_url': row.get('thumb_1024_url'),
-            'page_url': 'https://www.mapillary.com/app/?pKey=%s' % row.get('id'),
-            'live': False,
-        })
+        pass
+
+    if out:
+        return out
+
+    # The bbox search above reliably returns zero rows for both modelled
+    # cities even well within its own size limit - verified directly, see
+    # mapillary_tiles.py's module docstring. Fall back to the same vector
+    # tiles Mapillary's own web app reads from, filtered back down to the
+    # requested radius (a tile covers ~1-2 km at z14, wider than most calls
+    # here ask for).
+    try:
+        from .mapillary_tiles import fetch_tile_images
+        for row in fetch_tile_images(lat, lon):
+            if haversine_m(lat, lon, row['lat'], row['lon']) <= radius_m:
+                out.append(row)
+    except Exception:  # noqa: BLE001
+        pass
     return out
 
 
@@ -214,7 +355,11 @@ def _windy_webcams(adapter, lat, lon, radius_m):
             params={
                 # Windy takes a radius in kilometres, minimum 1.
                 'nearby': '%f,%f,%d' % (lat, lon, max(1, int(round(radius_m / 1000.0)))),
-                'include': 'images,location,urls',
+                # `categories` is what tells two webcams published under the
+                # same bare title apart - both Hyderabad cams are titled just
+                # "Hyderabad" and stand on the same rooftop, so coordinates
+                # cannot separate them but "Indoor" can.
+                'include': 'images,location,urls,categories',
                 'limit': 8,
             },
             headers={'x-windy-api-key': key, 'Accept': 'application/json'},
@@ -243,6 +388,8 @@ def _windy_webcams(adapter, lat, lon, radius_m):
             'thumb_url': preview,
             'full_url': images.get('preview') or preview,
             'page_url': (row.get('urls') or {}).get('detail'),
+            'category': next((c.get('name') for c in (row.get('categories') or [])
+                              if c.get('name')), None),
             'live': True,
         })
     return out

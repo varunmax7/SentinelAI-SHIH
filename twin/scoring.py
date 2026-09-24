@@ -126,9 +126,22 @@ def infra_sub_score(criticality_sum):
     return clamp((criticality_sum or 0.0) * twin_config.ASSET_CRITICALITY_STEP)
 
 
-def hazard_score(hydro, incident, env):
+def hazard_score(hydro, incident, env, disruption=None):
+    """`disruption` is `None`, not `0.0`, for the common case (no transit
+
+    data for this city at all) - and when it is `None` the other three
+    weights are renormalised so the result is *identical* to what this
+    function returned before `disruption` existed. A city that never gets
+    real transit data must never see its score shift because of a weight it
+    has no input for.
+    """
     w = twin_config.HAZARD_WEIGHTS
-    return clamp(w['hydro'] * hydro + w['incident'] * incident + w['env'] * env)
+    if disruption is None:
+        total = w['hydro'] + w['incident'] + w['env']
+        return clamp((w['hydro'] * hydro + w['incident'] * incident + w['env'] * env) / total)
+    total = w['hydro'] + w['incident'] + w['env'] + w['disruption']
+    return clamp((w['hydro'] * hydro + w['incident'] * incident
+                 + w['env'] * env + w['disruption'] * disruption) / total)
 
 
 def vulnerability_multiplier(terrain, infra):
@@ -137,9 +150,9 @@ def vulnerability_multiplier(terrain, infra):
     return 1.0 + twin_config.VULNERABILITY_SPAN * (blended / 100.0)
 
 
-def compose(hydro, incident, env, terrain, infra):
+def compose(hydro, incident, env, terrain, infra, disruption=None):
     """Full risk composition. Returns (risk_score, status, vulnerability)."""
-    hazard = hazard_score(hydro, incident, env)
+    hazard = hazard_score(hydro, incident, env, disruption)
     vulnerability = vulnerability_multiplier(terrain, infra)
     risk = clamp(hazard * vulnerability)
     return risk, twin_config.status_for_score(risk), vulnerability
@@ -176,8 +189,23 @@ def explain(inputs, sub_scores, risk, vulnerability):
 
     env = sub_scores.get('env', 0.0)
     if env >= 40:
-        bits.append("Environmental stress %.0f/100 (AQI %s, %s degC)."
-                    % (env, _fmt(inputs.get('aqi')), _fmt(inputs.get('temperature_c'))))
+        aqi_source = "station" if inputs.get('station_aqi') is not None else "Open-Meteo estimate"
+        bits.append("Environmental stress %.0f/100 (AQI %s from a %s, %s degC)."
+                    % (env, _fmt(inputs.get('aqi')), aqi_source, _fmt(inputs.get('temperature_c'))))
+
+    disruption = inputs.get('disruption_pct')
+    if disruption is not None and disruption >= 25:
+        bits.append("%.0f%% of nearby transit vehicles are currently stalled." % disruption)
+
+    anomaly = inputs.get('anomaly')
+    if anomaly and anomaly.get('label') in ('watch', 'alert'):
+        metric_label = 'rainfall' if anomaly.get('dominant_metric') == 'rain' else 'temperature'
+        bits.append(
+            "%s is %.1fsigma above normal for this location, based on %d years of history - "
+            "%s than usual for this specific point, not just hot or wet in general."
+            % (metric_label.capitalize(), anomaly.get('sigma') or 0.0,
+               anomaly.get('baseline_years') or 0,
+               'wetter' if metric_label == 'rainfall' else 'hotter'))
 
     bits.append("Vulnerability multiplier x%.2f - terrain %.0f/100, critical infrastructure %.0f/100."
                 % (vulnerability, sub_scores.get('terrain', 0.0), sub_scores.get('infra', 0.0)))

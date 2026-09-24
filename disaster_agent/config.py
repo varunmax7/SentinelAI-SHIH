@@ -52,6 +52,12 @@ HORIZONS = (1, 3, 6, 24)
 # path the first time an analyst opens the panel before any cache exists.
 HTTP_TIMEOUT_S = _env_float('DISASTER_AGENT_HTTP_TIMEOUT_S', 8.0)
 FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
+# How far ahead the hourly forecast is pulled. This is the ceiling on how far
+# window.py can say a hazard lasts: past it there is no data, and the window is
+# reported `open_ended` rather than given an invented end time. Three days is
+# Open-Meteo's free default and covers every horizon in HORIZONS with room to
+# see the far side of a 24-hour event.
+FORECAST_DAYS = _env_int('DISASTER_AGENT_FORECAST_DAYS', 3)
 
 # --- Step 2: deterministic projection -----------------------------------------
 # A source region's hazard signal must clear this (0-100) before it is worth
@@ -68,6 +74,17 @@ BEARING_TOLERANCE_DEG = _env_float('DISASTER_AGENT_BEARING_TOLERANCE_DEG', 55.0)
 # LLM calls are the one part of the cycle with a real cost; everything upstream
 # of this cap is free.
 MAX_NARRATED_HOTSPOTS = _env_int('DISASTER_AGENT_MAX_NARRATED', 10)
+# A hotspot already narrated in a previous cycle is re-narrated only if its
+# risk score moved by more than this many points, or its leading contributing
+# source changed - otherwise the previous brief is reused as-is and no LLM
+# call is made. Mirrors twin/agent/graph.py's "a quiet run must cost zero
+# tokens" rule: weather rarely swings enough between 20-minute cycles to make
+# a materially different paragraph true.
+REUSE_RISK_DELTA = _env_float('DISASTER_AGENT_REUSE_RISK_DELTA', 6.0)
+# LLM calls that DO need to happen this cycle run concurrently, this many at
+# once, so narrating N hotspots costs one round-trip's wall-clock time instead
+# of N sequential ones.
+NARRATE_MAX_WORKERS = _env_int('DISASTER_AGENT_NARRATE_WORKERS', 4)
 
 # --- Step 3: narrative ---------------------------------------------------------
 # Reuses the twin's OpenRouter key/model - one LLM account for the app, not two.

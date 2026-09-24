@@ -85,11 +85,20 @@
         </div>
 
         <span class="twin-live" title="Live when the event stream is connected">Live</span>
+        <button type="button" class="twin-agentbtn twin-agentbtn--unknown" data-twin-agent
+                title="AI prediction agent status">
+            &#129302; <span data-twin-agent-label>Agent…</span>
+        </button>
         <button type="button" class="twin-flagbtn" data-twin-flags style="display:none"
                 title="Agent flags awaiting review">
             &#9873; <span data-twin-flag-count>0</span>
         </button>
         <span class="twin-health twin-health--unknown" data-twin-health>Checking sources…</span>
+        <button type="button" class="twin-btn" data-twin-osint
+                title="Open-source intelligence near this city: aircraft, seismicity, natural events, news">&#128225; OSINT</button>
+        <button type="button" class="twin-btn" data-twin-ground
+                title="Live and street-level imagery for every location in this city">&#128247; Ground</button>
+        <button type="button" class="twin-btn" data-twin-3d title="Switch between 2D and 3D">3D</button>
         <button type="button" class="twin-btn" data-twin-reset title="Return to the city view">Reset view</button>
         <button type="button" class="twin-btn" data-twin-refresh title="Recompute the risk grid now">Recompute</button>
     </div>

@@ -22,8 +22,16 @@
         infrastructure: "twin-infrastructure-src",
         cctv: "twin-cctv-src",
         cctvCones: "twin-cctv-cones-src",
+        criticalBuildings: "twin-critical-buildings-src",
         water: "twin-water-src",
-        alerts: "twin-alerts-src"
+        alerts: "twin-alerts-src",
+        flags: "twin-flags-src",
+        osint: "twin-osint-src",
+        // Two sources over the same DEM tiles, deliberately - see
+        // twin-layers.js::hillshadeDemSource for why one source shared
+        // between the terrain mesh and the hillshade layer is the wrong call.
+        dem: "twin-dem-src",
+        demHillshade: "twin-dem-hillshade-src"
     };
 
     var EMPTY_FC = { type: "FeatureCollection", features: [] };
@@ -39,6 +47,7 @@
         this.onCameraClick = options.onCameraClick || function () {};
         this.onIncidentClick = options.onIncidentClick || function () {};
         this.onAlertClick = options.onAlertClick || function () {};
+        this.onOsintClick = options.onOsintClick || function () {};
         this.onError = options.onError || function () {};
 
         this._selectedH3 = null;
@@ -51,6 +60,9 @@
         this._fillMode = options.fillMode || "balanced";
         this._layerVisibility = {};
         this._rasterSources = {};
+        this._terrainSourcesReady = false;
+        this._terrainEnabled = false;
+        this._is3D = true;
 
         var camera = options.camera || {};
 
@@ -165,16 +177,22 @@
         // the operator is already looking at.
         map.addSource(SRC.incidents, { type: "geojson", data: EMPTY_FC });
         map.addSource(SRC.infrastructure, { type: "geojson", data: EMPTY_FC });
+        map.addSource(SRC.criticalBuildings, { type: "geojson", data: EMPTY_FC });
         map.addSource(SRC.cctv, { type: "geojson", data: EMPTY_FC });
         map.addSource(SRC.cctvCones, { type: "geojson", data: EMPTY_FC });
         map.addSource(SRC.water, { type: "geojson", data: EMPTY_FC });
         map.addSource(SRC.alerts, { type: "geojson", data: EMPTY_FC });
+        map.addSource(SRC.flags, { type: "geojson", data: EMPTY_FC });
+        map.addSource(SRC.osint, { type: "geojson", data: EMPTY_FC });
 
         this._addLayer(L.buildings3dLayer());
         L.waterBodyLayers(SRC.water).forEach(this._addLayer, this);
         L.alertLayers(SRC.alerts).forEach(this._addLayer, this);
+        this._addLayer(L.alertWallLayer(SRC.alerts));
+        this._addLayer(L.flagWallLayer(SRC.flags));
         this._addLayer(L.twinHexFlatLayer(SRC.hexes, this._fillMode));
         this._addLayer(L.twinHexLayer(SRC.hexes, this._fillMode));
+        this._addLayer(L.twinHexCriticalCapLayer(SRC.hexes));
         this._addLayer(L.twinHexOutlineLayer(SRC.hexes));
         this._addLayer(L.twinHexDegradedLayer(SRC.hexes));
         this._addLayer(L.twinHexInteractionGlowLayer(SRC.hexes));
@@ -182,18 +200,24 @@
         this._addLayer(L.zoneOutlineLayer(SRC.zones));
         L.cctvLayers(SRC.cctv, SRC.cctvCones).forEach(this._addLayer, this);
         this._addLayer(L.infrastructureLayer(SRC.infrastructure));
+        this._addLayer(L.criticalBuildingsLayer(SRC.criticalBuildings));
         L.incidentLayers(SRC.incidents).forEach(this._addLayer, this);
         L.incidentGroupLayers(SRC.incidents).forEach(this._addLayer, this);
+        L.osintLayers(SRC.osint).forEach(this._addLayer, this);
 
         // Layers that start hidden until the operator asks for them.
         ["water-bodies", "water-bodies-outline", "water-drains-glow", "water-drains",
          "cctv", "cctv-direction", "cctv-cone", "cctv-cone-edge",
-         "infrastructure", "zone-outline",
-         "alert-areas", "alert-areas-outline"].forEach(function (id) {
+         "infrastructure", "twin-critical-buildings", "zone-outline",
+         "alert-areas", "alert-areas-outline",
+         "osint-points", "osint-aircraft", "osint-labels",
+         "osint-aircraft-labels"].forEach(function (id) {
             this.setLayerVisible(id, false);
         }, this);
 
         this.applyBasemap(this._basemap);
+        this.applyLighting();
+        this._startFlagPulse();
         this._verifyLayers();
     };
 
@@ -204,7 +228,8 @@
     TwinMap.prototype._verifyLayers = function () {
         var expected = L.LAYER_ORDER.filter(function (id) {
             // Basemap rasters and lazily-added overlays are legitimately absent.
-            return ["satellite", "satellite-labels", "gibs", "radar", "traffic"].indexOf(id) < 0;
+            return ["satellite", "satellite-labels", "gibs", "radar", "traffic",
+                    "twin-hillshade"].indexOf(id) < 0;
         });
         var missing = expected.filter(function (id) { return !this.map.getLayer(id); }, this);
         if (missing.length) {
@@ -234,6 +259,15 @@
     TwinMap.prototype.applyBasemap = function (choice, gibs) {
         this._basemap = choice;
         var map = this.map;
+
+        // Buildings read cleanly at full opacity over the Liberty vector
+        // style's own flat ground colour, but the same opacity over satellite
+        // imagery hides the photo underneath entirely - 0.85 there lets both
+        // read at once.
+        if (map.getLayer("twin-buildings-3d")) {
+            map.setPaintProperty("twin-buildings-3d", "fill-extrusion-opacity",
+                                 choice === "vector" ? 1.0 : 0.85);
+        }
 
         ["satellite", "satellite-labels", "gibs"].forEach(function (id) {
             if (map.getLayer(id)) map.removeLayer(id);
@@ -292,6 +326,112 @@
         });
     };
 
+    // ---- terrain (15.1) ---------------------------------------------------
+    /* Adds the DEM sources and the hillshade layer, but does not turn terrain
+     * on - that is setTerrainEnabled()'s job. Split in two so the compact
+     * dashboard card (section 15.8) can defer even registering these sources,
+     * and their tile fetches, until an operator actually asks for terrain,
+     * the same lazy pattern the console already uses for radar/traffic/water. */
+    TwinMap.prototype.enableTerrainSources = function () {
+        if (this._terrainSourcesReady) return;
+        var map = this.map;
+        if (!map.getSource(SRC.dem)) map.addSource(SRC.dem, L.terrainDemSource());
+        if (!map.getSource(SRC.demHillshade)) map.addSource(SRC.demHillshade, L.hillshadeDemSource());
+        this._addLayer(L.hillshadeLayer(SRC.demHillshade));
+        this.setLayerVisible("twin-hillshade", false); // starts hidden; setTerrainEnabled shows it
+        this._terrainSourcesReady = true;
+    };
+
+    TwinMap.prototype.setTerrainEnabled = function (enabled) {
+        if (enabled && !this._terrainSourcesReady) this.enableTerrainSources();
+        this._terrainEnabled = !!enabled;
+        if (enabled) {
+            this.map.setTerrain({ source: SRC.dem, exaggeration: L.TERRAIN_EXAGGERATION });
+        } else {
+            this.map.setTerrain(null);
+        }
+        this.setLayerVisible("twin-hillshade", enabled);
+    };
+
+    TwinMap.prototype.terrainEnabled = function () { return this._terrainEnabled; };
+
+    // ---- light & atmosphere (15.6) -----------------------------------------
+    TwinMap.prototype.applyLighting = function () {
+        this.map.setLight({ anchor: "map", position: [1.2, 200, 35], color: "#dbeafe", intensity: 0.45 });
+
+        // setSky is a MapLibre 4.x addition; guarded rather than assumed, per
+        // the rule that this console never upgrades MapLibre for a cosmetic.
+        if (typeof this.map.setSky === "function") {
+            this.map.setSky({
+                "sky-color": "#0b1220",
+                "horizon-color": "#1a2234",
+                "fog-color": "#0b1220",
+                "horizon-fog-blend": 0.4
+            });
+        }
+    };
+
+    // ---- flag wall pulse (15.5) --------------------------------------------
+    /* "This area is under review" has to read as active, not just present -
+     * a fixed opacity wall looks identical whether the agent flagged it a
+     * second ago or an hour ago. Throttled to ~10fps: a glow does not need
+     * 60fps to read as pulsing, and this runs for as long as the console is
+     * open. Paused outright when the tab is hidden, via the Page
+     * Visibility API - rAF already throttles a hidden tab, but not calling
+     * setPaintProperty at all is one fewer thing happening in a background
+     * tab nobody is looking at. */
+    var FLAG_PULSE_FRAME_MS = 100;
+    var FLAG_PULSE_CYCLE_MS = 2000;
+
+    TwinMap.prototype._startFlagPulse = function () {
+        if (this._flagPulseRunning) return;
+        this._flagPulseRunning = true;
+        var self = this;
+        var lastFrame = 0;
+
+        function tick(now) {
+            if (!self._flagPulseRunning) return;
+            if (!(typeof document !== "undefined" && document.hidden) && now - lastFrame >= FLAG_PULSE_FRAME_MS) {
+                lastFrame = now;
+                if (self.map.getLayer("flag-wall")) {
+                    var phase = (now % FLAG_PULSE_CYCLE_MS) / FLAG_PULSE_CYCLE_MS;
+                    var opacity = 0.35 + 0.25 * (0.5 + 0.5 * Math.sin(phase * Math.PI * 2));
+                    self.map.setPaintProperty("flag-wall", "fill-extrusion-opacity", opacity);
+                }
+            }
+            global.requestAnimationFrame(tick);
+        }
+        global.requestAnimationFrame(tick);
+    };
+
+    TwinMap.prototype._stopFlagPulse = function () {
+        this._flagPulseRunning = false;
+    };
+
+    // ---- 2D / 3D toggle (15.7) ---------------------------------------------
+    TwinMap.prototype.is3D = function () { return this._is3D; };
+
+    TwinMap.prototype.set3D = function (enabled, defaultPitch) {
+        this._is3D = !!enabled;
+        if (enabled) {
+            // Flat -> 3D restores pitch and whatever terrain state was on
+            // before the last flatten, so toggling twice is a true round trip
+            // rather than a one-way "turn everything off" switch.
+            this.map.easeTo({ pitch: defaultPitch != null ? defaultPitch : 55, duration: 600 });
+            if (this._terrainSourcesReady && this._terrainEnabledBeforeFlatten) {
+                this.setTerrainEnabled(true);
+            }
+        } else {
+            // Pitch 0 alone already makes every extrusion in the scene read
+            // flat from directly above, with no paint property touched -
+            // terrain is turned off too, since a DEM mesh viewed straight down
+            // is just a slower way to render a flat map.
+            this._terrainEnabledBeforeFlatten = this._terrainEnabled;
+            this.map.easeTo({ pitch: 0, duration: 600 });
+            this.setTerrainEnabled(false);
+        }
+    };
+
     // ---- fill density (D2) ----------------------------------------------
     TwinMap.prototype.setFillMode = function (mode) {
         this._fillMode = mode;
@@ -305,9 +445,19 @@
     };
 
     TwinMap.prototype.setExtrusionScale = function (scale) {
-        if (!this.map.getLayer("twin-hexes")) return;
-        this.map.setPaintProperty("twin-hexes", "fill-extrusion-height",
-                                  L.riskHeightExpression(scale));
+        if (this.map.getLayer("twin-hexes")) {
+            this.map.setPaintProperty("twin-hexes", "fill-extrusion-height",
+                                      L.riskHeightExpressionByZoom(scale));
+        }
+        // The critical cap's base tracks the same height its column uses -
+        // rescaling one without the other would either bury the cap inside
+        // the column or leave it floating free of it.
+        if (this.map.getLayer("twin-hex-critical-cap")) {
+            var height = L.riskHeightExpressionByZoom(scale);
+            this.map.setPaintProperty("twin-hex-critical-cap", "fill-extrusion-base", height);
+            this.map.setPaintProperty("twin-hex-critical-cap", "fill-extrusion-height",
+                                      ["+", height, 12]);
+        }
     };
 
     // ---- data ------------------------------------------------------------
@@ -320,15 +470,33 @@
 
     TwinMap.prototype.setZones = function (collection) { this._setData(SRC.zones, collection); };
     TwinMap.prototype.setIncidents = function (collection) { this._setData(SRC.incidents, collection); };
-    TwinMap.prototype.setInfrastructure = function (collection) { this._setData(SRC.infrastructure, collection); };
+    TwinMap.prototype.setInfrastructure = function (collection) {
+        this._setData(SRC.infrastructure, collection);
+        // Footprints are derived client-side, the same way camera cones are -
+        // see buildCriticalFootprintCollection()'s own comment.
+        this._setData(SRC.criticalBuildings, L.buildCriticalFootprintCollection(collection));
+    };
     TwinMap.prototype.setWater = function (collection) { this._setData(SRC.water, collection); };
     TwinMap.prototype.setAlerts = function (collection) { this._setData(SRC.alerts, collection); };
+
+    /* Takes the flat `/{city}/flags/areas` response (`{areas: [...]}`), not a
+     * GeoJSON collection - the ring polygon is derived client-side, the same
+     * pattern buildConeCollection() and buildCriticalFootprintCollection()
+     * already use for exactly this reason (a radius is the only thing that
+     * varies per flag; the ring shape is not worth shipping over the wire). */
+    TwinMap.prototype.setFlagAreas = function (areas) {
+        this._setData(SRC.flags, L.buildFlagRingCollection(areas));
+    };
 
     TwinMap.prototype.setCameras = function (collection) {
         this._setData(SRC.cctv, collection);
         // Cones are derived on the client: sending them would multiply an
         // already-large payload by roughly fourteen.
         this._setData(SRC.cctvCones, L.buildConeCollection(collection));
+    };
+
+    TwinMap.prototype.setOsint = function (collection) {
+        this._setData(SRC.osint, collection);
     };
 
     TwinMap.prototype._setData = function (sourceId, collection) {
@@ -407,6 +575,17 @@
                 // Stop the hex underneath from also opening its drawer.
                 event.originalEvent.stopPropagation();
                 self.onCameraClick(event.features[0].properties, event.lngLat);
+            });
+            map.on("mouseenter", layerId, function () { canvas.style.cursor = "pointer"; });
+            map.on("mouseleave", layerId, function () { canvas.style.cursor = ""; });
+        });
+
+        ["osint-points", "osint-aircraft"].forEach(function (layerId) {
+            map.on("click", layerId, function (event) {
+                if (!event.features || !event.features.length) return;
+                // Stop the hex underneath from also opening its drawer.
+                event.originalEvent.stopPropagation();
+                self.onOsintClick(event.features[0].properties, event.lngLat);
             });
             map.on("mouseenter", layerId, function () { canvas.style.cursor = "pointer"; });
             map.on("mouseleave", layerId, function () { canvas.style.cursor = ""; });
@@ -520,6 +699,7 @@
 
     TwinMap.prototype.destroy = function () {
         if (this._initTimer) { clearTimeout(this._initTimer); this._initTimer = null; }
+        this._stopFlagPulse();
         try { this.map.remove(); } catch (err) { /* already gone */ }
     };
 

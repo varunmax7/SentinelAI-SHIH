@@ -31,7 +31,7 @@
 | 3 | [Requirement Traceability Matrix](#-requirement-traceability-matrix) | Every PS clause mapped to shipped code |
 | 4 | [Sentinel AI: The Solution](#-sentinel-ai-the-solution) | Multi-agent architecture & digital twin |
 | 5 | [Complete Application Flow](#-complete-application-flow) | End-to-end operational pipeline |
-| 6 | [Feature Deep-Dive](#-feature-deep-dive) | All 28 feature clusters in detail |
+| 6 | [Feature Deep-Dive](#-feature-deep-dive) | All 29 feature clusters in detail |
 | 7 | [System Architecture](#-system-architecture) | Layers, agents, integrations |
 | 8 | [Data Flow Sequences](#-data-flow-sequences) | Step-by-step request traces |
 | 9 | [Project Structure](#-project-structure) | Every file and what it does |
@@ -63,7 +63,7 @@ Sentinel AI is a **single unified command platform** that replaces the tangle of
 It does five things no existing system does together:
 
 1. **Detects incidents from four independent channels simultaneously** — a Progressive Web App form, a one-tap Voice SOS with NLP keyword extraction, an offline AI calling agent, and a full WhatsApp bot — so a citizen with no smartphone, no data plan, or no literacy in English can still raise an alarm.
-2. **Validates every incident autonomously in under a second** using a 4-Parameter Accuracy System™ that cross-checks spatial corroboration, live meteorological data, the reporter's historical credibility, and NVIDIA NIM vision analysis of the reporter's photo — auto-approving anything above 85% confidence without a human in the loop.
+2. **Validates every incident autonomously in under a second** using a 4-Parameter Accuracy System™ that cross-checks spatial corroboration, live meteorological data, the reporter's historical credibility, and vision analysis of the reporter's photo — which also detects whether the photo is a re-capture of a screen rather than a real scene. Anything above 85% confidence auto-approves without a human in the loop; a detected re-capture never does.
 3. **Runs a live city digital twin** — a 3D "God Mode" MapLibre GL globe layered with government TGDPS rainfall telemetry, RainViewer precipitation radar, Open-Meteo climate data, and every live incident in the database.
 4. **Dispatches responders like a ride-hailing app** — geo-queries available volunteers, ranks them by distance and skill, fires a WhatsApp mission card with photo and coordinates, and tracks accept → en route → completed with GPS-verified photo proof.
 5. **Simulates the future** — the Sentinel Resilience Engine takes projected rainfall and sea-level parameters and produces a full government-grade resilience report with sectoral damage forecasts across Power, Water, Telecom, and Housing, including cascade-failure analysis and time-bound action plans.
@@ -74,16 +74,17 @@ Everything is wrapped in a gamified civic layer — points, levels, badges, lead
 
 | Metric | Value |
 |:---|:---|
-| **Backend routes** | 119 Flask routes (`app.py`, ~5,950 lines) |
-| **Database models** | 23 SQLAlchemy models (`models.py`) |
-| **Jinja2 templates** | 50 HTML templates |
+| **Backend routes** | **173** total — 128 core (`app.py`), 39 Digital Twin, 6 Prediction Agent |
+| **Database models** | 24 host models (`models.py`) + Twin and Prediction-Agent model factories |
+| **Jinja2 templates** | 53 HTML templates |
 | **WTForms classes** | 25 validated form definitions |
 | **Languages supported** | 6 — English, Hindi, Telugu, Tamil, Malayalam, Kannada |
 | **AI agents** | 6 — Detection, Prioritization, Dispatch, Alert, Analytics, Coordination |
 | **Reporting channels** | 4 — PWA, Voice SOS, WhatsApp, AI calling agent |
-| **External data sources** | Open-Meteo, Open-Meteo AQ, TGDPS, RainViewer, Nominatim, Esri, IMD/NDMA/USGS/GSI feeds |
-| **AI verification latency** | Sub-second (4-parameter weighted scoring) |
-| **Auto-approval threshold** | ≥ 85% confidence |
+| **External data sources** | 20+ — Open-Meteo (forecast/AQ/GloFAS/archive), NDMA SACHET, GDACS, USGS, EMSC, NASA EONET/FIRMS/GIBS, OpenSky, GDELT, RainViewer, KartaView, Mapillary, Windy Webcams, Esri, OpenFreeMap, OSM Overpass, Nominatim, TGDPS, GTFS-RT, AWS Terrarium DEM |
+| **AI verification latency** | ~2–4 s end-to-end (4-parameter weighted scoring + vision) |
+| **Auto-approval threshold** | ≥ 85% confidence — **hard-blocked** if the photo is a screen re-capture |
+| **Digital Twin coverage** | Hyderabad + Bengaluru, ~460 m H3 cells, 12 toggleable layers |
 | **Volunteer dispatch radius** | 10 km (configurable; demo mode broadcasts wider) |
 | **Completion proof radius** | Volunteer must be within 10 km of hazard with GPS + photo |
 | **Government certificate threshold** | 500 points |
@@ -274,7 +275,7 @@ The following is the end-to-end operational flow of Sentinel AI, from incident d
 │                   │  P3: User Quality Score (25%)           │               │
 │                   │      → Historical credibility of author │               │
 │                   │  P4: Image Processing (25%)             │               │
-│                   │      → NVIDIA NIM vision hazard match   │               │
+│                   │      → vision: provenance + hazard     │               │
 │                   │                                         │               │
 │                   │  Score ≥ 85% → AUTO-APPROVED            │               │
 │                   │  Score < 85% → Queued for Official      │               │
@@ -466,7 +467,7 @@ Every report is scored the instant it lands, with no human in the loop.
 | **Heatmap Match** | 25% | Cross-references spatial density of similar reports within ~5.5 km (0.05° box) over a ±24-hour window, counting only `approved` or `pending` reports of the same hazard type |
 | **Climate Alignment** | 25% | Queries Open-Meteo — validates that live weather conditions (wind speed, humidity, WMO weather codes) actually support the claimed hazard |
 | **User Quality Score** | 25% | Historical credibility — approval rate, total report count, user level, and role-based trust multiplier |
-| **Image Processing** | 25% | Sends the reporter's photo to an NVIDIA NIM vision-language model (`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` by default, served via OpenRouter, with an automatic fallback to `inclusionai/ling-3.0-flash-vl:free` if the primary model is saturated), which checks whether the image visually matches the claimed hazard type |
+| **Image Processing** | 25% | Sends the reporter's photo to a vision-language model (OpenAI `gpt-4.1-mini` by default, with a chain of free OpenRouter models behind it) which answers two independent questions: is this a direct photo or a re-capture of a screen, and does the scene match the claimed hazard |
 
 #### Parameter 1 — Heatmap Corroboration Scoring
 
@@ -490,22 +491,54 @@ quality_score = base_role_score × history_multiplier × level_factor   (capped 
 | **History multiplier** | ≥80% approval → 1.00 · ≥60% → 0.85 · ≥40% → 0.70 · <40% → 0.50 · brand-new user → 0.60 |
 | **Level factor** | `min(1.0, (level / 10) × 0.3 + 0.7)` — scales 0.70 → 1.00 |
 
-#### Parameter 4 — Image Processing (NVIDIA NIM)
+#### Parameter 4 — Image Processing & Photo Provenance
 
-The uploaded photo is base64-encoded and sent to NVIDIA's hosted NIM vision-language model with a prompt asking it to compare the image against the claimed `hazard_type` and return structured JSON (`matches_hazard`, `confidence`, `detected_hazard`, `reasoning`).
+The uploaded photo is downscaled, base64-encoded and sent to a vision-language model, which answers **two independent questions**:
+
+- **A — Provenance:** how was this *file* produced? A direct photo of a real scene, or a re-capture of a screen or printed page?
+- **B — Hazard:** what hazard, if any, is visible in the depicted scene?
+
+**Why provenance is asked separately.** A citizen photographed a flood picture displayed on a laptop and submitted it. The model described the flood accurately — *"people in waist-deep floodwater"* — and scored it `coastal_flooding, high`, never mentioning the macOS dock, Touch Bar and F4–F9 keys filling the bottom third of the frame, because nothing had asked it to look. Asking one question invited one answer.
+
+| Detected medium | Effect |
+|:---|:---|
+| `direct_photo` | Scored normally |
+| `screen` / `printout`, confidence ≥ **0.70** | Score **capped at 0.25**, report **hard-blocked from auto-approval**, warning shown to the analyst with the specific evidence |
+| `screen` / `printout`, confidence < 0.70 | Noted for the analyst, **not** penalised |
+
+Capped rather than zeroed on purpose: the hazard shown may be entirely real and worth an analyst's eye. What a photo of a screen cannot do is show the reporter was at the scene.
+
+> **EXIF is deliberately not used to corroborate.** Every photo taken through this app's own camera widget carries *zero* EXIF tags — the browser canvas capture path strips them. An "absent EXIF is suspicious" rule would flag every legitimate in-app capture, while still missing this case entirely, because a phone photo of a screen carries perfectly normal camera EXIF.
+
+**Measured on the real submission:** `gpt-4.1-mini` → `screen` at 0.95, citing *"visible laptop keyboard, screen bezels, and desktop taskbar"*. `gpt-5.4-nano` → `screen` at 0.95. A genuine outdoor photo → `direct_photo` at 0.90. The 0.70 threshold sits clear of both.
+
+**Provider chain.** OpenAI leads (billed, reliable); free OpenRouter models back it up, so a billing or quota wall degrades to a free caption rather than to no caption. Every entry below was verified against a real street photo with the production prompt:
+
+| Provider | Model | Latency | Tokens | Status |
+|:---|:---|:---|:---|:---|
+| OpenAI | `gpt-4.1-mini` | 2.2 s | 539 | **default** |
+| OpenAI | `gpt-5.4-nano` | 4.6 s | 446 | second |
+| OpenRouter | `nex-agi/nex-n2.5-mini:free` | 4.3 s | — | free fallback |
+| OpenRouter | `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | 4.5 s | — | free fallback |
+| OpenRouter | `google/gemma-4-31b-it:free` | 5.3 s | — | free fallback |
+
+Checked and rejected, each for a specific reason: `inclusionai/ling-3.0-flash-vl:free` (HTTP 404 — retired to paid-only), `thinkingmachines/inkling-small:free` (403, agentic harnesses only), `dots-studio/dots-3-note-preview:free` (200 but never parseable JSON), `nex-agi/nex-n2.5-pro:free` (200 but 37 s, past every deadline).
+
+A model answering 404/403 is remembered for the process, so a retired model stops burning the budget the next working candidate needs. `gpt-5`/o-series models are sent `max_completion_tokens` and no `temperature` — the older pair is a hard 400, not a warning.
 
 | Condition | Score | Interpretation |
 |:---|:---|:---|
 | Model confirms match | **model confidence (0–1)** | Photo visually supports the claimed hazard |
 | Model detects a different hazard | **confidence × 0.3** | Photo doesn't match the claim — heavily discounted |
+| Photo of a screen / printout | **≤ 0.25 + auto-approval blocked** | Cannot establish the reporter was present |
 | No photo attached | **0.30** | Missing evidence, mildly penalised |
-| No `NVIDIA_API_KEY` configured, file missing, timeout, or API error | **0.50** | Neutral fallback — never blocks report submission |
+| No vision key configured, file missing, timeout, or API error | **0.50** | Neutral fallback — never blocks report submission |
 
 #### Final Classification
 
 | Score | Classification | System Action |
 |:---|:---|:---|
-| **85–100%** | 🟢 Highly Reliable | **Auto-approved** → alerts dispatched immediately, reporter awarded bonus points |
+| **85–100%** | 🟢 Highly Reliable | **Auto-approved** → alerts dispatched immediately, reporter awarded bonus points — *unless* the photo was detected as a re-capture of a screen, which blocks auto-approval outright regardless of score |
 | **60–84%** | 🟡 Good Confidence | Queued for official review |
 | **40–59%** | 🟠 Questionable | Held for investigation |
 | **0–39%** | 🔴 Low Confidence | Flagged as potential misinformation |
@@ -540,6 +573,79 @@ The crown jewel of the platform — a comprehensive analytical command center, g
 - `/chart/hazard_distribution` — hazard-type pie chart
 - `/chart/reports_timeline` — reports-over-time line chart
 - `/chart/user_engagement` — engagement bar chart
+
+
+#### 🌐 The Urban Digital Twin
+
+A live H3 risk grid (~460 m cells) for **Hyderabad and Bengaluru**, rendered in MapLibre GL 4.7.1 with terrain, height-graded buildings and zoom-scaled risk hexes.
+
+```
+risk = hazard × vulnerability
+```
+
+Every cell carries its contributing sub-scores (hydro, incident, environment, terrain, critical infrastructure), the live inputs behind them, and an honest degraded flag when an upstream source is stale.
+
+**Layer registry** — Zones · Official alerts (SACHET/IMD) · Flag areas · Reports · Critical assets · CCTV · Water & drains · 3D buildings · Terrain relief · Rain radar · Traffic · **OSINT**
+
+---
+
+#### 📷 Ground Imagery — what this place actually looks like
+
+Two views, both reachable from the twin header.
+
+**Per-cell (the drawer).** Clicking any cell answers *"what does this exact place look like?"* — and the answer is guaranteed to be specific to that cell:
+
+| Tier | Source | Notes |
+|:---|:---|:---|
+| **Reported here** | Citizen report photos within 700 m | Recent *and* this exact place — the only source that is both |
+| **This area** | KartaView street-level, **ring-sampled** | See below |
+| **Satellite** | Esri World Imagery crop of the exact cell | The floor — always exists, always of this cell |
+| **Live** | Windy webcams, demoted and labelled | Same frame city-wide; never leads |
+
+**Ring sampling.** KartaView's API hard-caps `radius` at 500 m — narrower than an H3 cell — so a single centre query left about half of all cells with no photo of their own, falling through to the shared city webcam. The adapter now samples a 5-point ring. Measured on 24 random Hyderabad cells:
+
+| Method | Cells with their own photo | Median photos |
+|:---|:---|:---|
+| Single 500 m query | 14 / 24 | 1 |
+| **5-point ring** | **19 / 24** | **5** |
+
+When even that finds nothing, two wider rings at 1.3 km and 2.6 km run; anything found is captioned with its true distance and never presented as this exact spot.
+
+> **Why the satellite crop exists.** With two Windy webcams covering all of Hyderabad, any cell without street coverage showed that same frame — so eight different locations looked identical. The Esri crop (same service as the basemap, no key, never proxied) guarantees every cell has an image genuinely of itself. Result on 8 random cells: **8 distinct lead images, up from 4.**
+
+**City-wide (📷 Ground).** One board of every location in the city that has a picture — live webcams, report photos, street-level photography — each tile carrying its provider, real age and distance. Filter by All / Live / Reports / Street; click a place name to fly the map there. Live frames refresh every 60 s.
+
+The **Sources** panel lists every feed *including the ones contributing nothing*, with the reason — an unkeyed or blocked source is something the owner can fix, whereas silence reads as "this city has no coverage".
+
+**AI reading.** A vision model captions whichever image the drawer leads with, so two locations sharing a photo still get two different, grounded sentences. A dead provider thumbnail and a dead model are reported as different failures — they need different fixes.
+
+---
+
+#### 📡 OSINT Intelligence Layer
+
+Open-source intelligence filtered to within 250 km of the city, drawn on the same map. Every source below was verified against its live endpoint:
+
+| Source | Feed | Status |
+|:---|:---|:---|
+| **Aircraft** | OpenSky Network (ADS-B) | ✅ keyless — live positions, callsign, altitude, heading, velocity |
+| **Seismic** | EMSC `seismicportal.eu` | ✅ keyless — chosen alongside USGS because EMSC's regional threshold over India is far lower |
+| **Natural events** | NASA EONET v3 | ✅ keyless — open event tracks, collapsed to one pin per event |
+| **Thermal anomalies** | NASA FIRMS (VIIRS/MODIS) | ⚠️ needs a free `FIRMS_MAP_KEY` — reports `unconfigured`, never guesses |
+| **Geocoded news** | GDELT 2.0 | ✅ keyless — hazard-filtered, image cards |
+
+Aircraft render as heading-rotated glyphs (dimmed on the ground — parked is not traffic); quakes as magnitude-scaled rings. Clicking any feature gives provider, age and distance.
+
+**Per-cell OSINT.** The cell drawer answers the same question for one point: is any camera covering this spot, what did OSINT detect within 25 km, and what is the nearest thing of each kind that fell outside. It is never allowed to render blank — *"nothing within 25 km, nearest aircraft 28.2 km (15 in the city)"* is an answer; a blank panel reads as a broken feed.
+
+It also states plainly why there is no camera: no open source publishes a live public camera feed for either city, OSM maps camera *locations* rather than streams, and a real feed appears only when an operator supplies access via `TWIN_CCTV_STREAMS_FILE`.
+
+**News is a list, not pins.** GDELT locates an article to the city and no further, so pinning articles would invent precision the feed does not have. Articles are filtered against hazard *phrases* rather than bare words — "rain" alone is a cricket delay — deduplicated across syndication, and Indian sources ranked first. Each renders as a card with the publisher's own lead image.
+
+> Nothing in this layer is an official warning, and the UI says so on every view. Official alerts remain the separate SACHET/IMD layer.
+
+**Caching.** All OSINT is collected once per city and reused, so opening twenty cell drawers costs zero extra calls to OpenSky, EMSC, EONET or FIRMS — that budget would otherwise be exhausted in minutes of ordinary clicking.
+
+---
 
 ---
 
@@ -1147,6 +1253,51 @@ Purpose-built endpoints that make demos, deployments, and field debugging surviv
 
 ---
 
+### 🤖 29. AI Disaster Prediction Agent
+
+A three-step agent — **INGEST → PROJECT → NARRATE** — watching live wind, cloud cover and fire-weather signal across 26+ monitored Indian regions and projecting which regions lie downwind of an elevated hazard.
+
+**The deterministic core.** A region with an elevated signal "throws" it along the direction its wind is blowing *toward* (meteorological wind direction reports where wind comes *from*, so hazards travel at `wind_dir + 180`), out to the distance that wind would carry it in a given horizon (1 / 3 / 6 / 24 h). Any other watched region falling inside a bearing cone and distance window accumulates a weighted share.
+
+```
+risk(target, hazard, horizon) = Σ  source_strength × bearing_alignment × distance_match
+```
+
+**No number, coordinate or time is ever produced by an LLM.** The model narrates the arithmetic and nothing else — the same separation the twin's triage agent enforces. With no LLM key the agent still runs, on a deterministic template narrative.
+
+#### Hazard Windows — *when*, not just *how strong*
+
+The watch list could say a signal was 40/100 but not how long it would last, which gives an analyst no basis for deciding whether to alert now or wait.
+
+Open-Meteo returns an **hourly forecast of exactly the fields the scoring function already consumes** — rain, cloud, wind, pressure, temperature, humidity. So that same function is re-run against each forecast hour, producing a strength *timeline* instead of a single number. The window is read straight off it:
+
+| Field | Meaning |
+|:---|:---|
+| `starts_at` | First hour at or above the alert threshold |
+| `peak_at` / `peak_strength` | The worst hour inside that run |
+| `ends_at` | First hour measured back **below** the threshold |
+
+No new model, no new coefficients, no extrapolation — a window can never disagree with the score it sits under.
+
+Live output:
+
+```
+Hyderabad · Flood      ⏱ Underway since 22:30 · expected to ease by 01:30 (≈3h)
+                          · peaks 42/100 at 22:30
+Gangtok   · Landslide  ⏱ Underway since 22:30 · expected to ease by 13:30 (≈15h)
+                          · peaks 50/100 at 03:30 tomorrow
+Patna     · Flood      ⏱ Underway since 22:30 · expected to ease by 17:30 (≈19h)
+                          · peaks 44/100 at 12:30 tomorrow
+```
+
+Note Patna and Bhubaneswar peak *tomorrow*. That is precisely what the old panel could not tell you — a 37/100 about to get worse read identically to a 37/100 about to clear.
+
+**What it refuses to say.** The forecast is finite. If a signal is still above threshold in the final forecast hour, there is no end time in the data and none is invented — the window is flagged `open_ended` and renders in red as *"still elevated at the end of the forecast — no end time in the data yet"*, never as an all-clear.
+
+States: `active` (above threshold now) · `upcoming` (crosses later) · `clear` (stays below for the whole forecast). A shifted window also counts as a material change, so a narrative is never reused when "eases by 20:00" becomes "eases by 04:00".
+
+---
+
 ## 🏗️ System Architecture
 
 ```
@@ -1386,6 +1537,32 @@ sentinel-ai/
 │   ├── whatsapp_setup.html · offline.html · debug_users.html
 │   └── partials/language_selector.html
 │
+├── twin/                       # Urban Digital Twin package (self-contained)
+│   ├── routes.py               #  HTTP surface — pages + JSON/GeoJSON API
+│   ├── engine.py · scoring.py  #  risk = hazard x vulnerability, per H3 cell
+│   ├── grid.py · geo.py        #  H3 grid build, haversine/bearing maths
+│   ├── models.py               #  TwinCity, TwinCell, TwinState, alerts, flags
+│   ├── ground.py               #  city-wide ground-imagery board
+│   ├── aerial.py               #  Esri satellite crop of one exact point
+│   ├── osint.py                #  aircraft, seismicity, natural events, news
+│   ├── vision.py               #  vision captions for ground imagery
+│   ├── cameras.py              #  operator-supplied streams (never proxied)
+│   ├── forecast.py · anomaly.py · dispatch.py · live.py
+│   ├── agent/                  #  LangGraph triage + forecast DAGs, RAG
+│   └── ingest/                 #  one adapter per source, all degrade never crash
+│       ├── open_meteo.py · overpass.py · rainviewer.py · sachet.py
+│       ├── streetview.py       #   KartaView/Mapillary, ring-sampled
+│       ├── mapillary_tiles.py  #   hand-rolled MVT decoder
+│       ├── stations.py · transit.py · windfield.py · global_events.py
+│       └── internal_reports.py #   this app's own reports as a hazard signal
+│
+├── disaster_agent/             # AI Disaster Prediction Agent
+│   ├── ingest.py               #  live wind/cloud/fire signal, 26+ regions
+│   ├── advect.py               #  deterministic downwind projection
+│   ├── window.py               #  hazard windows — when it starts, peaks, eases
+│   ├── agent.py                #  INGEST -> PROJECT -> NARRATE orchestrator
+│   ├── regions.py · localities.py · models.py · routes.py
+│
 ├── migrations/                 # Flask-Migrate (Alembic) migrations
 │   └── versions/
 │       ├── 0391715ef3c0_initial_migration.py
@@ -1396,6 +1573,7 @@ sentinel-ai/
 │       ├── add_notification_assignment.py
 │       ├── add_rescue_completion_fields.py
 │       ├── add_volunteer_assignment_columns.py
+│       ├── add_disaster_prediction_window.py   # hazard-window columns
 │       └── volunteer_assignment_updates.py
 │
 └── instance/                   # SQLite database files (gitignored)
@@ -1655,13 +1833,37 @@ TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886   # Twilio Sandbox number
 # --- Twilio SMS (optional) ---
 TWILIO_PHONE_NUMBER=+1XXXXXXXXXX
 
-# --- NVIDIA NIM (image processing, Parameter 4) ---
-NVIDIA_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   # OpenRouter key
-NVIDIA_VISION_MODEL=nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free   # optional, this is the default
+# --- Vision (image processing + twin ground imagery) ---
+# Primary. Any vision-capable model; gpt-4.1-mini is the default and fastest.
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Optional free fallback chain, so a billing or quota wall degrades to a free
+# caption rather than to none. All configured keys are tried in turn.
+KIMI_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   # OpenRouter
+
+# --- Urban Digital Twin (all optional; it runs keyless) ---
+TWIN_ENABLED=1
+WINDY_WEBCAMS_KEY=                # only source of genuinely live webcam frames
+MAPILLARY_TOKEN=                  # needs "read" scope, see .env.twin.example
+FIRMS_MAP_KEY=                    # free NASA key for satellite fire detection
+TOMTOM_API_KEY=                   # traffic raster overlay
+
+# --- AI Disaster Prediction Agent (runs keyless; an LLM key only narrates) ---
+DISASTER_AGENT_ENABLED=1
+DISASTER_AGENT_CYCLE_MIN=20
 
 # --- Optional ---
 BASE_URL=https://your-ngrok-subdomain.ngrok-free.app
 FIREBASE_SERVER_KEY=your_firebase_key    # For push notifications
+```
+
+> **`.env.twin.example`** carries the fully annotated reference for every Twin,
+> OSINT, vision and agent variable — including which external sources were
+> checked and **rejected**, and why. Worth reading before changing a default.
+
+#### Seed the Digital Twin grid
+
+```bash
+python scripts/seed_twin.py      # builds the H3 grid for Hyderabad + Bengaluru
 ```
 
 ### 3. Initialise the Database
@@ -1729,6 +1931,61 @@ Every setting lives in `config.py` and reads from the environment.
 | `TWILIO_WHATSAPP_NUMBER` | — | Sandbox or approved WhatsApp sender |
 | `TWILIO_PHONE_NUMBER` | — | SMS sender for the SMS alert path |
 | `FIREBASE_SERVER_KEY` | — | Enables push notifications when set |
+
+### Vision Models (report photos + twin ground imagery)
+
+| Variable | Default | Purpose |
+|:---|:---|:---|
+| `OPENAI_API_KEY` | — | **Primary** vision provider. Any vision-capable model |
+| `OPENAI_VISION_MODELS` | `gpt-4.1-mini,gpt-5.4-nano` | Ordered OpenAI candidates |
+| `OPENROUTER_API_KEY` / `KIMI_API_KEY` / `NVIDIA_API_KEY` | — | OpenRouter keys for the free-model fallback chain. **All** are tried in turn — a key that is *set but expired* is exactly the case a plain `A or B` misses |
+| `NVIDIA_VISION_MODEL` / `VISION_FALLBACK_MODEL` | — | Pin a specific OpenRouter model ahead of the verified chain |
+| `REPHOTOGRAPH_MIN_CONFIDENCE` | `0.70` | How sure the model must be that a photo is a screen/printout re-capture before it is penalised |
+| `REPHOTOGRAPH_SCORE_CAP` | `0.25` | Score ceiling for a detected re-capture. Detection **also** hard-blocks auto-approval, independent of any score |
+
+### Urban Digital Twin
+
+| Variable | Default | Purpose |
+|:---|:---|:---|
+| `TWIN_ENABLED` | `1` | Master switch |
+| `TWIN_H3_RESOLUTION` | `8` | Grid resolution (~460 m cells) |
+| `TWIN_SCHEDULER_ENABLED` | `1` | Background recompute |
+| `TWIN_COMPUTE_INTERVAL_MIN` | `5` | Minutes between risk recomputes |
+| `TWIN_STREETVIEW_RING_POINTS` | `5` | Ring-sample size for street imagery. `1` restores a single query |
+| `TWIN_STREETVIEW_RING_STEP_M` | `420` | Ring radius |
+| `TWIN_STREETVIEW_WIDE_RING_STEPS_M` | `1300,2600` | Widened search, used only when the close ring finds nothing |
+| `TWIN_STREETVIEW_REPORT_RADIUS_M` | `700` | How close a report photo must be to count as *this* point |
+| `TWIN_AERIAL_SPAN_M` | `400` | Satellite crop width (~one H3 cell) |
+| `TWIN_GROUND_WEBCAM_TTL_S` | `60` | A live frame older than this is no longer "now" |
+| `TWIN_GROUND_ARCHIVE_TTL_S` | `86400` | Archival photography does not change |
+| `WINDY_WEBCAMS_KEY` | — | The only source of genuinely live webcam frames |
+| `MAPILLARY_TOKEN` | — | Street-level imagery. **Needs `read` scope** — a token without it returns HTTP 200 with an empty list, indistinguishable from "no coverage" |
+| `TWIN_CCTV_STREAMS_FILE` | `data/twin/cctv_streams.json` | Operator-supplied live feeds. Never proxied |
+| `TOMTOM_API_KEY` | — | Traffic raster overlay |
+
+### OSINT Feeds
+
+| Variable | Default | Purpose |
+|:---|:---|:---|
+| `TWIN_OSINT_RADIUS_KM` | `250` | How far from the city centre to collect |
+| `TWIN_OSINT_AIRCRAFT_TTL_S` | `60` | OpenSky poll floor (anonymous tier is rate-limited) |
+| `TWIN_OSINT_SEISMIC_MIN_MAG` | `2.5` | Below this nobody felt it |
+| `TWIN_OSINT_NEAR_RADIUS_KM` | `25` | Per-cell OSINT radius |
+| `TWIN_OSINT_CAMERA_COVER_KM` | `1.5` | How close a camera must be to be said to cover a point |
+| `TWIN_OSINT_NEWS_MIN_INTERVAL_S` | `6` | GDELT's published minimum is 5 s |
+| `TWIN_OSINT_NEWS_COOLDOWN_S` | `300` | After a 429, stop asking locally rather than earning another |
+| `FIRMS_MAP_KEY` | — | Free key for NASA FIRMS thermal anomalies |
+
+### AI Disaster Prediction Agent
+
+| Variable | Default | Purpose |
+|:---|:---|:---|
+| `DISASTER_AGENT_ENABLED` | `1` | Master switch |
+| `DISASTER_AGENT_CYCLE_MIN` | `20` | Minutes between automatic cycles |
+| `DISASTER_AGENT_SOURCE_MIN` | `35` | Alert threshold a signal must clear |
+| `DISASTER_AGENT_FORECAST_DAYS` | `3` | Ceiling on how long a hazard window can be. Past it, a still-elevated signal is reported `open_ended` — never given an invented end |
+
+> Full annotated reference, including which sources were checked and rejected and why, lives in **`.env.twin.example`**.
 
 ---
 
@@ -1888,6 +2145,41 @@ All JSON endpoints require authentication via session cookie unless marked other
 | `GET` | `/dashboard` | ✅ | Main user dashboard |
 | `GET` | `/get_location` | ✅ | Location helper |
 
+### Urban Digital Twin 🔐
+
+All routes require one of `official`, `analyst`, `admin`, `coordinator`.
+
+| Route | Purpose |
+|:---|:---|
+| `GET /digital-twin` | Full-page twin console |
+| `GET /api/twin/cities` | City list, zones, camera defaults, attributions, status bands |
+| `GET /api/twin/<city>/state` | H3 risk grid as GeoJSON for a horizon |
+| `GET /api/twin/<city>/cell/<h3>` | One cell — sub-scores, terrain, live inputs, assets, reports, **satellite crop** |
+| `GET /api/twin/<city>/zones` | Zone polygons (Voronoi, flagged `approximate`) |
+| `GET /api/twin/<city>/alerts` | SACHET / GDACS / USGS alerts scoped to the city |
+| `GET /api/twin/<city>/cameras` | OSM-mapped camera positions (locations, never streams) |
+| `GET /api/twin/<city>/water` | Water bodies and mapped drains |
+| `GET /api/twin/<city>/ground-imagery` | **City-wide imagery board** — every location with a picture, plus per-source health |
+| `GET /api/twin/<city>/osint` | **OSINT FeatureCollection** + hazard-filtered news list |
+| `GET /api/twin/<city>/osint/near?lat=&lon=` | **Per-point OSINT** — observations, nearest-beyond, camera coverage |
+| `GET /api/twin/cctv/view?lat=&lon=` | Imagery for one point — report photos, street-level, satellite, live |
+| `GET /api/twin/cctv/caption?lat=&lon=` | Vision-model reading of whichever image leads |
+| `GET /api/twin/cctv/streams?city=` | Operator-supplied live feeds (never proxied) |
+| `GET /api/twin/radar` · `/gibs` · `/traffic` | Raster overlay descriptors |
+| `GET /api/twin/stream` | SSE — `state_update`, `incident`, `alerts`, `transit`, `flags` |
+| `POST /api/twin/refresh` 🔐 | Force a recompute (`official` / `admin`) |
+
+### AI Disaster Prediction Agent 🔐
+
+| Route | Purpose |
+|:---|:---|
+| `GET /api/disaster-agent/signals` | Live per-region hazard strength **with hazard windows**, regardless of threshold |
+| `GET /api/disaster-agent/predictions` | Active hotspots with narrative, severity and window |
+| `GET /api/disaster-agent/status` | Agent enabled/scheduler state, LLM availability, last run |
+| `GET /api/disaster-agent/localities` | Neighbourhood-level alert targets per region |
+| `POST /api/disaster-agent/run` | Run a cycle now |
+| `POST /api/disaster-agent/predictions/<id>/dismiss` | Dismiss a prediction |
+
 ### Browser-Side External APIs (no proxy)
 
 | Service | Endpoint | Purpose |
@@ -2019,6 +2311,20 @@ Coordinator (WhatsApp) → "❌ *ASSIGNMENT CANCELLED*
 | **Maps** | Leaflet.js + MapLibre GL | Interactive 2D maps + 3D God Mode globe |
 | **Map Tiles** | Esri World Imagery + CARTO Voyager | Satellite + vector base tiles |
 | **Weather Radar** | RainViewer | Satellite precipitation overlay |
+| **Spatial index** | H3 (Uber) | ~460 m hexagonal risk cells |
+| **Vision (primary)** | OpenAI `gpt-4.1-mini` | Photo provenance + hazard matching, ground-imagery captions |
+| **Vision (fallback)** | OpenRouter free VLMs | Keeps captions working when the billed key hits a wall |
+| **Street imagery** | KartaView · Mapillary | Archival ground-level photography, ring-sampled |
+| **Live webcams** | Windy Webcams API v3 | The only genuinely live frames available for these cities |
+| **Aerial crops** | Esri World Imagery `export` | Per-cell satellite view; no key, never proxied |
+| **Aircraft (OSINT)** | OpenSky Network | Live ADS-B positions |
+| **Seismic (OSINT)** | EMSC `seismicportal.eu` | Regional quakes below USGS's India threshold |
+| **Natural events** | NASA EONET v3 | Open event tracks |
+| **Thermal anomalies** | NASA FIRMS (VIIRS/MODIS) | Satellite fire detection (free key) |
+| **News (OSINT)** | GDELT 2.0 | Hazard-filtered geocoded world news |
+| **Official alerts** | NDMA SACHET (CAP) · GDACS · USGS | Government warning feeds |
+| **Terrain** | AWS Terrarium DEM | 3D relief and hillshade |
+| **Agent runtime** | LangGraph | Triage + forecast DAGs with checkpointing |
 | **LLM** | Sentinel Resilience Strategy Engine | Government-grade simulation briefings |
 | **AI Support** | Chatbase (embedded iframe) | In-app AI assistant chatbot |
 | **Charts** | Matplotlib ≥ 3.8 + NumPy ≥ 1.26 | Server-rendered analytics PNGs |
@@ -2222,6 +2528,14 @@ A practical validation script for demo day or a staging sign-off.
 |:---|:---|:---|
 | **Now** | 4-channel ingestion, 4-parameter AI, dispatch, coordination, simulation | ✅ Shipped |
 | **Now** | PWA, offline queue, WhatsApp bot, 6 languages, gamification | ✅ Shipped |
+| **Now** | Urban Digital Twin — H3 risk grid, 12 layers, SSE live updates | ✅ Shipped |
+| **Now** | Ground imagery — ring-sampled street photos, report photos, per-cell satellite crops | ✅ Shipped |
+| **Now** | OSINT layer — aircraft, seismicity, natural events, thermal anomalies, geocoded news | ✅ Shipped |
+| **Now** | AI Disaster Prediction Agent with hazard windows (start / peak / ease) | ✅ Shipped |
+| **Now** | Photo-provenance detection — screen re-captures blocked from auto-approval | ✅ Shipped |
+| **Next** | Mapillary `read` scope on the API token — unlocks dense street coverage already visible in its vector tiles | 🔑 Owner action |
+| **Next** | NASA `FIRMS_MAP_KEY` (free) — turns on satellite fire detection per city | 🔑 Owner action |
+| **Next** | Operator CCTV handover (GHMC / BBMP ICCC) into `TWIN_CCTV_STREAMS_FILE` — the only route to genuinely live per-location camera feeds | 🤝 Partnership |
 | **Next** | WebSockets replacing 5-second notification polling | 🔨 Planned |
 | **Next** | PostGIS spatial indexing for sub-100 ms radius queries at city scale | 🔨 Planned |
 | **Next** | Celery/RQ worker queue for WhatsApp and alert fan-out | 🔨 Planned |
@@ -2238,6 +2552,12 @@ A practical validation script for demo day or a staging sign-off.
 
 | Date | Change |
 |:---|:---|
+| **2026-09-24** | 🛡️ **Photo-provenance detection** — a flood picture photographed off a laptop screen was grading as a genuine field photo. The grader now asks about provenance and hazard as two independent questions, caps a detected re-capture at 0.25 and **hard-blocks auto-approval**. Verified at 0.95 confidence on the real submission |
+| **2026-09-24** | 👁️ **Vision pipeline rebuilt** — OpenAI `gpt-4.1-mini` primary with a free-OpenRouter fallback chain. Fixed a silent failure where `max_tokens=300` let a *reasoning* model spend its whole budget thinking and return nothing, and replaced `ling-3.0-flash-vl:free` after it was retired to paid-only (HTTP 404) |
+| **2026-09-24** | 📡 **OSINT layer** — live aircraft (OpenSky), regional seismicity (EMSC), natural events (NASA EONET), thermal anomalies (NASA FIRMS) and hazard-filtered geocoded news (GDELT) on the twin map, plus per-cell OSINT in the drawer |
+| **2026-09-24** | ⏱️ **Hazard windows** — the prediction agent now reports when each signal starts, peaks and is expected to ease, by re-running its own scoring function over the hourly forecast. A still-elevated signal at the forecast edge is reported `open_ended`, never given an invented end |
+| **2026-09-23** | 📷 **Ground imagery overhaul** — ring-sampled KartaView (14/24 → 19/24 cells with their own photo), citizen report photos, and an Esri satellite crop of every exact cell. Result: 8 distinct lead images across 8 cells, up from 4 |
+| **2026-09-23** | 🖼️ **City-wide imagery board** (📷 Ground) — every location with a picture, side by side, each tile carrying provider, real age and distance, with a source-health panel that names what is unkeyed or blocked |
 | **2026-09-05** | 🌐 **Urban Digital Twin & Live Incidents** — H3 spatial risk grids, CCTV OSINT cones, and LangGraph-powered ingestion of real NDMA SACHET / GDACS / USGS feeds |
 | **2026-09-03** | 📚 README rewritten as a complete platform reference — all 28 feature clusters, 119 routes, 23 models, full SH-SVA-03 traceability matrix |
 | **2026-05-24** | 🧪 **Sentinel Resilience Engine** — LLM-backed 7-section government resilience briefings with a deterministic fallback report |

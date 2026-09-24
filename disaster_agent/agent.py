@@ -11,6 +11,7 @@ less articulate about it (the same trade-off `twin/` makes everywhere).
 """
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 from . import advect, config as agent_config, ingest
@@ -51,17 +52,100 @@ def run_prediction_cycle(db, models, now=None, llm=None):
         return {'ok': False, 'stage': 'project', 'error': str(exc)}
 
     narrated = hotspots[:agent_config.MAX_NARRATED_HOTSPOTS]
-    briefs = [_narrate(h, llm=llm) for h in narrated]
+    to_narrate, reused = _split_by_reuse(models, narrated)
 
+    llm = llm if llm is not None else _default_llm()
+    fresh = _narrate_concurrently(to_narrate, llm)
+
+    briefs = fresh + reused
     persisted = _persist(db, models, now, briefs)
     return {
         'ok': True, 'regions': len(signals), 'hotspots': len(hotspots),
-        'narrated': len(narrated), 'persisted': persisted,
+        'narrated': len(narrated), 'llm_calls': len(to_narrate),
+        'reused': len(reused), 'persisted': persisted,
         'ran_at': now.isoformat(),
     }
 
 
+# --- reuse: skip the LLM when nothing material changed --------------------------
+def _split_by_reuse(models, hotspots):
+    """Hotspots into (needs a fresh narrative, can reuse the last one).
+
+    A quiet cycle - risk scores drifting a couple of points, same leading
+    source - should cost zero LLM calls, the same principle
+    twin/agent/graph.py applies to its own triage runs.
+    """
+    if not hotspots:
+        return [], []
+
+    # A plain single-column IN, not a composite (region, hazard) tuple IN -
+    # portable across every DB backend this app might run on, at the cost of
+    # a handful of extra rows fetched (filtered out in Python below).
+    slugs = {h['target_slug'] for h in hotspots}
+    candidates = (models.DisasterPrediction.query
+                  .filter(models.DisasterPrediction.region_slug.in_(slugs))
+                  .filter(models.DisasterPrediction.status == 'active')
+                  .all())
+    existing_by_key = {(row.region_slug, row.hazard_type): row for row in candidates}
+
+    to_narrate, reused = [], []
+    for hotspot in hotspots:
+        row = existing_by_key.get((hotspot['target_slug'], hotspot['hazard_type']))
+        if _needs_fresh_narrative(hotspot, row):
+            to_narrate.append(hotspot)
+        else:
+            reused.append(dict(hotspot,
+                              headline=row.headline,
+                              narrative=row.narrative,
+                              recommended_action=row.recommended_action,
+                              confidence_label=row.confidence_label,
+                              citation_sources=[s.get('region') for s in row.contributing_sources()],
+                              generated_offline=row.generated_offline))
+    return to_narrate, reused
+
+
+def _needs_fresh_narrative(hotspot, row):
+    if row is None or not row.narrative:
+        return True
+    # A template brief is upgraded to an LLM one the moment a key becomes
+    # available, rather than staying template-worded indefinitely.
+    if row.generated_offline and agent_config.llm_available():
+        return True
+    if abs(hotspot['risk_score'] - (row.risk_score or 0.0)) > agent_config.REUSE_RISK_DELTA:
+        return True
+    # A window that has shifted is exactly the kind of change an analyst is
+    # watching for - "eases by 20:00" turning into "eases by 04:00" must not be
+    # hidden behind a reused narrative just because the score barely moved.
+    window = hotspot.get('window') or {}
+    if _iso(window.get('ends_at')) != _iso(row.window_ends_at):
+        return True
+    if _iso(window.get('starts_at')) != _iso(row.window_starts_at):
+        return True
+
+    previous_top_source = (row.contributing_sources() or [{}])[0].get('region')
+    current_top_source = (hotspot['sources'] or [{}])[0].get('region')
+    return previous_top_source != current_top_source
+
+
+def _iso(value):
+    return value.replace(microsecond=0).isoformat() if isinstance(value, datetime) else None
+
+
 # --- narration -----------------------------------------------------------------
+def _narrate_concurrently(hotspots, llm):
+    """Every hotspot that needs a fresh brief, narrated in parallel.
+
+    LLM calls are network-bound HTTP round-trips, not CPU work, so a thread
+    pool turns N sequential round-trips into roughly one round-trip's worth
+    of wall-clock time.
+    """
+    if not hotspots:
+        return []
+    workers = min(agent_config.NARRATE_MAX_WORKERS, len(hotspots))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(lambda h: _narrate(h, llm=llm), hotspots))
+
+
 def _narrate(hotspot, llm=None):
     """One hotspot -> a dict ready to persist, with or without an LLM."""
     if llm is None:
@@ -129,6 +213,10 @@ def _build_prompt(hotspot):
         if src.get('temperature_c') is not None:
             bits.append('temperature %.1f C' % src['temperature_c'])
         lines.append(', '.join(bits))
+    if hotspot.get('window_text'):
+        lines.append('')
+        lines.append('Timing (already computed from the hourly forecast - quote it, never '
+                     'recompute or round it): %s' % hotspot['window_text'])
     lines.append('')
     lines.append('Write the brief for this hotspot only, grounded strictly in the numbers above.')
     return '\n'.join(lines)
@@ -166,6 +254,9 @@ def _offline_brief(hotspot):
                 top_source.get('region', 'an upwind source'),
                 top_source.get('distance_km', 0.0), top_source.get('bearing_alignment_pct', 0.0))
         )
+
+    if hotspot.get('window_text'):
+        narrative += ' ' + hotspot['window_text']
 
     confidence = 'high' if len(hotspot['sources']) > 1 and hotspot['risk_score'] >= 70 else (
         'medium' if hotspot['risk_score'] >= 55 else 'low')
@@ -213,6 +304,14 @@ def _persist(db, models, now, briefs):
         row.recommended_action = brief['recommended_action']
         row.confidence_label = brief['confidence_label']
         row.contributing_json = json.dumps(brief['sources'], default=str)
+        window = brief.get('window') or {}
+        row.window_starts_at = window.get('starts_at')
+        row.window_ends_at = window.get('ends_at')
+        row.window_peak_at = window.get('peak_at')
+        row.window_peak_strength = window.get('peak_strength')
+        row.window_state = window.get('state')
+        row.window_open_ended = bool(window.get('open_ended'))
+        row.window_text = brief.get('window_text')
         row.generated_offline = bool(brief.get('generated_offline'))
         row.status = 'active'
         row.updated_at = now

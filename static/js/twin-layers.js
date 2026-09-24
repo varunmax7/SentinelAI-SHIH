@@ -25,6 +25,7 @@
         "satellite",
         "satellite-labels",
         "gibs",
+        "twin-hillshade",
         "twin-buildings-3d",
         "water-bodies",
         "water-bodies-outline",
@@ -34,8 +35,11 @@
         "traffic",
         "alert-areas",
         "alert-areas-outline",
+        "alert-wall",
+        "flag-wall",
         "twin-hex-fill",
         "twin-hexes",
+        "twin-hex-critical-cap",
         "twin-hex-outline",
         "twin-hexes-degraded",
         "twin-hex-interaction-glow",
@@ -43,7 +47,9 @@
         "zone-outline",
         "cctv-cone",
         "cctv-cone-edge",
+        "cctv-cone-3d",
         "infrastructure",
+        "twin-critical-buildings",
         "cctv",
         "cctv-direction",
         "incidents",
@@ -51,7 +57,11 @@
         "incident-labels",
         "incident-detail-labels",
         "incident-groups",
-        "incident-group-count"
+        "incident-group-count",
+        "osint-points",
+        "osint-aircraft",
+        "osint-labels",
+        "osint-aircraft-labels"
     ];
 
     /* The layer this one must sit *below*: the first layer above it in
@@ -142,6 +152,22 @@
         ];
     }
 
+    /* The same column heights, scaled down as the camera gets close enough
+     * that a full-height column would dwarf the buildings and hide the
+     * street beneath it. `["zoom"]` may only appear at the top level of an
+     * expression in MapLibre's style spec; each stop's *output* here is a
+     * full data expression (riskHeightExpression()), which is allowed - only
+     * a second top-level zoom reference inside those stops would not be. */
+    function riskHeightExpressionByZoom(scale) {
+        var full = riskHeightExpression(scale);
+        return [
+            "interpolate", ["linear"], ["zoom"],
+            10, full,                              // city view: full columns
+            13, ["*", 0.35, full],                 // district view: shorter
+            15, ["*", 0.04, full]                  // street view: a thin tinted floor
+        ];
+    }
+
     // ---- risk grid ------------------------------------------------------
     /* The grid is drawn by TWO layers over the same source, split at the watch
      * threshold, and the split is not cosmetic.
@@ -173,13 +199,43 @@
             filter: [">=", ["coalesce", ["get", "risk"], 0], STATUS_FLOORS.watch],
             paint: {
                 "fill-extrusion-color": riskColorExpression(mode),
-                "fill-extrusion-height": riskHeightExpression(heightScale),
+                "fill-extrusion-height": riskHeightExpressionByZoom(heightScale),
                 "fill-extrusion-base": 0,
                 // A flat number, never an expression - see the file header.
                 "fill-extrusion-opacity": 1.0,
                 // Darkens the base of each column; this is what visually
                 // separates neighbouring cells when the camera is pitched.
-                "fill-extrusion-vertical-gradient": true
+                "fill-extrusion-vertical-gradient": true,
+                // Switching Now -> +6h changes `risk` on every feature; without
+                // this the columns and their colour jump instantly instead of
+                // visibly growing or shrinking, which is the whole point of
+                // having a horizon control at all.
+                "fill-extrusion-height-transition": { duration: 600 },
+                "fill-extrusion-color-transition": { duration: 600 }
+            }
+        };
+    }
+
+    /* A second, thin extrusion sitting on top of every critical (>=75) column,
+     * always solid red regardless of fill mode - a warning lid that reads at
+     * any zoom, including the street-level view where the column beneath it
+     * has been scaled down to a thin floor. `base` tracks the same zoom-scaled
+     * height as the column below it so the cap never floats free of its own
+     * column or buries itself inside it. */
+    function twinHexCriticalCapLayer(sourceId, heightScale) {
+        var height = riskHeightExpressionByZoom(heightScale);
+        return {
+            id: "twin-hex-critical-cap",
+            type: "fill-extrusion",
+            source: sourceId,
+            filter: [">=", ["coalesce", ["get", "risk"], 0], STATUS_FLOORS.critical],
+            paint: {
+                "fill-extrusion-color": "rgba(239,68,68,0.9)",
+                "fill-extrusion-base": height,
+                "fill-extrusion-height": ["+", height, 12],
+                "fill-extrusion-opacity": 1.0,
+                "fill-extrusion-height-transition": { duration: 600 },
+                "fill-extrusion-base-transition": { duration: 600 }
             }
         };
     }
@@ -343,11 +399,17 @@
             "source-layer": "building",
             minzoom: BUILDINGS_MINZOOM,
             paint: {
+                // Slate-to-steel-blue by height, five stops rather than three:
+                // tall towers along the Outer Ring Road / HITEC City corridor
+                // should read as visibly taller than old-city low-rise, not
+                // just a lighter shade of the same block.
                 "fill-extrusion-color": [
                     "interpolate", ["linear"], buildingHeightExpression(),
-                    0, "#5b6b82",
-                    20, "#7b8ca6",
-                    60, "#9db0cc"
+                    0, "#1e293b",
+                    15, "#334155",
+                    45, "#3b4f6b",
+                    120, "#4b6a8f",
+                    250, "#7aa2c8"
                 ],
                 "fill-extrusion-height": [
                     "interpolate", ["linear"], ["zoom"],
@@ -357,6 +419,54 @@
                 "fill-extrusion-base": buildingMinHeightExpression(),
                 "fill-extrusion-opacity": 0.85,
                 "fill-extrusion-vertical-gradient": true
+            }
+        };
+    }
+
+    // ---- terrain ----------------------------------------------------------
+    // Hyderabad's rolling granite and Bengaluru's valleys are where water
+    // collects; showing the ground's actual shape makes low-lying risk
+    // visible instead of implicit in a "terrain 75/100" sub-score. Both cities
+    // are fairly flat in absolute relief, so a modest exaggeration is needed
+    // before the shape reads at all - tuned here, not left as a MapLibre
+    // default, so it stays one named constant to argue with.
+    var TERRAIN_EXAGGERATION = 1.6;
+    var TERRAIN_DEM_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
+    var TERRAIN_DEM_MAXZOOM = 14;
+
+    /* A SEPARATE raster-dem source from the one `map.setTerrain()` uses, even
+     * though the tile URL is identical - sharing one source between the 3D
+     * terrain mesh and the 2D hillshade layer means the two visibly fight
+     * each other over it (each wants a different internal representation of
+     * the same tiles). Two sources, one URL, costs nothing extra: MapLibre's
+     * own tile cache still dedupes the actual network fetches. */
+    function terrainDemSource() {
+        return {
+            type: "raster-dem",
+            tiles: [TERRAIN_DEM_URL],
+            encoding: "terrarium",
+            tileSize: 256,
+            maxzoom: TERRAIN_DEM_MAXZOOM,
+            attribution: "Terrain: AWS Terrain Tiles"
+        };
+    }
+
+    function hillshadeDemSource() {
+        return terrainDemSource();
+    }
+
+    /* Kept subtle on purpose - the satellite image stays the main visual, this
+     * only has to make the relief legible, not become the picture itself. */
+    function hillshadeLayer(sourceId) {
+        return {
+            id: "twin-hillshade",
+            type: "hillshade",
+            source: sourceId,
+            paint: {
+                "hillshade-shadow-color": "rgba(2,6,23,0.55)",
+                "hillshade-highlight-color": "rgba(148,163,184,0.25)",
+                "hillshade-exaggeration": 0.35,
+                "hillshade-illumination-direction": 315
             }
         };
     }
@@ -417,6 +527,75 @@
         ];
     }
 
+    // ---- flag walls (15.5) -------------------------------------------------
+    /* A pending or approved flag's footprint, as a glowing extruded ring -
+     * "this area is under review", readable from any camera angle, not just
+     * looking straight down at a flat outline. Height and colour are static
+     * per feature; the *pulse* (opacity cycling 0.35-0.6) is driven from
+     * digital-twin.js via setPaintProperty on a throttled rAF loop, paused
+     * when the tab is hidden - see startFlagPulse() there for why this
+     * lives outside the layer spec itself.
+     */
+    var FLAG_WALL_HEIGHT_M = 60;
+    var FLAG_WALL_RING_SEGMENTS = 24;
+
+    function flagSeverityColor(severity) {
+        return rgba(STATUS_COLORS[severity] || STATUS_COLORS.watch, 1);
+    }
+
+    function circleRing(lat, lon, radiusM, segments) {
+        segments = segments || FLAG_WALL_RING_SEGMENTS;
+        var ring = [];
+        for (var i = 0; i <= segments; i++) {
+            ring.push(destination(lat, lon, (360 * i) / segments, radiusM));
+        }
+        return ring;
+    }
+
+    /* Built client-side from `/{city}/flags/areas` (a flat list of
+     * {id, lat, lon, radius_m, severity}), the same "derive the polygon in
+     * the browser" pattern viewCone() and hexagonRing() already use - the
+     * radius is the one number that changes per flag, not a shape worth
+     * shipping as a pre-rendered polygon over the wire. */
+    function buildFlagRingCollection(areas) {
+        var features = (areas || []).map(function (area) {
+            return {
+                type: "Feature",
+                properties: {
+                    id: area.id, hazard_type: area.hazard_type,
+                    severity: area.severity, status: area.status,
+                },
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [circleRing(area.lat, area.lon, (area.radius_m || 0) + 15)]
+                }
+            };
+        });
+        return { type: "FeatureCollection", features: features };
+    }
+
+    function flagWallLayer(sourceId) {
+        return {
+            id: "flag-wall",
+            type: "fill-extrusion",
+            source: sourceId,
+            paint: {
+                "fill-extrusion-color": [
+                    "match", ["get", "severity"],
+                    "critical", flagSeverityColor("critical"),
+                    "warning", flagSeverityColor("warning"),
+                    "watch", flagSeverityColor("watch"),
+                    flagSeverityColor("normal")
+                ],
+                "fill-extrusion-base": 0,
+                "fill-extrusion-height": FLAG_WALL_HEIGHT_M,
+                // Starting value; startFlagPulse() animates this paint
+                // property directly once the layer exists.
+                "fill-extrusion-opacity": 0.5
+            }
+        };
+    }
+
     // ---- official alerts -------------------------------------------------
     /* Drawn *beneath* the risk grid, deliberately. The grid is the twin's own
      * computed judgement and has to stay readable; an alert footprint is
@@ -471,6 +650,25 @@
                 }
             }
         ];
+    }
+
+    /* A low amber wall on every CAP polygon - visibly a different kind of
+     * thing from a flag's glowing ring (which pulses; this does not) and
+     * from the risk grid's own colours, so an official warning always reads
+     * as itself even in a 3D view crowded with other extrusions. */
+    function alertWallLayer(sourceId) {
+        return {
+            id: "alert-wall",
+            type: "fill-extrusion",
+            source: sourceId,
+            filter: ["==", ["geometry-type"], "Polygon"],
+            paint: {
+                "fill-extrusion-color": "#d97706",
+                "fill-extrusion-base": 0,
+                "fill-extrusion-height": 30,
+                "fill-extrusion-opacity": 0.28
+            }
+        };
     }
 
     // ---- incidents & assets --------------------------------------------
@@ -554,6 +752,137 @@
                        ["!", ["get", "grouped"]]),
             labelLayer("incident-detail-labels", sourceId, GROUP_SPLIT_ZOOM, undefined,
                        ["get", "grouped"])
+        ];
+    }
+
+
+    // ---- OSINT ----------------------------------------------------------
+    /* Open-source intelligence: live aircraft, regional seismicity, open
+     * natural-event tracks and satellite thermal anomalies. See twin/osint.py.
+     *
+     * One source, four layers, split by `kind` rather than one layer with a
+     * match expression, because each kind wants a genuinely different mark:
+     * an aircraft is a heading-rotated triangle, a quake is a magnitude-scaled
+     * ring, a fire is a hot dot. Sharing one circle layer would flatten all
+     * of that into colour alone.
+     *
+     * Deliberately NOT styled like the alert layers. These are observations
+     * from third parties, not warnings anyone issued, and an operator must
+     * never confuse a news-adjacent OSINT ping with an IMD red alert.
+     */
+    var OSINT_COLORS = {
+        aircraft: "#38bdf8",
+        seismic: "#f59e0b",
+        events: "#a78bfa",
+        fire: "#ef4444"
+    };
+
+    function osintColorExpression() {
+        return ["match", ["get", "kind"],
+            "aircraft", OSINT_COLORS.aircraft,
+            "seismic", OSINT_COLORS.seismic,
+            "events", OSINT_COLORS.events,
+            "fire", OSINT_COLORS.fire,
+            "#94a3b8"];
+    }
+
+    /* Magnitude drives radius for quakes; everything else is a fixed size.
+     * A bare ["get","magnitude"] would return null for an aircraft and throw
+     * inside the interpolate, so the ["case", ["has", ...]] guard is load
+     * bearing - see this file's header note. */
+    function osintRadiusExpression() {
+        return ["interpolate", ["linear"], ["zoom"],
+            6, ["case", ["has", "magnitude"],
+                   ["interpolate", ["linear"], ["get", "magnitude"], 2, 2.5, 6, 9],
+                   3],
+            12, ["case", ["has", "magnitude"],
+                    ["interpolate", ["linear"], ["get", "magnitude"], 2, 5, 6, 20],
+                    6]];
+    }
+
+    function osintLayers(sourceId) {
+        return [
+            {
+                // Quakes, natural events and fires. Aircraft get their own
+                // layer below so they can be rotated to their heading.
+                id: "osint-points",
+                type: "circle",
+                source: sourceId,
+                filter: ["!=", ["get", "kind"], "aircraft"],
+                paint: {
+                    "circle-radius": osintRadiusExpression(),
+                    "circle-color": osintColorExpression(),
+                    "circle-opacity": 0.55,
+                    "circle-stroke-width": 1.2,
+                    "circle-stroke-color": osintColorExpression(),
+                    "circle-stroke-opacity": 0.95
+                }
+            },
+            {
+                // An aircraft is a bearing, not just a position. The glyph is
+                // the built-in "airport-15"-style triangle drawn as text so no
+                // sprite is needed - the Liberty style's sprite is not
+                // guaranteed to survive a basemap swap.
+                id: "osint-aircraft",
+                type: "symbol",
+                source: sourceId,
+                filter: ["==", ["get", "kind"], "aircraft"],
+                layout: {
+                    "text-field": "▲",
+                    "text-size": ["interpolate", ["linear"], ["zoom"], 6, 10, 12, 16],
+                    "text-rotate": ["case", ["has", "heading_deg"], ["get", "heading_deg"], 0],
+                    "text-rotation-alignment": "map",
+                    "text-allow-overlap": true,
+                    "text-ignore-placement": true
+                },
+                paint: {
+                    "text-color": OSINT_COLORS.aircraft,
+                    "text-halo-color": "rgba(2,6,23,0.85)",
+                    "text-halo-width": 1.2,
+                    // On the ground is a different fact from in the air, and
+                    // a parked aircraft should not read as traffic.
+                    "text-opacity": ["case", ["get", "on_ground"], 0.45, 1.0]
+                }
+            },
+            {
+                id: "osint-aircraft-labels",
+                type: "symbol",
+                source: sourceId,
+                minzoom: 9,
+                filter: ["==", ["get", "kind"], "aircraft"],
+                layout: {
+                    "text-field": ["case", ["has", "callsign"], ["get", "callsign"], ""],
+                    "text-size": 10,
+                    "text-offset": [0, 1.1],
+                    "text-anchor": "top",
+                    "text-allow-overlap": false
+                },
+                paint: {
+                    "text-color": "#e2e8f0",
+                    "text-halo-color": "rgba(2,6,23,0.9)",
+                    "text-halo-width": 1.1
+                }
+            },
+            {
+                id: "osint-labels",
+                type: "symbol",
+                source: sourceId,
+                minzoom: 7,
+                filter: ["!=", ["get", "kind"], "aircraft"],
+                layout: {
+                    "text-field": ["get", "title"],
+                    "text-size": 10.5,
+                    "text-offset": [0, 1.3],
+                    "text-anchor": "top",
+                    "text-max-width": 13,
+                    "text-allow-overlap": false
+                },
+                paint: {
+                    "text-color": "#e2e8f0",
+                    "text-halo-color": "rgba(2,6,23,0.9)",
+                    "text-halo-width": 1.1
+                }
+            }
         ];
     }
 
@@ -653,6 +982,79 @@
         };
     }
 
+    // ---- critical buildings -----------------------------------------------
+    /* Life-safety assets get a small extruded hexagon on top of their
+     * existing flat circle, from z14 - additive, not a replacement, so this
+     * can never regress the always-visible circle every other asset type
+     * relies on. Built from `twin_infrastructure` points, not vector-tile
+     * building footprints: OpenFreeMap's building class tags are not
+     * reliable enough across Indian OSM coverage to filter on, where this
+     * app's own criticality data already is. */
+    var CRITICAL_ASSET_TYPES = ['hospital', 'school', 'police', 'fire_station', 'shelter'];
+    var CRITICAL_ASSET_COLORS = {
+        hospital: '#f43f5e', school: '#38bdf8', shelter: '#38bdf8',
+        police: '#a78bfa', fire_station: '#a78bfa'
+    };
+    var CRITICAL_FOOTPRINT_RADIUS_M = 20;
+    var CRITICAL_BUILDING_HEIGHT_M = 25;
+
+    function hexagonRing(lat, lon, radiusM) {
+        var ring = [];
+        for (var i = 0; i <= 6; i++) {
+            ring.push(destination(lat, lon, (360 * i) / 6, radiusM));
+        }
+        return ring;
+    }
+
+    /* Built client-side from the /infrastructure payload, the same way
+     * buildConeCollection() derives camera cones from /cameras - sending
+     * pre-computed footprints would multiply an already-large response for
+     * no reason a browser can't do itself in a loop. */
+    function buildCriticalFootprintCollection(infrastructureCollection) {
+        var features = [];
+        var rows = (infrastructureCollection && infrastructureCollection.features) || [];
+        for (var i = 0; i < rows.length; i++) {
+            var feature = rows[i];
+            var props = feature.properties || {};
+            if (CRITICAL_ASSET_TYPES.indexOf(props.asset_type) < 0) continue;
+            var coords = feature.geometry && feature.geometry.coordinates;
+            if (!coords) continue;
+            features.push({
+                type: "Feature",
+                properties: { asset_type: props.asset_type, name: props.name || null },
+                geometry: {
+                    type: "Polygon",
+                    coordinates: [hexagonRing(coords[1], coords[0], CRITICAL_FOOTPRINT_RADIUS_M)]
+                }
+            });
+        }
+        return { type: "FeatureCollection", features: features };
+    }
+
+    function criticalBuildingsLayer(sourceId) {
+        return {
+            id: "twin-critical-buildings",
+            type: "fill-extrusion",
+            source: sourceId,
+            minzoom: 14,
+            paint: {
+                "fill-extrusion-color": [
+                    "match", ["get", "asset_type"],
+                    "hospital", CRITICAL_ASSET_COLORS.hospital,
+                    "school", CRITICAL_ASSET_COLORS.school,
+                    "shelter", CRITICAL_ASSET_COLORS.shelter,
+                    "police", CRITICAL_ASSET_COLORS.police,
+                    "fire_station", CRITICAL_ASSET_COLORS.fire_station,
+                    "#a78bfa"
+                ],
+                "fill-extrusion-height": CRITICAL_BUILDING_HEIGHT_M,
+                "fill-extrusion-base": 0,
+                "fill-extrusion-opacity": 0.88,
+                "fill-extrusion-vertical-gradient": true
+            }
+        };
+    }
+
     // ---- CCTV -----------------------------------------------------------
     /* Assumed optics by camera type. OSM almost never tags field of view or
      * range, so these are declared assumptions and the legend says so. They
@@ -695,6 +1097,25 @@
                     "line-color": cameraColorExpression(),
                     "line-width": 0.8,
                     "line-opacity": 0.5
+                }
+            },
+            {
+                // Even later than the flat cone (z16, not z15) - at that
+                // distance a wedge with height reads as "this camera looks
+                // this way in 3D" rather than another translucent shape
+                // among many. Every cone here already has a real tagged
+                // bearing: viewCone() (see below) never emits one for a
+                // camera with no `direction` property, so there is no
+                // separate "inferred direction" case left to exclude.
+                id: "cctv-cone-3d",
+                type: "fill-extrusion",
+                source: coneSourceId,
+                minzoom: 16,
+                paint: {
+                    "fill-extrusion-color": cameraColorExpression(),
+                    "fill-extrusion-base": 0,
+                    "fill-extrusion-height": 6,
+                    "fill-extrusion-opacity": 0.25
                 }
             },
             {
@@ -826,8 +1247,10 @@
         rgba: rgba,
         riskColorExpression: riskColorExpression,
         riskHeightExpression: riskHeightExpression,
+        riskHeightExpressionByZoom: riskHeightExpressionByZoom,
         twinHexFlatLayer: twinHexFlatLayer,
         twinHexLayer: twinHexLayer,
+        twinHexCriticalCapLayer: twinHexCriticalCapLayer,
         twinHexOutlineLayer: twinHexOutlineLayer,
         twinHexDegradedLayer: twinHexDegradedLayer,
         twinHexInteractionLayer: twinHexInteractionLayer,
@@ -835,12 +1258,26 @@
         zoneOutlineLayer: zoneOutlineLayer,
         buildings3dLayer: buildings3dLayer,
         buildingHeightExpression: buildingHeightExpression,
+        TERRAIN_EXAGGERATION: TERRAIN_EXAGGERATION,
+        terrainDemSource: terrainDemSource,
+        hillshadeDemSource: hillshadeDemSource,
+        hillshadeLayer: hillshadeLayer,
         waterBodyLayers: waterBodyLayers,
         alertLayers: alertLayers,
+        alertWallLayer: alertWallLayer,
+        flagWallLayer: flagWallLayer,
+        buildFlagRingCollection: buildFlagRingCollection,
+        flagSeverityColor: flagSeverityColor,
+        circleRing: circleRing,
         incidentLayers: incidentLayers,
         incidentGroupLayers: incidentGroupLayers,
         GROUP_SPLIT_ZOOM: GROUP_SPLIT_ZOOM,
         infrastructureLayer: infrastructureLayer,
+        criticalBuildingsLayer: criticalBuildingsLayer,
+        buildCriticalFootprintCollection: buildCriticalFootprintCollection,
+        CRITICAL_ASSET_TYPES: CRITICAL_ASSET_TYPES,
+        osintLayers: osintLayers,
+        OSINT_COLORS: OSINT_COLORS,
         cctvLayers: cctvLayers,
         buildConeCollection: buildConeCollection,
         viewCone: viewCone,

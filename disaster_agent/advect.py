@@ -164,7 +164,61 @@ def project_hotspots(signals, horizons=None, threshold=None):
     hotspots.sort(key=lambda h: h['risk_score'], reverse=True)
     for h in hotspots:
         h['sources'].sort(key=lambda s: s['contribution'], reverse=True)
+        # How long this is expected to last, from the same hourly forecast the
+        # score came from. Attached to the hotspot (not recomputed downstream)
+        # so the brief, the API and the stored row all quote one window.
+        _attach_window(h, by_slug)
     return hotspots
+
+
+def _attach_window(hotspot, by_slug):
+    """The hazard window for the region the hotspot is *about*.
+
+    Deliberately the target's own forecast, not the upwind source's: an
+    analyst reading "Patna, flood, eases by 12:00" needs Patna's timing, not
+    the timing of the region that threw the signal at it.
+
+    A target with no forecast of its own gets no window rather than a
+    borrowed one. It can only have become a target by being ingested, so this
+    is defensive - but substituting another region's timing here would be
+    exactly the kind of quiet fabrication the rest of this package refuses.
+    """
+    from . import window as hazard_window
+
+    target = by_slug.get(hotspot['target_slug'])
+    if target is None:
+        hotspot['window'] = None
+        hotspot['window_text'] = None
+        return
+    span = hazard_window.hazard_window(target, hotspot['hazard_type'])
+    hotspot['window'] = span
+    hotspot['window_text'] = hazard_window.describe(span, hotspot['hazard_type'])
+
+
+def downwind_candidates(source, hazard_type, strength, by_slug, horizons=None):
+    """Every other watched region this source's signal is currently pointed
+
+    at, deduped to the soonest horizon each appears at. Same bearing/distance
+    math as `project_hotspots`, just not gated by `HOTSPOT_THRESHOLD` - this is
+    what the dashboard's sub-threshold "who might this affect if it grows"
+    dropdown is built from, so an analyst reviewing a below-threshold signal
+    can still see which regions are in its path before deciding whether to
+    alert one pre-emptively.
+    """
+    horizons = horizons or agent_config.HORIZONS
+    best = {}
+    for horizon in horizons:
+        for target_slug, _contribution, _detail in _project_one(
+                source, hazard_type, strength, horizon, by_slug):
+            if target_slug == source['slug']:
+                continue  # origin/self is not a "downwind" target
+            if target_slug not in best or horizon < best[target_slug]['horizon_hours']:
+                target = by_slug[target_slug]
+                best[target_slug] = {
+                    'slug': target_slug, 'name': target['name'], 'state': target['state'],
+                    'lat': target['lat'], 'lon': target['lon'], 'horizon_hours': horizon,
+                }
+    return sorted(best.values(), key=lambda t: t['horizon_hours'])
 
 
 def _project_one(source, hazard_type, strength, horizon, by_slug):

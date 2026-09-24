@@ -275,6 +275,35 @@ is stored on every row and rendered as a `TEMPLATE` tag on the dashboard card,
 so an analyst is never shown a template sentence under the impression a model
 wrote it. This mirrors `twin_flag.generated_offline`.
 
+### 4.3 Efficiency: reuse and concurrency
+
+Two optimisations, both load-bearing enough to be worth naming rather than
+leaving as implementation detail:
+
+**Reuse (cost).** `agent.py::_split_by_reuse` checks, before calling the LLM
+at all, whether a hotspot already has an active prediction from a previous
+cycle whose risk score is within `DISASTER_AGENT_REUSE_RISK_DELTA` (default 6
+points) and whose leading contributing source is unchanged. If so, the
+previous headline/narrative/action/confidence is copied forward - only the
+numeric fields (risk score, horizon, `predicted_for`) refresh - and no LLM
+call is made. This is the same principle `twin/agent/graph.py` states for its
+own triage runs: *"a quiet feed is the normal case ... it must cost zero
+tokens, not one cheap call."* Measured on a live run: a second cycle run
+immediately after the first, with conditions essentially unchanged, made **0
+of 10** possible LLM calls and completed in 1.4s vs. the first cycle's 10.4s.
+A `generated_offline` row is always re-narrated the moment an LLM key becomes
+available, rather than staying template-worded indefinitely.
+
+**Concurrency (latency).** Whatever hotspots *do* need a fresh narrative are
+sent to the LLM in parallel (`agent.py::_narrate_concurrently`, a
+`ThreadPoolExecutor` bounded by `DISASTER_AGENT_NARRATE_WORKERS`, default 4)
+rather than one after another - these are network-bound HTTP round-trips, not
+CPU work, so narrating N hotspots costs roughly one round-trip's wall-clock
+time instead of N. No database access happens inside the worker threads
+(the DB read that powers reuse-detection runs before the pool starts, and the
+persist step runs after it joins), so this introduces no session
+thread-safety concerns with Flask-SQLAlchemy.
+
 ---
 
 ## 5. Persistence, API, scheduling
@@ -292,6 +321,7 @@ same role list as the analyst dashboard itself):
 | Route | Method | Purpose |
 |---|---|---|
 | `/api/disaster-agent/predictions` | GET | Active hotspots, `?min_risk=`, `?hazard_type=`, `?limit=` |
+| `/api/disaster-agent/signals` | GET | Live per-region strength for every hazard, regardless of threshold - see §6 |
 | `/api/disaster-agent/status` | GET | Last run time, region count, LLM availability |
 | `/api/disaster-agent/run` | POST | Trigger an immediate cycle (dashboard's "Run Now") |
 | `/api/disaster-agent/predictions/<id>/dismiss` | POST | Hide one prediction |
@@ -317,6 +347,18 @@ station-alert flow already sends, so a prediction becomes a real broadcast
 notification (in-app + WhatsApp, per existing logic) with no new backend alert
 path to introduce or trust.
 
+**The "nothing is happening" state.** A day with no hazard signal above
+`HOTSPOT_THRESHOLD` (50/100) is the common case, and correctly so - a panel
+that alerts on every overcast afternoon teaches analysts to ignore it, the
+same reasoning `twin/`'s own quiet-feed short-circuit is built on (§1.1). But
+an empty list is indistinguishable from a broken panel to whoever is looking
+at it. When `predictions` comes back empty, the dashboard falls back to
+`/api/disaster-agent/signals` - the raw per-region strengths the projection
+step is working from, always live, ranked, shown with a risk bar against the
+threshold, but visually distinct from an actual hotspot card (no headline, no
+narrative, no Send Alert button - it never resembles an alert). This proves
+the agent is actively computing on a quiet day instead of reading as inert.
+
 ---
 
 ## 7. Configuration
@@ -333,6 +375,8 @@ and fully functional without an LLM key (template narration).
 | `DISASTER_AGENT_HOTSPOT_THRESHOLD` | `50` | Hotspot floor (0-100) |
 | `DISASTER_AGENT_BEARING_TOLERANCE_DEG` | `55` | Downwind cone half-width |
 | `DISASTER_AGENT_MAX_NARRATED` | `10` | LLM calls per cycle, cost cap |
+| `DISASTER_AGENT_REUSE_RISK_DELTA` | `6.0` | Risk-score drift (points) below which a previous narrative is reused instead of re-called |
+| `DISASTER_AGENT_NARRATE_WORKERS` | `4` | Concurrent LLM calls when narration is actually needed |
 | `DISASTER_AGENT_HTTP_TIMEOUT_S` | `8.0` | Open-Meteo call budget |
 
 LLM key/model are **not** separately configured - `disaster_agent` reads
@@ -352,6 +396,10 @@ LLM key/model are **not** separately configured - `disaster_agent` reads
 - `/analyst_dashboard` renders with the new panel present under an
   authenticated `analyst`-role session; all four new API routes return valid
   JSON under the same session.
+- Reuse + concurrency (§4.3) measured back to back on a live run: cycle two,
+  run immediately after cycle one with conditions essentially unchanged, made
+  0 of 10 possible LLM calls (all reused) and completed in 1.4s vs. cycle
+  one's 10.4s.
 - Every new module `py_compile`s clean; the embedded panel JS passes
   `node --check`.
 - All testing ran against throwaway copies of `instance/site.db` - the live
