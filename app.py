@@ -1607,7 +1607,7 @@ def report():
         report.confidence_score = ai_result['confidence_score']
         report.ai_analysis = ai_result['analysis']
         
-        # --- AI AUTO-APPROVAL SYSTEM (SH-SVA-03) ---
+        # --- AI AUTO-APPROVAL SYSTEM (SIH 2026 PS 26206) ---
         # Automatically approve reports with extremely high confidence (>= 85%)
         is_auto_approved = False
         # A re-photographed image (a picture of a screen or a printout) is a
