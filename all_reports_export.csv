@@ -39,3 +39,10 @@ Climate Alignment (80%): Flood conditions likely: High humidity 77% detected
 User Quality (18%): Low accuracy: 0/1 reports approved (0%)
 Image Processing (78%): Vision analysis (gpt-5.4-nano) - what it saw: ""A group of people stand in waist-to-chest deep muddy floodwater near a riverbank or coastal edge."" | detected 'coastal_flooding' (matches claimed 'coastal_flooding'), severity: high. The image shows people partially submerged by rapidly spreading floodwater consistent with coastal flooding rather than waves or a tidal abnormality.
 Linguistic Analysis (50%): Neutral: Standard reporting language",pending,,,,,0,0,0,0,False
+23,Demo,Demo,coastal_flooding,"Ward 104 Kondapur, Greater Hyderabad Municipal Corporation West Zone, Hyderabad, Serilingampalle mandal, రంగారెడ్డి, Telangana, 500084, India",17.477862,78.356484,captured_photo_20260924_213029.jpg,,2026-09-24 16:00:41.681075,19,active,medium,0.0,False,,False,0.48481250000000004,"Overall Accuracy: 48%
+Severity: MEDIUM (40%)
+Heatmap Match (70%): Partial heatmap match: 1 corroborating report(s)
+Climate Alignment (80%): Flood conditions likely: High humidity 79% detected
+User Quality (18%): Low accuracy: 0/2 reports approved (0%)
+Image Processing (25%): Vision analysis (gpt-5.4-nano) - what it saw: ""A laptop screen shows people and vehicles/structures along a flooded roadway with standing water."" | detected 'coastal_flooding' (matches claimed 'coastal_flooding'), severity: medium. Standing floodwater covers the ground and reaches people near the shoreline/low area, indicating flooding. ⚠ NOT A DIRECT PHOTO: this file is a re-capture of a screen (confidence 90%; Visible laptop screen with browser-style content and a macOS dock/top icons; a full keyboard bezel and trackpad are in frame.). The hazard shown may be real, but this image cannot confirm the reporter was at the scene. Confidence capped at 0.25 pending human review.
+Linguistic Analysis (50%): Neutral: Standard reporting language",pending,,,,,0,0,0,0,False

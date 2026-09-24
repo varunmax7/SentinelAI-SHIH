@@ -1,4 +1,4 @@
-# 🛡️ Sentinel AI — Multi-Agent Urban Disaster & Infrastructure Intelligence Platform
+# 🛡️ Sentinel AI — Full-Lifecycle Disaster Management Platform
 
 <div align="center">
 
@@ -11,12 +11,19 @@
 [![PWA](https://img.shields.io/badge/PWA-Installable-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**An enterprise-grade, AI-powered multi-agent disaster response & urban infrastructure management platform.**  
-*Addressing Problem Statement **SH-SVA-03**: Unifying fragmented urban departments through autonomous incident detection, coordinated multi-agent response, and real-time city-wide digital twin intelligence.*
+**An AI-powered, multi-agent platform covering the entire disaster lifecycle — risk mitigation and planning *before*, coordinated response *during*, and audited recovery *after*.**
 
-**119 API Routes · 23 Database Models · 50 Templates · 25 Forms · 6 Languages · 6 AI Agents · 4 Reporting Channels**
+*Smart India Hackathon 2026 · **Problem Statement 26206** · AICTE, MIC — Student Innovation · Theme: Disaster Management*
 
-[Problem Statement](#-problem-statement-sh-sva-03) • [Solution](#-sentinel-ai-the-solution) • [App Flow](#-complete-application-flow) • [Features](#-feature-deep-dive) • [Architecture](#-system-architecture) • [Getting Started](#-getting-started) • [API Reference](#-api-reference) • [WhatsApp Bot](#-whatsapp-bot) • [Database Schema](#-database-schema) • [Deployment](#-deployment) • [Roadmap](#-roadmap)
+| Phase | What runs |
+|:---|:---|
+| 🟦 **BEFORE** | Urban Digital Twin · AI Prediction Agent with hazard windows · Resilience simulation · OSINT early signal |
+| 🟥 **DURING** | 4-channel ingestion · AI verification with photo-provenance checks · Geo-fenced alerts · Volunteer dispatch |
+| 🟩 **AFTER** | GPS + photo proof of closure · Immutable audit trail · Analytics · Resilience re-scoring |
+
+**173 API Routes · 24+ Database Models · 53 Templates · 6 Languages · 6 AI Agents · 4 Reporting Channels · 20+ Live Data Sources**
+
+[Problem Statement](#-problem-statement-sih-2026--ps-26206) • [Solution](#-sentinel-ai-the-solution) • [App Flow](#-complete-application-flow) • [Features](#-feature-deep-dive) • [Architecture](#-system-architecture) • [Getting Started](#-getting-started) • [API Reference](#-api-reference) • [WhatsApp Bot](#-whatsapp-bot) • [Database Schema](#-database-schema) • [Deployment](#-deployment) • [Roadmap](#-roadmap)
 
 </div>
 
@@ -27,15 +34,15 @@
 | # | Section | What's Inside |
 |:--|:---|:---|
 | 1 | [Executive Summary](#-executive-summary) | The 60-second overview |
-| 2 | [Problem Statement SH-SVA-03](#-problem-statement-sh-sva-03) | The official PS, decomposed clause by clause |
-| 3 | [Requirement Traceability Matrix](#-requirement-traceability-matrix) | Every PS clause mapped to shipped code |
+| 2 | [Problem Statement PS 26206](#-problem-statement-sih-2026--ps-26206) | The official SIH 2026 PS, decomposed clause by clause |
+| 3 | [Requirement Traceability Matrix](#-requirement-traceability-matrix) | Every PS clause mapped to shipped code, by lifecycle phase |
 | 4 | [Sentinel AI: The Solution](#-sentinel-ai-the-solution) | Multi-agent architecture & digital twin |
 | 5 | [Complete Application Flow](#-complete-application-flow) | End-to-end operational pipeline |
 | 6 | [Feature Deep-Dive](#-feature-deep-dive) | All 29 feature clusters in detail |
 | 7 | [System Architecture](#-system-architecture) | Layers, agents, integrations |
 | 8 | [Data Flow Sequences](#-data-flow-sequences) | Step-by-step request traces |
 | 9 | [Project Structure](#-project-structure) | Every file and what it does |
-| 10 | [Database Schema](#-database-schema) | All 23 models, fields, relations |
+| 10 | [Database Schema](#-database-schema) | All models, fields, relations |
 | 11 | [User Roles & Permissions](#-user-roles--permissions) | RBAC matrix |
 | 12 | [Points & Rewards Economy](#-points--rewards-economy) | Exact scoring rules |
 | 13 | [Getting Started](#-getting-started) | Install → run in 5 steps |
@@ -58,17 +65,20 @@
 
 ## 🚀 Executive Summary
 
-Sentinel AI is a **single unified command platform** that replaces the tangle of phone calls, WhatsApp groups, spreadsheets, and siloed departmental portals that Indian cities currently rely on during an urban incident or disaster.
+Sentinel AI is a **single unified command platform** covering the full disaster lifecycle that PS 26206 names — **risk mitigation and planning before an event, coordinated management during it, and audited recovery after it** — replacing the tangle of phone calls, WhatsApp groups, spreadsheets and siloed departmental portals Indian agencies currently rely on.
 
-It does five things no existing system does together:
+Most disaster software picks one phase. A tool that only activates once water is rising is used for a few hours a year and forgotten the rest of the time, which is exactly why it fails when it is finally needed. Sentinel AI is designed to be **useful on a quiet Tuesday**: the digital twin recomputes city risk every five minutes, the prediction agent watches wind fields across 26+ regions, and OSINT feeds track regional seismicity — continuously building the model an emergency will depend on.
+
+It does six things no existing system does together:
 
 1. **Detects incidents from four independent channels simultaneously** — a Progressive Web App form, a one-tap Voice SOS with NLP keyword extraction, an offline AI calling agent, and a full WhatsApp bot — so a citizen with no smartphone, no data plan, or no literacy in English can still raise an alarm.
 2. **Validates every incident autonomously in under a second** using a 4-Parameter Accuracy System™ that cross-checks spatial corroboration, live meteorological data, the reporter's historical credibility, and vision analysis of the reporter's photo — which also detects whether the photo is a re-capture of a screen rather than a real scene. Anything above 85% confidence auto-approves without a human in the loop; a detected re-capture never does.
-3. **Runs a live city digital twin** — a 3D "God Mode" MapLibre GL globe layered with government TGDPS rainfall telemetry, RainViewer precipitation radar, Open-Meteo climate data, and every live incident in the database.
+3. **Models risk before anything happens** — an Urban Digital Twin scoring `hazard × vulnerability` on a ~460 m H3 grid across Hyderabad and Bengaluru, from hydrology, terrain, live weather, official CAP warnings and critical-infrastructure density, with ground imagery and open-source intelligence for any cell an analyst clicks.
 4. **Dispatches responders like a ride-hailing app** — geo-queries available volunteers, ranks them by distance and skill, fires a WhatsApp mission card with photo and coordinates, and tracks accept → en route → completed with GPS-verified photo proof.
 5. **Simulates the future** — the Sentinel Resilience Engine takes projected rainfall and sea-level parameters and produces a full government-grade resilience report with sectoral damage forecasts across Power, Water, Telecom, and Housing, including cascade-failure analysis and time-bound action plans.
+6. **Says when, not just how strong** — the AI Disaster Prediction Agent projects hazard signal downwind across 26+ Indian regions and reports a **hazard window** for each: when it starts, when it peaks, and when it is expected to ease. Where the forecast runs out, it says so rather than inventing an end time.
 
-Everything is wrapped in a gamified civic layer — points, levels, badges, leaderboards, government certificates — so that the citizen network stays engaged **between** disasters, not just during them.
+Everything is wrapped in a gamified civic layer — points, levels, badges, leaderboards, government certificates — so that the citizen network stays engaged **between** disasters, not just during them. That engagement is not decoration: the corroboration history it builds is what Parameter 1 of the verification engine scores against when a real event arrives.
 
 ### At a Glance
 
@@ -92,74 +102,139 @@ Everything is wrapped in a gamified civic layer — points, levels, badges, lead
 
 ---
 
-## 🎯 Problem Statement: SH-SVA-03
+## 🎯 Problem Statement: SIH 2026 · PS 26206
 
-> ### SH-SVA-03 — Urban Infrastructure Management
->
-> **Urban infrastructure management is fragmented across departments, leading to delayed incident detection, inefficient response, and increased operational costs. A multi-agent AI system integrated with a city digital twin is needed to autonomously prioritize incidents, coordinate actions, and ensure timely, compliant resolution.**
+| Field | Detail |
+|:---|:---|
+| **Problem Statement ID** | **26206** |
+| **Title** | Student Innovation — Disaster management includes ideas related to risk mitigation, planning and management before, after or during a disaster |
+| **Organization** | AICTE |
+| **Department** | AICTE, MIC — Student Innovation |
+| **Category** | Software |
+| **Theme** | Disaster Management |
+
+> **Disaster management includes ideas related to risk mitigation, planning and management before, after or during a disaster.**
+
+### Reading the Problem Statement
+
+This PS is deliberately open. It does not name a hazard, a state, or a technology — it names a **lifecycle**, and asks for software that operates across all of it. Most disaster software picks one phase and stops there: an alerting app that only fires once water is already rising, or a dashboard that only becomes useful after the event is over.
+
+Sentinel AI is built as **one continuous system across all three phases**, because the same city model that predicts a hazard is the one that routes a rescue and the one that measures the recovery.
+
+```
+        ┌────────────── BEFORE ──────────────┬──── DURING ────┬────── AFTER ──────┐
+        │  risk mitigation + planning        │   management   │   recovery        │
+        ├────────────────────────────────────┼────────────────┼───────────────────┤
+        │  Urban Digital Twin (H3 risk grid) │  4-channel     │  Audit trail      │
+        │  AI Prediction Agent + hazard      │  ingestion     │  CSV export       │
+        │    windows (start / peak / ease)   │  AI verify     │  Analytics        │
+        │  Resilience Engine simulation      │  Geo-fenced    │  Resilience Index │
+        │  Urban Resilience Index            │    alerts      │  Post-event       │
+        │  OSINT early signal                │  Dispatch      │    briefings      │
+        │  Offline pre-caching               │  Coordination  │  Certification    │
+        └────────────────────────────────────┴────────────────┴───────────────────┘
+```
 
 ### Decomposing the Problem Statement
 
-The PS contains **six distinct engineering requirements**. Sentinel AI addresses each one explicitly:
+The PS contains **four explicit demands**. Each maps to shipped, runnable code:
 
-| # | PS Clause | Engineering Requirement | Sentinel AI Response |
+| # | PS Clause | What It Actually Requires | Sentinel AI Response |
 |:--|:---|:---|:---|
-| 1 | *"fragmented across departments"* | A single shared operating picture across Fire, Police, Municipal, Health, Revenue, and Disaster agencies | **Coordination Dashboard** + Agency Registry + shared Resource Allocation ledger + SITREP system |
-| 2 | *"delayed incident detection"* | Ingest incidents in seconds, not hours, from every possible channel | **4-channel omni-ingestion** (PWA / Voice SOS / WhatsApp / AI call) + sub-second AI validation |
-| 3 | *"inefficient response"* | Match the right responder to the right incident automatically | **Uber-style dispatch** — geo-query, skill-match, WhatsApp mission card, lifecycle tracking |
-| 4 | *"increased operational costs"* | Eliminate duplicate effort and reactive over-deployment | Deduplication via heatmap corroboration, precision geo-fencing (no mass blasts), volunteer-first response before paid crews |
-| 5 | *"multi-agent AI system"* | Multiple specialised autonomous agents, not one monolithic model | **6 agents** — Detection, Prioritization, Dispatch, Alert, Analytics, Coordination |
-| 6 | *"integrated with a city digital twin"* | A live, queryable, spatial model of the city | **God Mode 3D map** (MapLibre GL) + TGDPS telemetry + RainViewer radar + Urban Resilience Index zones + Resilience Engine simulation |
-| 7 | *"autonomously prioritize incidents"* | Rank by severity without waiting for a human | 4-Parameter scoring → priority escalation (low → medium → high → critical), SOS auto-escalated to **critical** |
-| 8 | *"coordinate actions"* | Cross-department task assignment and tracking | Emergency Events → Resource Allocations → Volunteer Assignments → SITREPs, all linked |
-| 9 | *"timely, compliant resolution"* | Auditable, time-stamped, evidence-backed closure | GPS + photo proof of completion, immutable timestamps, CSV audit export, rejection reasons recorded |
+| 1 | *"risk mitigation"* | Reduce exposure **before** anything happens — know which streets flood, which buildings are critical, where the gaps are | **Urban Digital Twin** — H3 risk grid (~460 m) scoring `hazard × vulnerability` per cell from hydrology, terrain, live weather and critical-infrastructure density, for Hyderabad and Bengaluru |
+| 2 | *"planning"* | Let an authority rehearse a disaster and plan resources against the result | **Sentinel Resilience Engine** — impact simulation with 7-section government briefings · **AI Prediction Agent** — downwind hazard projection across 26+ regions with **hazard windows** saying when a threat starts, peaks and eases |
+| 3 | *"management before / during / after"* | One system that stays useful across the whole lifecycle, not three disconnected tools | **Before:** twin, prediction, simulation, offline pre-caching · **During:** 4-channel ingestion, sub-4s AI verification, geo-fenced alerts, volunteer dispatch, inter-department coordination · **After:** GPS+photo proof of closure, immutable audit trail, CSV export, resilience re-scoring |
+| 4 | *"disaster management"* (as a domain) | Work in real Indian conditions — multilingual, low-connectivity, citizen-scale | 6 languages with GPS-driven auto-selection · full offline IndexedDB queue + Service Worker · WhatsApp bot for feature-phone reach · PWA installable on any device |
+
+### Why the lifecycle framing matters
+
+A disaster-management tool that only works *during* an event is used for hours a year and forgotten the rest of the time — which is precisely why it fails when it is finally needed. Sentinel AI is designed to be **used on a quiet Tuesday**: the twin is recomputing risk every 5 minutes, the prediction agent is watching wind fields across the country, OSINT is tracking regional seismicity, and citizens are reporting potholes and waterlogging that quietly build the corroboration history the system will rely on in an emergency.
 
 ### The Crisis in Numbers
 
-India has **7,516 km of coastline** with over **170 million people** living in low-lying urban areas vulnerable to cyclones, floods, storm surges, and tsunamis. Urban infrastructure management across Indian cities suffers from systemic, cross-departmental failures:
+India's vulnerability profile, as published by the **National Disaster Management Authority (NDMA)**:
+
+| Exposure | Scale |
+|:---|:---|
+| **Earthquake** | ~58.6% of the landmass is prone to moderate-to-very-high intensity seismicity |
+| **Flood & river erosion** | Over 40 million hectares — roughly 12% of the land area |
+| **Cyclone & tsunami** | Of 7,516 km of coastline, close to 5,700 km is prone to cyclones and tsunamis |
+| **Drought** | Around 68% of cultivable area is vulnerable |
+| **Landslide & avalanche** | Hilly regions, particularly the Himalaya and Western Ghats |
+
+Against that exposure, the operational failures are consistent across events:
 
 | Problem Area | Real-World Impact |
 |:---|:---|
-| **🏛️ Departmental Silos** | Fire, police, municipal, health, and disaster agencies operate on separate communication channels. A single flood event requires 5+ departments to coordinate — manually, by phone. |
-| **⏱️ Delayed Detection** | A field report of rising floodwater takes **hours** to be manually confirmed by authorities. Citizens call helplines, officials check social media, volunteers wait for orders. |
-| **📞 Inefficient Dispatch** | Coordinators phone or message volunteers one by one, losing precious minutes while lives are at stake. No skill-matching, no distance ranking. |
-| **🌐 Language Barriers** | Critical alerts in non-native languages are ignored by local communities — fishermen, farmers, coastal workers. |
-| **📊 Zero Predictive Power** | Agencies react to disasters rather than simulating impacts ahead of time. No city-wide digital twin exists. |
-| **💰 Operational Cost Overrun** | Redundant efforts, uncoordinated resource deployment, and reactive approaches drain government budgets. |
-| **📵 Connectivity Collapse** | The moment a disaster hits, mobile data is the first casualty — yet every existing tool assumes a live connection. |
-| **🔁 Duplicate Reporting** | The same pothole, the same flooded underpass, reported 40 times — with no automatic deduplication or corroboration scoring. |
-| **📉 No Feedback Loop** | Citizens who report never learn what happened. Engagement dies after the first unanswered report. |
+| **📉 No mitigation layer** | Agencies react to disasters rather than modelling risk ahead of them. Which 460 m of a city floods first is institutional knowledge in someone's head, not a queryable dataset. |
+| **⏱️ Delayed Detection** | A field report of rising water takes **hours** to be manually confirmed. Citizens call helplines, officials check social media, volunteers wait for orders. |
+| **🏛️ Departmental Silos** | Fire, police, municipal, health and disaster agencies operate on separate channels. A single flood requires 5+ departments to coordinate — manually, by phone. |
+| **📞 Inefficient Dispatch** | Coordinators phone volunteers one by one, losing minutes while lives are at stake. No skill-matching, no distance ranking. |
+| **🌐 Language Barriers** | Critical alerts in non-native languages are ignored by the communities most at risk. |
+| **📵 Connectivity Collapse** | Mobile data is the first casualty of a disaster — yet almost every existing tool assumes a live connection. |
+| **🖼️ Unverifiable Evidence** | A photo of a flood taken off a laptop screen is indistinguishable from a field photo to a human reviewer at 3 a.m. |
+| **🔁 Duplicate Reporting** | The same flooded underpass reported 40 times, with no automatic deduplication or corroboration scoring. |
+| **📊 No After-Action Loop** | Once the water recedes, nothing is measured, so the next event is met with the same preparedness as the last. |
 
-**The result:** Response times measured in hours. Lives and resources lost that could have been saved with an intelligent, unified system.
+**The result:** response times measured in hours, and mitigation measured in nothing at all.
 
 ---
 
 ## 🧩 Requirement Traceability Matrix
 
-Every requirement in SH-SVA-03 maps to specific, runnable code in this repository:
+Every clause of PS 26206 maps to specific, runnable code in this repository — organised by the lifecycle phase the PS names.
+
+### 🟦 BEFORE — Risk Mitigation & Planning
 
 | PS Requirement | Implementation | Code Location |
 |:---|:---|:---|
-| Autonomous incident detection | 4-channel ingestion pipeline | `app.py::report()`, `app.py::submit_sos()`, `app.py::whatsapp_webhook()` |
-| Autonomous prioritization | 4-Parameter Accuracy System™ | `utils.py::validate_report_accuracy_4params()` |
-| Spatial corroboration | Heatmap density check, 5.5 km / 24 h window | `utils.py::_validate_heatmap_match()` |
+| Spatial risk modelling | H3 risk grid, `risk = hazard × vulnerability` | `twin/engine.py`, `twin/scoring.py`, `twin/grid.py` |
+| Hydrological & terrain risk | Elevation, distance-to-water, mapped drains, GloFAS anomaly | `twin/ingest/open_meteo.py`, `twin/ingest/overpass.py` |
+| Critical-asset exposure | Hospitals, schools, universities per cell | `twin/ingest/overpass.py`, `twin/serializers.py` |
+| Hazard forecasting | Downwind advection across 26+ regions, 1/3/6/24 h horizons | `disaster_agent/advect.py` |
+| **Hazard windows** (start / peak / ease) | Hourly forecast re-scored with the same function | `disaster_agent/window.py` |
+| Early open-source signal | Aircraft, seismicity, natural events, thermal anomalies, news | `twin/osint.py` |
+| Scenario planning | Impact simulation + 7-section government briefing | `app.py::simulate_impact()`, `app.py::simulate_analysis()` |
+| Preparedness measurement | Urban Resilience Index zones and scores | `models.py::ResilienceZone`, `models.py::ResilienceScore` |
+| Offline readiness | Service Worker shell caching before the event | `static/sw.js`, `static/js/offline-sync.js` |
+
+### 🟥 DURING — Detection, Verification & Response
+
+| PS Requirement | Implementation | Code Location |
+|:---|:---|:---|
+| Multi-channel detection | PWA · Voice SOS · WhatsApp · AI call | `app.py::report()`, `submit_sos()`, `whatsapp_webhook()` |
+| Autonomous prioritisation | 4-Parameter Accuracy System™ | `utils.py::validate_report_accuracy_4params()` |
+| Spatial corroboration | Heatmap density, 5.5 km / 24 h window | `utils.py::_validate_heatmap_match()` |
 | Meteorological validation | Live Open-Meteo cross-check | `utils.py::_validate_climate_alignment()` |
 | Reporter credibility | Role × history × level scoring | `utils.py::_calculate_user_quality_score()` |
-| Multi-agent dispatch | Geo-query + skill match + WhatsApp | `app.py::assign_volunteer_to_hazard()`, `app.py::match_volunteers()` |
-| Geo-fenced alerting | Per-hazard radius rules | `utils.py::get_hazard_alert_radius()`, `utils.py::should_receive_alert()` |
-| Inter-department coordination | Agencies, resources, SITREPs | `app.py::coordination_dashboard()` and `/coordination/*` routes |
-| City digital twin | 3D MapLibre + live layers | `static/js/god-mode-maps.js`, `templates/analyst_dashboard.html` |
-| Predictive simulation | Sentinel Resilience Engine | `app.py::simulate_impact()`, `app.py::simulate_analysis()` |
-| Compliant resolution | GPS + photo proof, audit trail | `app.py::complete_rescue_assignment()`, `utils.py::sync_reports_to_csv()` |
-| Resilience measurement | Urban Resilience Index zones | `models.py::ResilienceZone`, `models.py::ResilienceScore` |
-| Offline resilience | IndexedDB queue + Service Worker | `static/js/offline-sync.js`, `static/sw.js` |
-| Language inclusion | GPS-driven auto-translation | `translations.py`, `app.py::detect_preferred_language()` |
+| **Evidence authenticity** | Vision provenance — blocks screen re-captures | `utils.py::_validate_image_processing()` |
+| Official warning ingestion | NDMA SACHET (CAP), GDACS, USGS | `twin/ingest/sachet.py`, `twin/ingest/global_events.py` |
+| Ground truth at a location | Report photos, street-level, satellite crop | `twin/ground.py`, `twin/aerial.py`, `twin/ingest/streetview.py` |
+| Geo-fenced alerting | Per-hazard radius rules, no mass blasts | `utils.py::get_hazard_alert_radius()`, `should_receive_alert()` |
+| Responder dispatch | Geo-query + skill match + WhatsApp mission card | `app.py::assign_volunteer_to_hazard()`, `match_volunteers()` |
+| Inter-department coordination | Agencies, resource ledger, SITREPs | `app.py::coordination_dashboard()`, `/coordination/*` |
+| Offline reporting | IndexedDB queue, syncs on reconnect | `static/js/offline-sync.js` |
+| Language inclusion | GPS-driven auto-translation, 6 languages | `translations.py`, `app.py::detect_preferred_language()` |
+
+### 🟩 AFTER — Closure, Audit & Recovery
+
+| PS Requirement | Implementation | Code Location |
+|:---|:---|:---|
+| Verified closure | GPS + photo proof within 10 km of the hazard | `app.py::complete_rescue_assignment()` |
+| Immutable audit trail | Timestamped lifecycle, rejection reasons recorded | `models.py::Report`, `app.py::verify_report()` |
+| Data export | CSV sync on every report write | `utils.py::sync_reports_to_csv()` |
+| Post-event analytics | Hazard distribution, timelines, engagement charts | `app.py::chart_*` routes |
+| Resilience re-scoring | Index recomputed against what actually happened | `models.py::ResilienceScore` |
+| Responder recognition | Points, badges, levels, government certification | `app.py::award_badge()`, certificate routes |
+| Public accountability | Report status visible to the citizen who filed it | `app.py::view_report()`, notification system |
 
 ---
 
 ## 🧠 Sentinel AI: The Solution
 
-Sentinel AI is not just another disaster app — it is a **multi-agent AI command system** that acts as the autonomous nervous system for urban crisis management.
+Sentinel AI is not just another disaster app — it is a **multi-agent AI command system** that acts as the autonomous nervous system for disaster management across all three phases PS 26206 names.
+
+Six specialised agents run continuously. Three of them (Detection, Prioritization, Dispatch) do their heaviest work **during** an event; the other three (Alert, Analytics, Coordination) carry the **before** and **after** — modelling risk, projecting hazards, and measuring what actually happened so the next event is met better prepared.
 
 ### Multi-Agent Architecture
 
@@ -2533,6 +2608,8 @@ A practical validation script for demo day or a staging sign-off.
 | **Now** | OSINT layer — aircraft, seismicity, natural events, thermal anomalies, geocoded news | ✅ Shipped |
 | **Now** | AI Disaster Prediction Agent with hazard windows (start / peak / ease) | ✅ Shipped |
 | **Now** | Photo-provenance detection — screen re-captures blocked from auto-approval | ✅ Shipped |
+| **Next** | Broaden the citizen reporting taxonomy — the report form currently offers six coastal hazard types plus `other`, while the prediction agent already models cyclone, storm surge, flood, landslide, heat wave and wildfire | 🔨 Planned |
+| **Next** | Extend the Digital Twin beyond Hyderabad and Bengaluru — the grid builder is city-agnostic, the constraint is seeded coverage | 🔨 Planned |
 | **Next** | Mapillary `read` scope on the API token — unlocks dense street coverage already visible in its vector tiles | 🔑 Owner action |
 | **Next** | NASA `FIRMS_MAP_KEY` (free) — turns on satellite fire detection per city | 🔑 Owner action |
 | **Next** | Operator CCTV handover (GHMC / BBMP ICCC) into `TWIN_CCTV_STREAMS_FILE` — the only route to genuinely live per-location camera feeds | 🤝 Partnership |
@@ -2552,6 +2629,7 @@ A practical validation script for demo day or a staging sign-off.
 
 | Date | Change |
 |:---|:---|
+| **2026-09-24** | 🎯 **Re-framed for SIH 2026 PS 26206** (AICTE, MIC Student Innovation — Disaster Management). README restructured around the lifecycle the PS names: risk mitigation and planning *before*, management *during*, recovery *after*, with the traceability matrix split across all three phases |
 | **2026-09-24** | 🛡️ **Photo-provenance detection** — a flood picture photographed off a laptop screen was grading as a genuine field photo. The grader now asks about provenance and hazard as two independent questions, caps a detected re-capture at 0.25 and **hard-blocks auto-approval**. Verified at 0.95 confidence on the real submission |
 | **2026-09-24** | 👁️ **Vision pipeline rebuilt** — OpenAI `gpt-4.1-mini` primary with a free-OpenRouter fallback chain. Fixed a silent failure where `max_tokens=300` let a *reasoning* model spend its whole budget thinking and return nothing, and replaced `ling-3.0-flash-vl:free` after it was retired to paid-only (HTTP 404) |
 | **2026-09-24** | 📡 **OSINT layer** — live aircraft (OpenSky), regional seismicity (EMSC), natural events (NASA EONET), thermal anomalies (NASA FIRMS) and hazard-filtered geocoded news (GDELT) on the twin map, plus per-cell OSINT in the drawer |
@@ -2598,7 +2676,8 @@ This project is licensed under the [MIT License](LICENSE).
 
 <div align="center">
 
-**Built with ❤️ for Smart India Hackathon — Problem Statement SH-SVA-03**
+**Built with ❤️ for Smart India Hackathon 2026 — Problem Statement 26206**  
+*AICTE · MIC Student Innovation · Theme: Disaster Management*
 
 *"Every minute in a disaster matters. Sentinel AI turns hours into seconds — unifying departments, empowering communities, saving lives."*
 
